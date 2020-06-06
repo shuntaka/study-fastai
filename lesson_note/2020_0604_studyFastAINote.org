@@ -1,0 +1,3785 @@
+* lesson8
+** 00_exports.ipynb
+*** exporting 00_exports
+
+    #+BEGIN_SRC sh
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+
+    #+END_SRC
+
+** 01_matmul.ipynb
+*** importing 01_matmal.ipynb
+    #+BEGIN_SRC sh
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 01_matmul.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_01.py /content/nb_01.py
+
+    #+END_SRC
+
+*** unsqueeze
+    # 4:49
+    https://youtu.be/fCVuiW9AFzY
+
+    https://deeplizard.com/learn/video/fCVuiW9AFzY
+    
+
+    #+BEGIN_SRC python
+      c = tensor([10., 20, 30])
+      '''
+      tensor([10., 20., 30.])
+      '''
+
+      c.unsqueeze(0)
+      '''
+      tensor([[10., 20., 30.]])
+      '''
+
+      c.unsqueeze(1)
+      '''
+      tensor([[10.],
+              [20.],
+              [30.]])
+      ''' 
+    #+END_SRC
+
+
+** 02_fully_connected.ipynb grad
+*** importing the modules
+
+    #+BEGIN_SRC python
+      # importing nb00 & nb_01
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+    #+END_SRC
+
+
+*** mean & standard deviation of a TENSOR
+    # mean
+    https://pytorch.org/docs/stable/torch.html#torch.mean
+    - Returns the mean value of all elements in the input tensor.
+
+    # std
+    https://pytorch.org/docs/master/generated/torch.std.html
+    - Returns the standard-deviation of all elements in the 
+      input tensor.
+
+      #+BEGIN_SRC python
+        myTensor = torch.tensor([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+        myTensor, myTensor.mean(), myTensor.std()
+        '''
+        (tensor([[1., 2., 3.],
+                 [4., 5., 6.],
+                 [7., 8., 9.]]), tensor(5.), tensor(2.7386)
+        '''
+
+      #+END_SRC
+
+*** how to calculate mean & standard-deviation for data (e.g. x_train)
+    - note that mean&std for training input are calculated 
+      across the ENTIRE elements of training input, 
+      which is rank 2 tensor (shape: tnesor([10000, 784]) )
+    
+    #+BEGIN_SRC python
+      x_train.shape
+      '''
+      torch.Size([10000, 784])
+      '''
+
+      x_train[0].shape
+      '''
+      torch.Size([784])
+      '''
+
+      train_mean,train_std = x_train.mean(),x_train.std()
+      train_mean,train_std
+
+      '''
+      (tensor(0.1304), tensor(0.3073))
+      '''
+    #+END_SRC
+
+*** TODO [0/0] normalizing training & validation input (x_train, x_valid)
+    - normalization is to subtract maen and devide by std
+    - by definition, after normalization, mean & std of training set will be 0 and 1, respectively
+    - validation set must be normalized using mean & std of TRAINING set
+    - [ ] mean & std of noramlized validation will be near 0 & 1
+    
+    #+BEGIN_SRC python
+      x_train = normalize(x_train, train_mean, train_std)
+      # NB: Use training, not validation mean for validation set
+      x_valid = normalize(x_valid, train_mean, train_std)
+
+      train_mean,train_std = x_train.mean(),x_train.std()
+      train_mean,train_std
+      '''
+      (tensor(0.0001), tensor(1.))
+      '''
+
+      valid_mean, valid_std = x_valid.mean(),x_valid.std()
+      valid_mean, valid_std
+      '''
+      (tensor(-0.0057), tensor(0.9924))
+      '''
+    #+END_SRC
+
+*** initializing weight
+    - initialization means, 
+      - set the initial value of the weights by randn()
+      - then devide by a constant
+
+    - when the initial value of the weight matrix is set by randn(),
+      it gets (mean, std) of (0, 1)
+
+    - when devided by sqrt(m), (mean,std) will be (0, 1/sqrt(m) )
+
+      #+BEGIN_SRC python
+        #memo
+        # simplified kaiming init / he init
+        w1 = torch.randn(m,nh)/math.sqrt(m)
+        b1 = torch.zeros(nh)
+        w2 = torch.randn(nh,1)/math.sqrt(nh)
+        b2 = torch.zeros(1)
+
+        w1.shape, b1.shape, 
+        w2.shape, b2.shape
+        '''
+        (
+          torch.Size([784, 50]), torch.Size([50]), 
+          torch.Size([50, 1]), torch.Size([1])
+        )
+        '''
+
+        w1.mean(), w1.std()
+        '''
+        (tensor(0.0002), tensor(0.0358))
+        '''
+      #+END_SRC
+
+
+*** effect of initialization
+    - when multiplying the normalized input with (mean, std) of (0, 1)
+      with initialized weight with (mean, std) of (0, 1/sqrt(m))
+      the resulting ACTIVATION will also have (mean, std) of (0 ,1)
+
+*** TODO why initialization matters
+    # blog
+    https://prateekvjoshi.com/2016/03/29/understanding-xavier-initialization-in-deep-neural-networks/
+
+    https://pouannes.github.io/blog/initialization/
+
+    # papers
+    http://proceedings.mlr.press/v9/glorot10a.html
+    https://arxiv.org/abs/1901.09321
+
+
+*** squeeze (batch size=3)
+
+    #+BEGIN_SRC python
+      myTensor1 = torch.tensor([[1], [2],[3]])
+      myTensor2 = torch.tensor([[1], [2],[3]])
+
+      myTensor1.squeeze(), myTensor2.squeeze(-1)
+      '''
+      (tensor([1, 2, 3]), tensor([1, 2, 3]))
+      '''
+    #+END_SRC
+
+*** squeeze (batch size =1)
+    #+BEGIN_SRC python
+
+      myTensor1 = torch.tensor([[3]])
+      myTensor2 = torch.tensor([[3]])
+      myTensor1.squeeze(), myTensor2.squeeze(-1)
+
+      '''
+      (tensor(3), tensor([3]))
+      '''
+
+    #+END_SRC
+
+  
+*** printing inside function
+    - just add 'import sys' inside cell
+
+      #+BEGIN_SRC python
+        import sys
+        def forward_and_backward(inp, targ):
+            # forward pass:
+            l1 = inp @ w1 + b1
+            l2 = relu(l1)
+            out = l2 @ w2 + b2
+            # we don't actually need the loss in backward!
+            loss = mse(out, targ)
+            
+            print(l1.shape)
+            print(l2.shape)
+            print(out.shape)
+            # backward pass:
+            mse_grad(out, targ)
+            lin_grad(l2, out, w2, b2)
+            relu_grad(l1, l2)
+            lin_grad(inp, l1, w1, b1)
+        '''
+        torch.Size([50000, 50])
+        torch.Size([50000, 50])
+        torch.Size([50000, 1])
+        '''
+            
+      #+END_SRC
+
+*** grad of mse, w.r.t input
+    - by definition, the grad should be in the form such that
+      grad * input will be of the same shape as output
+    - grad for mse is rank 2 tensor 
+
+      #+BEGIN_SRC python
+        def mse(output, targ): return (output.squeeze(-1) - targ).pow(2).mean()
+        '''
+        shape for output is [[3],[1],...,[7]] (torch.Size([50000,1])
+        '''
+
+
+        def mse_grad(inp, targ): 
+            # grad of loss with respect to output of previous layer
+            inp.g = 2. * (inp.squeeze() - targ).unsqueeze(-1) / inp.shape[0]
+        '''
+        shape of inp.g is torch.Size([50000,1])
+        '''
+            
+      #+END_SRC
+
+*** checking the shape of gradients
+
+    #+BEGIN_SRC python
+      #memo
+      import sys
+      def mse_grad(inp, targ): 
+          # grad of loss with respect to output of previous layer
+          inp.g = 2. * (inp.squeeze() - targ).unsqueeze(-1) / inp.shape[0]
+          print('mse_grad')
+          print(inp.g.shape)
+
+      def relu_grad(inp, out):
+          # grad of relu with respect to input activations
+          inp.g = (inp>0).float() * out.g
+          print('relu_grad (inp>0).float()')
+          print((inp>0).float().shape)
+          print('relu_grad out.g')
+          print(out.g.shape)
+          print('relu_grad (inp>0).float() * out.g')
+          print(inp.g.shape)
+
+      def lin_grad(inp, out, w, b):
+          # grad of matmul with respect to input
+          inp.g = out.g @ w.t()
+          w.g = (inp.unsqueeze(-1) * out.g.unsqueeze(1)).sum(0)
+          b.g = out.g.sum(0)
+          print('lin_grad, w.t()')
+          print(w.t().shape)
+          print('lin_grad out.g')
+          print(out.g.shape)
+          print('lin_grad out.g@w.t()')
+          print(inp.g.shape)
+
+      #memo
+      import sys
+      def forward_and_backward(inp, targ):
+          # forward pass:
+          l1 = inp @ w1 + b1
+          l2 = relu(l1)
+          out = l2 @ w2 + b2
+          # we don't actually need the loss in backward!
+          loss = mse(out, targ)
+
+          print('l1')
+          print(l1.shape)
+          print('l2')
+          print(l2.shape)
+          print('out')
+          print(out.shape)
+          # backward pass:
+          mse_grad(out, targ)
+          lin_grad(l2, out, w2, b2)
+          relu_grad(l1, l2)
+          lin_grad(inp, l1, w1, b1)
+
+      forward_and_backward(x_train, y_train)
+      '''
+      l1
+      torch.Size([50000, 50])
+      l2
+      torch.Size([50000, 50])
+      out
+      torch.Size([50000, 1])
+
+      mse_grad
+      torch.Size([50000, 1])
+
+      lin_grad, w.t()
+      torch.Size([1, 50])
+
+      lin_grad out.g
+      torch.Size([50000, 1])
+
+      lin_grad out.g@w.t()
+      torch.Size([50000, 50])
+
+      relu_grad (inp>0).float()
+      torch.Size([50000, 50])
+
+      relu_grad out.g
+      torch.Size([50000, 50])
+
+      relu_grad (inp>0).float() * out.g
+      torch.Size([50000, 50])
+
+      lin_grad, w.t()
+      torch.Size([50, 784])
+
+      lin_grad out.g
+      torch.Size([50000, 50])
+
+      lin_grad out.g@w.t()
+      torch.Size([50000, 784])
+      '''
+    #+END_SRC
+
+*** TODO how to calculate gradient w.r.t weights for a linear layer
+*** TODO how autograd in pytorch works
+    https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
+    https://pytorch.org/docs/stable/autograd.html
+
+*** 
+
+
+** 02_fully_connected.ipynb refactoring layers (Lin, Relu, Mse, lin_grad, relu_grad)
+*** original codes for each layer
+
+    #+BEGIN_SRC python
+      class Relu():
+          def __call__(self, inp):
+              self.inp = inp
+              self.out = inp.clamp_min(0.)-0.5
+              return self.out
+          
+          def backward(self): self.inp.g = (self.inp>0).float() * self.out.g
+
+      class Lin():
+          def __init__(self, w, b): self.w,self.b = w,b
+              
+          def __call__(self, inp):
+              self.inp = inp
+              self.out = inp@self.w + self.b
+              return self.out
+          
+          def backward(self):
+              self.inp.g = self.out.g @ self.w.t()
+              # Creating a giant outer product, just to sum it, is inefficient!
+              self.w.g = (self.inp.unsqueeze(-1) * self.out.g.unsqueeze(1)).sum(0)
+              self.b.g = self.out.g.sum(0)
+
+      class Mse():
+          def __call__(self, inp, targ):
+              self.inp = inp
+              self.targ = targ
+              self.out = (inp.squeeze() - targ).pow(2).mean()
+              return self.out
+          
+          def backward(self):
+              self.inp.g = 2. * (self.inp.squeeze() - self.targ).unsqueeze(-1) / self.targ.shape[0]        
+    #+END_SRC
+
+*** refactoring the codes for each layer with Module
+    #+BEGIN_SRC python
+      class Module():
+          def __call__(self, *args):
+              self.args = args
+              self.out = self.forward(*args)
+              return self.out
+          
+          def forward(self): raise Exception('not implemented')
+          def backward(self): self.bwd(self.out, *self.args)
+
+      class Relu(Module):
+          def forward(self, inp): return inp.clamp_min(0.)-0.5
+          def bwd(self, out, inp): inp.g = (inp>0).float() * out.g
+
+      class Lin(Module):
+          def __init__(self, w, b): self.w,self.b = w,b
+              
+          def forward(self, inp): return inp@self.w + self.b
+          
+          def bwd(self, out, inp):
+              inp.g = out.g @ self.w.t()
+              self.w.g = torch.einsum("bi,bj->ij", inp, out.g)
+              self.b.g = out.g.sum(0)
+
+      class Mse(Module):
+          def forward (self, inp, targ): return (inp.squeeze() - targ).pow(2).mean()
+          def bwd(self, out, inp, targ): inp.g = 2*(inp.squeeze()-targ).unsqueeze(-1) / targ.shape[0]
+
+      class Model():
+          def __init__(self):
+              self.layers = [Lin(w1,b1), Relu(), Lin(w2,b2)]
+              self.loss = Mse()
+              
+          def __call__(self, x, targ):
+              for l in self.layers: x = l(x)
+              return self.loss(x, targ)
+          
+          def backward(self):
+              self.loss.backward()
+              for l in reversed(self.layers): l.backward()
+
+      w1.g,b1.g,w2.g,b2.g = [None]*4
+      model = Model()
+              
+      %time loss = model(x_train, y_train)
+
+      %time model.backward()
+    #+END_SRC
+
+    - `inp` refered inside `bwd` of each layer is 
+      populated as follows
+      - Model::backward() is called
+      - for each layer, l.backward() is called
+      - in each layer, backward is inherited from 
+        its super class Module, so Module::backward() is called
+      - Module::backawrd() calls
+        self.bwd(self.out, *self.args)
+      - self.args is populated when Module::__call__ is called
+        first time, i.e., when each layer is called in the forward path
+
+*** TODO refactoring Model with nn.Module, nn.Linear
+    #+BEGIN_SRC python
+      class Model(nn.Module):
+          def __init__(self, n_in, nh, n_out):
+              super().__init__()
+              self.layers = [nn.Linear(n_in,nh), nn.ReLU(), nn.Linear(nh,n_out)]
+              self.loss = mse
+              
+          def __call__(self, x, targ):
+              for l in self.layers: x = l(x)
+              return self.loss(x.squeeze(), targ)
+
+      model = Model(m, nh, 1)
+
+      %time loss = model(x_train, y_train)
+
+      %time loss.backward()
+    #+END_SRC
+
+    - with nn.Module, there is a slight difference.
+      - Model does not have `backward`, so we do not call `model.backward()`
+
+      - instead, it return the result of calculating loss
+        through call Model::__call__ ;
+
+      - then we call backward on the calculated loss.
+
+      - [ ] calling the backward on the calculated loss
+        recursively calls backward of each 'layer' involved in calculating 
+        the loss.
+
+* lesson9
+** 02b_initializing.ipynb
+*** get_data
+          #+BEGIN_SRC python
+
+        from exp.nb_01 import *
+
+        def get_data():
+            path = datasets.download_data(MNIST_URL, ext='.gz')
+            with gzip.open(path, 'rb') as f:
+                ((x_train, y_train), (x_valid, y_valid), _) = pickle.load(f, encoding='latin-1')
+            return map(tensor, (x_train,y_train,x_valid,y_valid))
+
+        def normalize(x, m, s): return (x-m)/s
+
+      #+END_SRC
+
+    - download and open training & validation data from pickle
+
+*** normalize
+          #+BEGIN_SRC python
+
+        from exp.nb_01 import *
+
+        def get_data():
+            path = datasets.download_data(MNIST_URL, ext='.gz')
+            with gzip.open(path, 'rb') as f:
+                ((x_train, y_train), (x_valid, y_valid), _) = pickle.load(f, encoding='latin-1')
+            return map(tensor, (x_train,y_train,x_valid,y_valid))
+
+        def normalize(x, m, s): return (x-m)/s
+
+      #+END_SRC
+
+    - normalize an input with mean and standard deviation
+      - x is an tensor
+      - m is a tensor like tensor(2.387)
+
+** 03_minitabch.ipynb
+*** importing the modules
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+    #+END_SRC
+
+*** Model(nn.Module) lesson9 ver1
+      #+BEGIN_SRC python
+        class Model(nn.Module):
+            def __init__(self, n_in, nh, n_out):
+                super().__init__()
+                self.layers = [nn.Linear(n_in,nh), nn.ReLU(), nn.Linear(nh,n_out)]
+                
+            def __call__(self, x):
+                for l in self.layers: x = l(x)
+                return x
+      #+END_SRC
+
+    - different from Model(nn.Module) implemented in lesson8,
+      Model(nn.Module) in lesson9 does not have self.loss.
+
+    - instead, the result of forward path is retured through
+      Model(nn.Module)::__call__ , and it will be later passed
+      to a loss function
+
+    - then we call backward on the retuned value of loss function
+
+      #+BEGIN_SRC python
+        loss = loss_func(model(xb), yb)
+        loss.backward()
+      #+END_SRC
+
+*** cross entropy
+    - cross entropy represents can be considered as 
+      'amount of money' that nenral net must pay for
+      occurences of events
+    - amount of money to pay for occurence of an event
+      is equal to -log(P) where P is the predicted probability
+    - amount of money to pay decrease if P is big
+    - in order to minimize the amount of money to pay,
+      neural net does its best to predict large probability
+      for the 'events' that actually occurs, and
+      small probability for the events that does not actually occur
+      - predict large probaility => small payment if an event actually occurs
+      - predict small probaility => big payment if an event actually occurs
+
+    - NOTE that the sum of the probailities of events must
+      add up to 1, so a neural net cannot get away with
+      'paying' little amount of money by predicting 
+      large probaility for all the events;
+      some probaility must be small, and some probaility must be large
+
+*** log_softmax
+    - x is prediction for ENTIRE training set, and so
+      of torch.Size([50000,10])
+      - where 50000 is number of images
+      - 10 corresonds to the number of labels (0,1,...,9)
+
+    - x.exp() operates on every elements of x (torch.Size([50000,10])
+      and result is also torch.Size([50000,10]) 
+
+    - x.exp().sum(-1, keepdim=True) takes sum along the last axis
+      ,which is along each row (50000 rows)
+
+    - since keepdim=True, after summing up along each row,
+      the sum will be torch.Size([1]) instead of torch.Size(1), 
+      a scalar, and so resulting tensor is of torch.Size([50000,1])
+
+    - x.exp() / (x.exp().sum(-1, keepdim=True)) is done element-wise
+      using broadcasting, and result is of torch.Size([50000,10])
+      - x.exp() => torch.Size([50000,10])
+      - x.exp().sum(...) => torch.Size([50000,1])
+
+    # definiton of log softmax
+    #+BEGIN_SRC python
+      def log_softmax(x):
+          return (x.exp()/(x.exp().sum(-1,keepdim=True))).log()
+    #+END_SRC
+
+
+    # my log softmax with print
+    #+BEGIN_SRC python
+      #memo
+      import sys
+      def my_log_softmax(x): 
+        print(x.exp().shape)
+        print(x.exp().sum(-1, keepdim=True).shape)
+        print((x.exp()/(x.exp().sum(-1,keepdim=True))).log())
+        return (x.exp()/(x.exp().sum(-1,keepdim=True))).log()
+
+      my_log_softmax(pred)
+      '''
+      torch.Size([50000, 10])
+      torch.Size([50000, 1])
+      tensor([[-2.2712, -2.2481, -2.4425,  ..., -2.0968, -2.3603, -2.3217],
+              [-2.3567, -2.2983, -2.4205,  ..., -1.9925, -2.3187, -2.1940],
+              [-2.3799, -2.2564, -2.4033,  ..., -2.1573, -2.2746, -2.3387],
+              ...,
+              [-2.2725, -2.3115, -2.4781,  ..., -2.0977, -2.3022, -2.3321],
+              [-2.3403, -2.2541, -2.3410,  ..., -2.1249, -2.3481, -2.3359],
+              [-2.2687, -2.1631, -2.3720,  ..., -2.2085, -2.3852, -2.3751]],
+             grad_fn=<LogBackward>)
+      '''
+
+    #+END_SRC
+
+*** integer array indexing
+    - `sm_pred` is an array of arrays
+
+    - sm_pred[ [0, 1, 2], [5, 0, 4]  ] grabs 0, 1, 2 of sm_pred
+
+    - for sm_pred[0], instead of grabbing entire array,
+      just grab index 5 of sm_pred[0]
+
+    - similarly, for sm_pred[1], it grabs index 0 of sm_pred[1]
+
+    #+BEGIN_SRC python
+      sm_pred[[0,1,2], [5,0,4]]
+    #+END_SRC
+
+*** nll
+    - calculates 
+
+    - `input` is log_softmax of pred (log of softmaxed probabilities)
+    - target is the label
+    - `target.shape[0]` is same as the number of data
+    - with 'integer array indexing', nll returns
+      
+    - using integer array indexing, 
+      `-input[range(target.shape[0]), target]` returns
+
+      (-1) x log softmax of a predicted probability for the label
+
+    - then,  .mean() returns the sum devided by number of the data
+
+      #+BEGIN_SRC python
+        def nll(input, target):
+            return -input[range(target.shape[0]), target].mean()
+      #+END_SRC
+
+*** logsumexp
+    https://pytorch.org/docs/master/generated/torch.logsumexp.html
+
+*** accuracy
+    # code
+    #+BEGIN_SRC python
+      def accuracy(out, yb):
+          return (torch.argmax(out, dim=1)==yb).float().mean()
+    #+END_SRC
+
+    # notes
+    - `out` is of torch.Size([64, 10])
+    - `yb` is of torch.Size([64])
+    - torch.argmax(out, dim=1) picks up the largest probability
+      for each row and returns tensor of size torch.Size([64])
+
+    - torch.argmax(out, dim=1)==yb returns tensor of
+      #+BEGIN_SRC python
+        tensor([ True,  True,  True,  True,  True,  True,  True,  True,  True,  True,
+                 True,  True,  True,  True,  True,  True,  True,  True,  True,  True,
+                 True,  True,  True,  True, False,  True,  True,  True, False, False,
+                 True,  True,  True,  True,  True,  True,  True,  True,  True,  True,
+                 True,  True,  True,  True,  True,  True,  True,  True, False,  True,
+                 True,  True,  True,  True,  True,  True,  True,  True,  True,  True,
+                 True,  True,  True,  True])
+      #+END_SRC
+
+    - torch.argmax(out, dim=1)==yb.float() converts to 
+      a tensor of 0 & 1
+
+      #+BEGIN_SRC python
+        tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+                1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1.,
+                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 1., 1.,
+                1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
+      #+END_SRC
+
+    
+
+*** basic training loop
+
+    #+BEGIN_SRC python
+      for epoch in range(epochs):
+          for i in range((n-1)//bs + 1):
+      #         set_trace()
+              start_i = i*bs
+              end_i = start_i+bs
+              xb = x_train[start_i:end_i]
+              yb = y_train[start_i:end_i]
+              loss = loss_func(model(xb), yb)
+
+              loss.backward()
+              with torch.no_grad():
+                  for l in model.layers:
+                      if hasattr(l, 'weight'):
+                          l.weight -= l.weight.grad * lr
+                          l.bias   -= l.bias.grad   * lr
+                          l.weight.grad.zero_()
+                          l.bias  .grad.zero_()
+    #+END_SRC
+
+    - n is defined to be the size of training data
+
+      #+BEGIN_SRC python
+        n,m = x.train.shape
+      #+END_SRC
+
+    - Model is from Model(nn.Module) lesson9 ver1 
+
+      #+BEGIN_SRC python
+        class Model(nn.Module):
+            def __init__(self, n_in, nh, n_out):
+                super().__init__()
+                self.layers = [nn.Linear(n_in,nh), nn.ReLU(), nn.Linear(nh,n_out)]
+                
+            def __call__(self, x):
+                for l in self.layers: x = l(x)
+                return x
+      #+END_SRC
+
+    - [ ] with torch.no_grad() is necessary since otherwise
+      pytorch's auto grad mechanics would keep track of
+      all the calculation weight is involved, for calculating
+      gradient, which costs lot of memoris
+
+*** fit ver1
+    #+BEGIN_SRC python
+      def fit():
+          for epoch in range(epochs):
+              for i in range((n-1)//bs + 1):
+                  start_i = i*bs
+                  end_i = start_i+bs
+                  xb = x_train[start_i:end_i]
+                  yb = y_train[start_i:end_i]
+                  loss = loss_func(model(xb), yb)
+
+                  loss.backward()
+                  with torch.no_grad():
+                      for p in model.parameters(): p -= p.grad * lr
+                      model.zero_grad()
+    #+END_SRC
+
+    - this refacroring is for getting rid of the duplicate code
+      for updating the parameters for each layer
+
+      #+BEGIN_SRC python
+        for l in model.layers:
+            if hasattr(l, 'weight'):
+                l.weight -= l.weight.grad * lr
+                l.bias   -= l.bias.grad   * lr
+                l.weight.grad.zero_()
+                l.bias  .grad.zero_()
+      #+END_SRC
+
+    - to do that, we need to be able to get all the parameters
+
+*** Model lesson9 ver2-preliminary
+      #+BEGIN_SRC python
+        class Model(DummyModule):
+            def __init__(self, n_in, nh, n_out):
+                super().__init__()
+                self.l1 = nn.Linear(n_in,nh)
+                self.l2 = nn.Linear(nh,n_out)
+                
+            def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+      #+END_SRC
+
+    #+BEGIN_SRC python
+      class DummyModule():
+          def __init__(self, n_in, nh, n_out):
+              self._modules = {}
+              self.l1 = nn.Linear(n_in,nh)
+              self.l2 = nn.Linear(nh,n_out)
+              
+          def __setattr__(self,k,v):
+              if not k.startswith("_"): self._modules[k] = v
+              super().__setattr__(k,v)
+              
+          def __repr__(self): return f'{self._modules}'
+          
+          def parameters(self):
+              for l in self._modules.values():
+                  for p in l.parameters(): yield p
+    #+END_SRC
+
+    - to do that, we change the implementation of Model as below;
+    
+    - what DummyModule does is, when some properties such as l1, l1
+      is set on `self`, it will call __setattr__
+      which registers the property and its value to 
+      self._modules
+
+    - DummyModule also has a method `parameters` which returns
+      all the parameters registered to self._modules
+
+*** Model(nn.Module) lesson9 ver2
+
+    #+BEGIN_SRC python
+      class Model(nn.Module):
+          def __init__(self, n_in, nh, n_out):
+              super().__init__()
+              self.l1 = nn.Linear(n_in,nh)
+              self.l2 = nn.Linear(nh,n_out)
+              
+          def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+    #+END_SRC
+
+    - luckily, the 2 features(__setattr__ , parameters)
+      of DummyModule is also implemented  on nn.Module, 
+      so instead of Model(DummyModule), we can use Model(nn.Module)
+
+*** Model(nn.Module) ver3
+
+     #+BEGIN_SRC python
+       class Model(nn.Module):
+           def __init__(self, layers):
+               super().__init__()
+               self.layers = layers
+               for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
+               
+           def __call__(self, x):
+               for l in self.layers: x = l(x)
+               return x
+     #+END_SRC
+
+     - a version of Model so that layer can be porvided dynamically
+       on calling __init__ of Model rather than hard coding it
+       as in Moodel(nn.Module) lesson9 ver2
+
+     - the difference is, on __init__, if calls 
+       self.add_module, which is equivalent to __setattr__ of either 
+       - Model(nn.Module) lesson9 ver2,
+       - Moodel(DummyModule) lesson9 ver2-preliminary
+
+*** SequentialModel ver1 ( = Model ver4)
+
+    #+BEGIN_SRC python
+      class SequentialModel(nn.Module):
+          def __init__(self, layers):
+              super().__init__()
+              self.layers = nn.ModuleList(layers)
+              
+          def __call__(self, x):
+              for l in self.layers: x = l(x)
+              return x
+    #+END_SRC
+
+    - it is for getting rid of cranky part of __init__ 
+      of Model(nn.Model) ver3 below by using nn.ModuleList
+
+      # Model(nn.Model) ver3
+      #+BEGIN_SRC python
+        class Model(nn.Module):
+            def __init__(self, layers):
+                super().__init__()
+                self.layers = layers
+                for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
+      #+END_SRC
+
+
+*** nn.Sequential
+    - nn.Sequential is equivalent of SequentialModel implemented above
+
+*** Optimizer
+
+    #+BEGIN_SRC python
+      class Optimizer():
+          def __init__(self, params, lr=0.5): self.params,self.lr=list(params),lr
+              
+          def step(self):
+              with torch.no_grad():
+                  for p in self.params: p -= p.grad * lr
+
+          def zero_grad(self):
+              for p in self.params: p.grad.data.zero_()
+    #+END_SRC
+
+    - we create optimizer to make parameter update more consice
+      in fit ver1
+      
+      # fit ver1
+      #+BEGIN_SRC python
+        def fit():
+            for epoch in range(epochs):
+                for i in range((n-1)//bs + 1):
+                    start_i = i*bs
+                    end_i = start_i+bs
+                    xb = x_train[start_i:end_i]
+                    yb = y_train[start_i:end_i]
+                    loss = loss_func(model(xb), yb)
+
+                    loss.backward()
+                    with torch.no_grad():
+                        for p in model.parameters(): p -= p.grad * lr
+                        model.zero_grad()
+      #+END_SRC
+
+      - params will be give by parameter() of Model class
+        inheritting from nn.Module (equivalent of parameter method
+        in DummyModule)
+
+      - we will implement more general optimizer later in the lesson
+
+*** training loop ver2 (cnosidered as fit "ver2"), refactored with Optimizer
+
+    #+BEGIN_SRC python
+      model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
+
+      opt = Optimizer(model.parameters())
+
+      for epoch in range(epochs):
+          for i in range((n-1)//bs + 1):
+              start_i = i*bs
+              end_i = start_i+bs
+              xb = x_train[start_i:end_i]
+              yb = y_train[start_i:end_i]
+              pred = model(xb)
+              loss = loss_func(pred, yb)
+
+              loss.backward()
+              opt.step()
+              opt.zero_grad()
+    #+END_SRC
+
+
+*** optim
+    - optim is the pytorch equivalent of Optimizer implement above
+
+*** get_model ver1
+
+    #+BEGIN_SRC python
+      def get_model():
+          model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
+          return model, optim.SGD(model.parameters(), lr=lr)
+    #+END_SRC
+
+    - this is for creating a pair of model AND optimizer
+      - optimizer is initialized with the model.parameters()
+
+*** Dataset
+
+    #+BEGIN_SRC python
+      #export
+      class Dataset():
+          def __init__(self, x, y): self.x,self.y = x,y
+          def __len__(self): return len(self.x)
+          def __getitem__(self, i): return self.x[i],self.y[i]
+    #+END_SRC
+
+    - Data set is for removing clunky part of fit ver2
+      for grabbing batch xb, yb
+
+      #+BEGIN_SRC python
+        for epoch in range(epochs):
+            for i in range((n-1)//bs + 1):
+                start_i = i*bs
+                end_i = start_i+bs
+                xb = x_train[start_i:end_i]
+                yb = y_train[start_i:end_i]
+                pred = model(xb)
+                loss = loss_func(pred, yb)
+
+                loss.backward()
+                opt.step()
+                opt.zero_grad()
+      #+END_SRC
+
+    - __getitem__ returns a tuple
+
+    - when range of index is passed like `train_ds[i*bs : i*bs+bs]`,
+      to __getitem__, it passes along that range of index, 
+      to return
+      self.x[i*bs : i*bs+bs], self.y[i*bs : i*bs+bs]
+
+*** training loop ver3 (fit ver3), refactored with dataset
+
+    #+BEGIN_SRC python
+      for epoch in range(epochs):
+          for i in range((n-1)//bs + 1):
+              xb,yb = train_ds[i*bs : i*bs+bs]
+              pred = model(xb)
+              loss = loss_func(pred, yb)
+
+              loss.backward()
+              opt.step()
+              opt.zero_grad()
+    #+END_SRC
+
+*** DataLoader ver1
+
+    #+BEGIN_SRC python
+      class DataLoader():
+          def __init__(self, ds, bs): self.ds,self.bs = ds,bs
+          def __iter__(self):
+              for i in range(0, len(self.ds), self.bs): yield self.ds[i:i+self.bs]
+    #+END_SRC
+
+    - DataLoader is for removing for loop in fit ver3
+
+      #+BEGIN_SRC python
+        for epoch in range(epochs):
+            for i in range((n-1)//bs + 1):
+                xb,yb = train_ds[i*bs : i*bs+bs]
+                pred = model(xb)
+                loss = loss_func(pred, yb)
+
+                loss.backward()
+                opt.step()
+                opt.zero_grad()
+      #+END_SRC
+
+    - DataLoader accept an instance of DataSet implemented above,
+      and it will return xb & yb by 
+
+      #+BEGIN_SRC python
+        train_dl = DataLoader(train_ds, bs)
+
+        xb,yb = next(iter(train_dl))
+
+      #+END_SRC
+
+*** fit ver4, refactored with DataLoader
+
+    #+BEGIN_SRC python
+      model,opt = get_model()
+
+      def fit():
+          for epoch in range(epochs):
+              for xb,yb in train_dl:
+                  pred = model(xb)
+                  loss = loss_func(pred, yb)
+                  loss.backward()
+                  opt.step()
+                  opt.zero_grad()
+    #+END_SRC
+
+*** Sampler
+
+    #+BEGIN_SRC python
+      class Sampler():
+          def __init__(self, ds, bs, shuffle=False):
+              self.n,self.bs,self.shuffle = len(ds),bs,shuffle
+              
+          def __iter__(self):
+              self.idxs = torch.randperm(self.n) if self.shuffle else torch.arange(self.n)
+              for i in range(0, self.n, self.bs): yield self.idxs[i:i+self.bs]
+    #+END_SRC
+
+    - torch.randperm generate array of integers from an integers
+
+      #+BEGIN_SRC python
+        my_n = 10000
+        my_perm_n = torch.randperm(my_n)
+        my_perm_n
+
+        '''
+        tensor([2294, 6962, 6917,  ..., 7317, 2931, 3086])
+        '''
+      #+END_SRC
+
+    - Sampler slice 'mini array' out of torch.randperm,
+      and the size of 'mini array' is equal to batch size
+
+      #+BEGIN_SRC python
+        my_randperm = torch.randperm(len(small_ds))
+        '''
+        tensor([0, 9, 7, 6, 3, 5, 4, 8, 1, 2])
+        '''
+
+        s = Sampler(small_ds,3,False)
+        [o for o in s]
+
+        '''
+        [tensor([0, 1, 2]), tensor([3, 4, 5]), tensor([6, 7, 8]), tensor([9])]
+        '''
+      #+END_SRC
+
+*** DataLoader ver2
+
+    #+BEGIN_SRC python
+      def collate(b):
+          xs,ys = zip(*b)
+          return torch.stack(xs),torch.stack(ys)
+
+      class DataLoader():
+          def __init__(self, ds, sampler, collate_fn=collate):
+              self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
+              
+          def __iter__(self):
+              for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
+    #+END_SRC
+
+
+    - the point of DataLoader ver2 is:
+      - now it picks up data set randomly
+
+
+    - self.ds[i] is a tuple
+      #+BEGIN_SRC python
+        class Dataset():
+              def __init__(self, x, y): self.x,self.y = x,y
+              def __len__(self): return len(self.x)
+              def __getitem__(self, i): return self.x[i],self.y[i]
+      #+END_SRC
+
+    - b (= [self.ds[i] for i in s) is a list of tuple, and looks like `my_b` below
+
+    #+BEGIN_SRC python
+      my_b = [train_ds[3], train_ds[1], train_ds[2]]
+      type(my_b), type(train_ds[0])
+      '''
+      (list, tuple)
+      '''
+    #+END_SRC
+
+    - unpacking b in `zip(*b)`;
+      unpacking operator(single asterisk *)
+      decompose the list b, and pass tuples to zip, 
+      so zip(*b) is equivalent to blow
+
+      #+BEGIN_SRC python
+        zip(train_ds[3], train_ds[1], train_ds[2])
+      #+END_SRC
+      
+
+    - what zip does when it accepts (tuple1, tuple2, tuple3);
+      stack tuples vertically and make new tuples by grouping
+      elements vertically 
+
+      | tuple1 | t1a | t1b | 
+      | tuple2 | t2a | t2b | 
+      | tuple3 | t3a | t3b | 
+
+      => 
+      
+      (t1a, t2a, t3a), (t1b, t2b, t3b)
+
+    - zip(*b) returns tuple
+
+      
+      
+
+
+      https://www.youtube.com/watch?v=VbBozykILZ0
+
+
+    
+
+
+
+
+
+*** validation loss
+
+    #+BEGIN_SRC python
+      def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
+          for epoch in range(epochs):
+              # Handle batchnorm / dropout
+              model.train()
+      #         print(model.training)
+              for xb,yb in train_dl:
+                  loss = loss_func(model(xb), yb)
+                  loss.backward()
+                  opt.step()
+                  opt.zero_grad()
+
+              model.eval()
+      #         print(model.training)
+              with torch.no_grad():
+                  tot_loss,tot_acc = 0.,0.
+                  for xb,yb in valid_dl:
+                      pred = model(xb)
+                      tot_loss += loss_func(pred, yb)
+                      tot_acc  += accuracy (pred,yb)
+              nv = len(valid_dl)
+              print(epoch, tot_loss/nv, tot_acc/nv)
+          return tot_loss/nv, tot_acc/nv
+    #+END_SRC
+
+    - model.train() sets model.training true
+    - mode.eval()  sets model.training false
+    - we always call model.train() before training, 
+      and model.eval() before inference, because
+      these are used by layers such as nn.BatchNorm2d
+      and nn.Dropout to ensure appropriate behaviour 
+      for these different phases.
+
+*** get_dls
+
+    #+BEGIN_SRC python
+      def get_dls(train_ds, valid_ds, bs, **kwargs):
+          return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
+                  DataLoader(valid_ds, batch_size=bs*2, **kwargs))
+    #+END_SRC
+
+    - get_dls is just a convinent helper for getting tuple of 
+      (DL for train_ds, DL for valid_ds)
+
+    - DL for valid_ds is has bigger batch size than DL for training_ds
+      because it is used with torch.no_grad(), and thus
+      we have more memory space (1:14:00)
+
+*** why we zero out gradient (1:14:58)
+
+** 04_callbacks.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+    #+END_SRC
+
+    
+
+
+*** getting data
+
+    #+BEGIN_SRC python
+      x_train,y_train,x_valid,y_valid = get_data()
+      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
+      nh,bs = 50,64
+      c = y_train.max().item()+1
+      loss_func = F.cross_entropy
+    #+END_SRC
+
+    - get_data from 02_fully_connected.ipynb
+
+      #+BEGIN_SRC python
+
+        from exp.nb_01 import *
+
+        def get_data():
+            path = datasets.download_data(MNIST_URL, ext='.gz')
+            with gzip.open(path, 'rb') as f:
+                ((x_train, y_train), (x_valid, y_valid), _) = pickle.load(f, encoding='latin-1')
+            return map(tensor, (x_train,y_train,x_valid,y_valid))
+
+        def normalize(x, m, s): return (x-m)/s
+
+      #+END_SRC
+
+
+*** fit ver5 (factor out arguments from  fit ver4)
+    #+BEGIN_SRC python
+      def get_model():
+          model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
+          return model, optim.SGD(model.parameters(), lr=lr)
+
+      model,opt = get_model()
+
+      def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
+          for epoch in range(epochs):
+              for xb,yb in train_dl:
+                  pred = model(xb)
+                  loss = loss_func(pred, yb)
+                  loss.backward()
+                  opt.step()
+                  opt.zero_grad()
+    #+END_SRC
+
+    - fit ver5 can be better by packaging up the arguments together
+      using factory method rather than asking user to 
+      prepair things necessary by themselves
+
+*** DataBunch
+    #+BEGIN_SRC python
+      #export
+      class DataBunch():
+          def __init__(self, train_dl, valid_dl, c=None):
+              self.train_dl,self.valid_dl,self.c = train_dl,valid_dl,c
+              
+          @property
+          def train_ds(self): return self.train_dl.dataset
+              
+          @property
+          def valid_ds(self): return self.valid_dl.dataset
+    #+END_SRC
+
+    - DataBunch bundle together training DL & validation DL
+
+*** get_model ver2
+
+    #+BEGIN_SRC python
+      # get_dls already implemented
+      def get_dls(train_ds, valid_ds, bs, **kwargs):
+          return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
+                  DataLoader(valid_ds, batch_size=bs*2, **kwargs))
+
+      # create data with DataBunch implemented above
+      data = DataBunch(*get_dls(train_ds, valid_ds, bs), c)
+
+      # definition of get_model
+      def get_model(data, lr=0.5, nh=50):
+          m = data.train_ds.x.shape[1]
+          model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,data.c))
+          return model, optim.SGD(model.parameters(), lr=lr)
+
+      class Learner():
+          def __init__(self, model, opt, loss_func, data):
+              self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
+    #+END_SRC
+
+    - get_model ver2 accepts DataBunch object whereas
+      get_model ver1 does not accept data, and just return
+      model and optimizer
+
+    - get model ver2 use DataBunch object to determine
+      number of input, and the size of the final output
+      for creating model
+
+*** Learner
+
+    #+BEGIN_SRC python
+      class Learner():
+          def __init__(self, model, opt, loss_func, data):
+              self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
+    #+END_SRC
+
+    - Learner is just a storage containing (model, opt, loss_func, data)
+      to be passed to fit ver5, as is mentioned above
+
+    - later in the course, Learner will be merged to Runner
+      since Learner just stores things and does nothing
+
+    - (model, opt) can be obtained through get_model ver2
+
+*** fit ver6
+
+    #+BEGIN_SRC python
+      def fit(epochs, learn):
+          for epoch in range(epochs):
+              learn.model.train()
+              for xb,yb in learn.data.train_dl:
+                  loss = learn.loss_func(learn.model(xb), yb)
+                  loss.backward()
+                  learn.opt.step()
+                  learn.opt.zero_grad()
+
+              learn.model.eval()
+              with torch.no_grad():
+                  tot_loss,tot_acc = 0.,0.
+                  for xb,yb in learn.data.valid_dl:
+                      pred = learn.model(xb)
+                      tot_loss += learn.loss_func(pred, yb)
+                      tot_acc  += accuracy (pred,yb)
+              nv = len(learn.data.valid_dl)
+              print(epoch, tot_loss/nv, tot_acc/nv)
+          return tot_loss/nv, tot_acc/nv
+    #+END_SRC
+
+    - since now Learner object contains all of
+      (model, opt, loss_func, data),
+      now the signature of fit is;
+      `fit(epochs, learn)`
+      
+*** fit ver7
+
+    #+BEGIN_SRC python
+      def one_batch(xb,yb):
+          pred = model(xb)
+          loss = loss_func(pred, yb)
+          loss.backward()
+          opt.step()
+          opt.zero_grad()
+
+      def fit():
+          for epoch in range(epochs):
+              for b in train_dl: one_batch(*b)
+    #+END_SRC
+
+    - with fit ver7, training logic of fit ver6 is factored out
+      as `one_batch`
+
+*** fit ver8
+
+    #+BEGIN_SRC python
+      def one_batch(xb, yb, cb):
+          if not cb.begin_batch(xb,yb): return
+          loss = cb.learn.loss_func(cb.learn.model(xb), yb)
+          if not cb.after_loss(loss): return
+          loss.backward()
+          if cb.after_backward(): cb.learn.opt.step()
+          if cb.after_step(): cb.learn.opt.zero_grad()
+
+      def all_batches(dl, cb):
+          for xb,yb in dl:
+              one_batch(xb, yb, cb)
+              if cb.do_stop(): return
+
+      def fit(epochs, learn, cb):
+          if not cb.begin_fit(learn): return
+          for epoch in range(epochs):
+              if not cb.begin_epoch(epoch): continue
+              all_batches(learn.data.train_dl, cb)
+              
+              if cb.begin_validate():
+                  with torch.no_grad(): all_batches(learn.data.valid_dl, cb)
+              if cb.do_stop() or not cb.after_epoch(): break
+          cb.after_fit()
+    #+END_SRC
+
+    - with fit ver8, `for b in train_dl: one_batch(*b)` in fit ver7
+      is factored out as all batch
+
+    - also, following callbacks are called
+      - cb.begin_fit(learn)    (beggining of fit)
+      - cb.begin_epoch(epoch)  (beggining of epoch)
+      - cb.begin_validate()    (beggining of validate)
+      - cb.after_fit()         (end of fit)
+
+    - if ..or not ... : break
+      
+
+*** Callback class ver1
+
+    #+BEGIN_SRC python
+      class Callback():
+          def begin_fit(self, learn):
+              self.learn = learn
+              return True
+          def after_fit(self): return True
+          def begin_epoch(self, epoch):
+              self.epoch=epoch
+              return True
+          def begin_validate(self): return True
+          def after_epoch(self): return True
+          def begin_batch(self, xb, yb):
+              self.xb,self.yb = xb,yb
+              return True
+          def after_loss(self, loss):
+              self.loss = loss
+              return True
+          def after_backward(self): return True
+          def after_step(self): return True
+    #+END_SRC
+
+    - `Callback` class implements the callbacks called
+      inside fit ver8
+
+    - callbacks(begin_fit, begin_batch, etc) defined 
+      inside `Callback` class just does minimum things;
+      - initialize property such as `learn`, `epoch`
+
+    - also ,each callback return a boolean value to signal
+      either or not to stop;
+
+    - more logics are implemented inside a concrete
+      callback class inheritting `Callback` class 
+
+*** CallbackHandler
+
+    #+BEGIN_SRC python
+      class CallbackHandler():
+          def __init__(self,cbs=None):
+              self.cbs = cbs if cbs else []
+
+          def begin_fit(self, learn):
+              self.learn,self.in_train = learn,True
+              learn.stop = False
+              res = True
+              for cb in self.cbs: res = res and cb.begin_fit(learn)
+              return res
+
+          def after_fit(self):
+              res = not self.in_train
+              for cb in self.cbs: res = res and cb.after_fit()
+              return res
+          
+          def begin_epoch(self, epoch):
+              self.learn.model.train()
+              self.in_train=True
+              res = True
+              for cb in self.cbs: res = res and cb.begin_epoch(epoch)
+              return res
+
+          def begin_validate(self):
+              self.learn.model.eval()
+              self.in_train=False
+              res = True
+              for cb in self.cbs: res = res and cb.begin_validate()
+              return res
+
+          def after_epoch(self):
+              res = True
+              for cb in self.cbs: res = res and cb.after_epoch()
+              return res
+          
+          def begin_batch(self, xb, yb):
+              res = True
+              for cb in self.cbs: res = res and cb.begin_batch(xb, yb)
+              return res
+
+          def after_loss(self, loss):
+              res = self.in_train
+              for cb in self.cbs: res = res and cb.after_loss(loss)
+              return res
+
+          def after_backward(self):
+              res = True
+              for cb in self.cbs: res = res and cb.after_backward()
+              return res
+
+          def after_step(self):
+              res = True
+              for cb in self.cbs: res = res and cb.after_step()
+              return res
+          
+          def do_stop(self):
+              try:     return self.learn.stop
+              finally: self.learn.stop = False
+    #+END_SRC
+
+    - CallbackHandler bundles callbacks into a "callback instance group", 
+      and for each of callback method (begin_fit, begin_batch, etc)
+      it sweeps through and call the corresponding method of
+      all the Callback object registered to the "callback instance group"
+
+    - return value of a callback method (begin_fit, begin_batch, etc)
+      is updated everytime the corresonding callback method of a
+      callback object in the "callback instance group" is called,
+
+*** putting (fit ver8, CallbackHandler, Callback) all together
+
+    #+BEGIN_SRC python
+      # fit ver8, one_batch, all_batches (represented)
+      def one_batch(xb, yb, cb):
+          if not cb.begin_batch(xb,yb): return
+          loss = cb.learn.loss_func(cb.learn.model(xb), yb)
+          if not cb.after_loss(loss): return
+          loss.backward()
+          if cb.after_backward(): cb.learn.opt.step()
+          if cb.after_step(): cb.learn.opt.zero_grad()
+
+      def all_batches(dl, cb):
+          for xb,yb in dl:
+              one_batch(xb, yb, cb)
+              if cb.do_stop(): return
+
+      def fit(epochs, learn, cb):
+          if not cb.begin_fit(learn): return
+          for epoch in range(epochs):
+              if not cb.begin_epoch(epoch): continue
+              all_batches(learn.data.train_dl, cb)
+              
+              if cb.begin_validate():
+                  with torch.no_grad(): all_batches(learn.data.valid_dl, cb)
+              if cb.do_stop() or not cb.after_epoch(): break
+          cb.after_fit()
+
+      #
+      class TestCallback(Callback):
+          def begin_fit(self,learn):
+              super().begin_fit(learn)
+              self.n_iters = 0
+              return True
+              
+          def after_step(self):
+              self.n_iters += 1
+              print(self.n_iters)
+              if self.n_iters>=10: self.learn.stop = True
+              return True
+
+      fit(1, learn, cb=CallbackHandler([TestCallback()]))
+      '''
+      1
+      2
+      3
+      4
+      5
+      6
+      7
+      8
+      9
+      10
+      '''
+    #+END_SRC
+
+    - TestCallback implements simple callbacks as follows;
+      - begin_fit: 
+        initialize n_iter which keeps track of the index of the current step
+
+      - after_step: 
+        keep track of the training steps in a epoch and set learn.stop flag true
+        when the current step exceeds 10, which results in throwing away the rest of the batches
+        and stop the training
+
+    - TestCallback is registered to the "callback oject group"
+      of CallbackHandler just by initializing CallbackHandler instance
+      with TestCallback
+
+
+*** listify
+
+    #+BEGIN_SRC python
+      #export
+      from typing import *
+
+      def listify(o):
+          if o is None: return []
+          if isinstance(o, list): return o
+          if isinstance(o, str): return [o]
+          if isinstance(o, Iterable): return list(o)
+          return [o]
+    #+END_SRC
+
+*** Runner ver1 (= fit ver9)
+
+    #+BEGIN_SRC python
+      # Runner class containing fit ver9    
+      class Runner():
+          def __init__(self, cbs=None, cb_funcs=None):
+              cbs = listify(cbs)
+              for cbf in listify(cb_funcs):
+                  cb = cbf()
+                  setattr(self, cb.name, cb)
+                  cbs.append(cb)
+              self.stop,self.cbs = False,[TrainEvalCallback()]+cbs
+
+          @property
+          def opt(self):       return self.learn.opt
+          @property
+          def model(self):     return self.learn.model
+          @property
+          def loss_func(self): return self.learn.loss_func
+          @property
+          def data(self):      return self.learn.data
+
+          def one_batch(self, xb, yb):
+              self.xb,self.yb = xb,yb
+              if self('begin_batch'): return
+              self.pred = self.model(self.xb)
+              if self('after_pred'): return
+              self.loss = self.loss_func(self.pred, self.yb)
+              if self('after_loss') or not self.in_train: return
+              self.loss.backward()
+              if self('after_backward'): return
+              self.opt.step()
+              if self('after_step'): return
+              self.opt.zero_grad()
+
+          def all_batches(self, dl):
+              self.iters = len(dl)
+              for xb,yb in dl:
+                  if self.stop: break
+                  self.one_batch(xb, yb)
+                  self('after_batch')
+              self.stop=False
+
+          def fit(self, epochs, learn):
+              self.epochs,self.learn = epochs,learn
+
+              try:
+                  for cb in self.cbs: cb.set_runner(self)
+                  if self('begin_fit'): return
+                  for epoch in range(epochs):
+                      self.epoch = epoch
+                      if not self('begin_epoch'): self.all_batches(self.data.train_dl)
+
+                      with torch.no_grad(): 
+                          if not self('begin_validate'): self.all_batches(self.data.valid_dl)
+                      if self('after_epoch'): break
+                  
+              finally:
+                  self('after_fit')
+                  self.learn = None
+
+          def __call__(self, cb_name):
+              for cb in sorted(self.cbs, key=lambda x: x._order):
+                  f = getattr(cb, cb_name, None)
+                  if f and f(): return True
+              return False
+    #+END_SRC
+    - with fit ver9, `fit` is a method defined on Runner class
+
+    - with fit ver9, Learner instance which contains
+      (model, opt, loss_func, data) is passed dynamically 
+      to `fit` method, which is SAME AS fit ver8.
+
+    - However, with fit ver9, `fit` function sets `self.learn`
+      of the Runner instance to the Learner instance 
+
+    - this way, (model, opt, loss_func, data) becomes accessible
+      from `one_batch`, `all_batches`, etc and `fit` itself
+      ,through special @property methods (def opt, def model, etc)
+      which delegates to property of `self.learn`
+
+    - with fit ver9, CallbackHandler instance is NOT 
+      passed to `fit`.
+
+    - Instead, callbacks are directly passed in either of
+      the 2 ways below:
+      - 1. callback CONSTRUCTORs are passed as a list
+          to `cb_funcs` argument of  __init__ of Runner class
+
+      - 2. callback INSTANCEs are passed to `cbs` argument of
+           __init__ of Runner class.
+
+      (NOTE: the class of each of the callback instances 
+             is inheritting Callback ver2, not Callback ver1)
+
+    - with the 1st way, Inside __init__ of Runner class, an instance
+      of each callback class is created, and 2 things are done 
+      for each of the callback instance;
+
+      - 1. append a callback instance to `self.cbs`
+        which is later used to sweep through the callback instances
+        to call 'begin_epoch', 'begin_batch', etc of 
+        each callback instance
+        (NOTE: TrainEvalCallback is appended as a default callback)
+
+      - 2. auto-register itself as a property of the  Runner
+        instance with key equal to `name` property of the 
+        callback instance. This is a benefit of passing
+        a callback as an CONSTRUCTOR
+        
+        example1: learn.Recorder in real fastai 
+        (`Learn` in real fastai is equivalent to `Runner`)
+
+        example2: run.avg_stats
+
+    #+BEGIN_SRC python
+      def __init__(self, cbs=None, cb_funcs=None):
+      cbs = listify(cbs)
+      cbf in listify(cb_funcs)
+      cb = cbf()
+      setattr(self, cb.name, cb)
+      cbs.append(cb)
+    #+END_SRC
+
+    - now, what happens when callbacks methods such as
+      begin_epoch, begin_batch are called 
+      as self('begin_epoch), or self('begin_batch'),
+      when calling `all_batches`, `one_batch` in `fit`
+
+    - self('begin_batch') calls __call__ method of Runner class
+
+    - then, inside __call__ methods, it sweeps through 
+      the callback instances stored in `self.cbs` according to 
+      its `_order` property, and for each of the callback instances
+      it grabs the callback method (begin_epoch, begin_batch, etc)
+
+    - And if the callback method exists, it is called
+
+      #+BEGIN_SRC python
+        # cb_name = 'begin_epoch', 'begin_batch', etc
+
+        def __call__(self, cb_name):
+            for cb in sorted(self.cbs, key=lambda x: x._order):
+                f = getattr(cb, cb_name, None)
+                if f and f(): return True
+            return False
+      #+END_SRC
+
+    - other parts of the logic of `fit` ver9 is almost same
+      as `fit` ver8, but with `fit` ver9, it call
+      cb.set_runner(self) for each of the callback instances
+      to store the reference to the Runner instance
+
+    - `fit`, is implemented to run all_batches() unless
+      the return value of `self('begin_epoch')` is `true`.
+      If the return value of self('begin_epoch') returns `false`
+      it keeps going
+      
+      In python, return value of a function is default to NaN, 
+      which is converted to `false`, so 
+      - if a function returns true, `fit` stops
+      - if a function does not return any value, 
+        or explicitly returns `false`, `fit` keeps going
+
+      #+BEGIN_SRC python
+      def fit(self, epochs, learn):
+      self.epochs,self.learn = epochs,learn
+
+      try:
+      for cb in self.cbs: cb.set_runner(self)
+      if self('begin_fit'): return
+      for epoch in range(epochs):
+      self.epoch = epoch
+      if not self('begin_epoch'): self.all_batches(self.data.train_dl)
+
+      with torch.no_grad(): 
+      if not self('begin_validate'): self.all_batches(self.data.valid_dl)
+      if self('after_epoch'): break
+                
+      finally:
+      self('after_fit')
+      self.learn = None
+      #+END_SRC
+
+    - In summary, 
+      - callacks are passed to Runner constructor
+
+      - Learn instance containing (model, opt, loss_func, data)
+        is passed to `fit` function of an Runner instance
+
+      - callbacks are registered to self.cbs, and swooped through
+        when calling self('begin_fit'), self('self_batch'), etc
+        inside `fit`, `one_batch` function
+
+      - also, when a callbackis passed as a CONSTRUCTOR,
+        the callback instance created during init becomes
+        available as the property of the `Runner` instance
+
+*** Callback ver2
+      #+BEGIN_SRC python
+        # Callback ver2
+        import re
+
+        _camel_re1 = re.compile('(.)([A-Z][a-z]+)')
+        _camel_re2 = re.compile('([a-z0-9])([A-Z])')
+        def camel2snake(name):
+            s1 = re.sub(_camel_re1, r'\1_\2', name)
+            return re.sub(_camel_re2, r'\1_\2', s1).lower()
+
+        class Callback():
+            _order=0
+            def set_runner(self, run): self.run=run
+            def __getattr__(self, k): return getattr(self.run, k)
+            @property
+            def name(self):
+                name = re.sub(r'Callback$', '', self.__class__.__name__)
+                return camel2snake(name or 'callback')
+      #+END_SRC
+
+    - Callback ver2 does NOT force a callback class to implement
+      callback methods (`begin_fit`, `begin_batch`, etc) any more,
+      and instead, each callback class implements only those 
+      necessary.
+
+    - With Callback ver2, a callback instance
+      stores reference to Runner instance in `self.run`
+
+    - When asked for some property which is not implemented
+      on the callback class ifself, it searchs the 
+      property of the same name defined on the Runner instance.
+      This pattern of delegation is often seen in fastai library
+
+      #+BEGIN_SRC python
+        def __getattr__(self, k): return getattr(self.run, k)
+      #+END_SRC
+
+    - By this delegation, a callback instance can read AND write
+      a property of the runner instance it is refering to 
+      as if it is a property of the callback instance 
+      as `self.in_train` in `AvgStatsCallback(Callback)`
+
+      #+BEGIN_SRC python
+        #export
+        class AvgStats():
+            def __init__(self, metrics, in_train): self.metrics,self.in_train = listify(metrics),in_train
+            
+            def reset(self):
+                self.tot_loss,self.count = 0.,0
+                self.tot_mets = [0.] * len(self.metrics)
+                
+            @property
+            def all_stats(self): return [self.tot_loss.item()] + self.tot_mets
+            @property
+            def avg_stats(self): return [o/self.count for o in self.all_stats]
+            
+            def __repr__(self):
+                if not self.count: return ""
+                return f"{'train' if self.in_train else 'valid'}: {self.avg_stats}"
+
+            def accumulate(self, run):
+                bn = run.xb.shape[0]
+                self.tot_loss += run.loss * bn
+                self.count += bn
+                for i,m in enumerate(self.metrics):
+                    self.tot_mets[i] += m(run.pred, run.yb) * bn
+
+        class AvgStatsCallback(Callback):
+            def __init__(self, metrics):
+                self.train_stats,self.valid_stats = AvgStats(metrics,True),AvgStats(metrics,False)
+                
+            def begin_epoch(self):
+                self.train_stats.reset()
+                self.valid_stats.reset()
+                
+            def after_loss(self):
+                stats = self.train_stats if self.in_train else self.valid_stats
+                with torch.no_grad(): stats.accumulate(self.run)
+            
+            def after_epoch(self):
+                print(self.train_stats)
+                print(self.valid_stats)
+      #+END_SRC
+      
+      
+
+    - name property remove "Callback" strings fron the 
+      name of a callback class, and turn it into snake case
+
+      #+BEGIN_SRC python
+        TrainEvalCallback().name
+        '''
+        train_eval
+        '''
+      #+END_SRC
+
+
+*** TrainEvalCallback
+
+    #+BEGIN_SRC python
+      #export
+      class TrainEvalCallback(Callback):
+          def begin_fit(self):
+              self.run.n_epochs=0.
+              self.run.n_iter=0
+          
+          def after_batch(self):
+              if not self.in_train: return
+              self.run.n_epochs += 1./self.iters
+              self.run.n_iter   += 1
+              
+          def begin_epoch(self):
+              self.run.n_epochs=self.epoch
+              self.model.train()
+              self.run.in_train=True
+
+          def begin_validate(self):
+              self.model.eval()
+              self.run.in_train=False
+    #+END_SRC
+    
+    - TrainEvalCallback is a default callback registered to
+      self.cbs of a Runner instance.
+
+    - This callback is responsible for managing if Runner is in 
+      training, or validation by switching self.in_train flag.
+      of the Runner instance inside `begin_validate` 
+
+    - self.in_train of the Runner instance will be refered 
+      inside AvgStatsCallback
+
+
+*** AvgStats & AvgStatsCallback
+
+    #+BEGIN_SRC python
+      #memo
+      #export
+      import sys
+      class AvgStats():
+          def __init__(self, metrics, in_train): self.metrics,self.in_train = listify(metrics),in_train
+          
+          def reset(self):
+              self.tot_loss,self.count = 0.,0
+              self.tot_mets = [0.] * len(self.metrics)
+              
+          @property
+          def all_stats(self): return [self.tot_loss.item()] + self.tot_mets
+          @property
+          def avg_stats(self): 
+
+            # print('self.tot_loss is:')
+            # print(self.tot_loss)
+            # print('self.tot_loss.item() is')
+            # print(self.tot_loss.item())
+
+            return [o/self.count for o in self.all_stats]
+          
+          def __repr__(self):
+              if not self.count: return ""
+              return f"{'train' if self.in_train else 'valid'}: {self.avg_stats}"
+
+          def accumulate(self, run):
+              bn = run.xb.shape[0]
+              self.tot_loss += run.loss * bn
+              self.count += bn
+              for i,m in enumerate(self.metrics):
+                  self.tot_mets[i] += m(run.pred, run.yb) * bn
+
+      class AvgStatsCallback(Callback):
+          def __init__(self, metrics):
+              self.train_stats,self.valid_stats = AvgStats(metrics,True),AvgStats(metrics,False)
+              
+          def begin_epoch(self):
+              self.train_stats.reset()
+              self.valid_stats.reset()
+              
+          def after_loss(self):
+              stats = self.train_stats if self.in_train else self.valid_stats
+              with torch.no_grad(): stats.accumulate(self.run)
+          
+          def after_epoch(self):
+              print(self.train_stats)
+              print(self.valid_stats)
+
+      learn = Learner(*get_model(data), loss_func, data)
+
+      stats = AvgStatsCallback([accuracy])
+      run = Runner(cbs=stats)
+
+      run.fit(2, learn)
+      '''
+      self.tot_loss is:
+      tensor(15825.9590)
+      self.tot_loss.item() is
+      15825.958984375
+      train: [0.3165191796875, tensor(0.9034)]
+
+      self.tot_loss is:
+      tensor(1606.2327)
+      self.tot_loss.item() is
+      1606.232666015625
+      valid: [0.1606232666015625, tensor(0.9529)]
+
+      self.tot_loss is:
+      tensor(7192.6704)
+      self.tot_loss.item() is
+      7192.67041015625
+      train: [0.143853408203125, tensor(0.9566)]
+
+      self.tot_loss is:
+      tensor(1330.4731)
+      self.tot_loss.item() is
+      1330.47314453125
+      valid: [0.133047314453125, tensor(0.9616)]
+      '''
+    #+END_SRC
+
+    - self.tot_loss will be a tensor of the form tensor(15825.9590).
+      In order to get the raw number, we need to call .item()
+
+      #+BEGIN_SRC python
+        #memo
+        my_tot_loss= tensor(15825.9590)
+        my_tot_loss
+        '''
+        tensor(15825.9590)
+        '''
+
+        raw_tot_loss = my_tot_loss.item()
+        raw_tot_loss
+        '''
+        15825.9590
+        '''
+      #+END_SRC
+
+
+    - tot_mets = [0. ] * 2 
+      will be 
+      [0.0, 0.0]
+
+*** passing AvgStatsCallback as a constructor
+
+    #+BEGIN_SRC python
+      acc_cbf = partial(AvgStatsCallback,accuracy)
+      run = Runner(cb_funcs=acc_cbf)
+      run.fit(1, learn)
+
+      run.avg_stats.valid_stats.avg_stats
+      '''
+      [0.12098992919921875, tensor(0.9649)]
+      '''
+    #+END_SRC
+
+
+    - this way, the AvgStatsCallback instance is accessible
+      via run.avg_stats.
+
+      - recall name of AvgStatsCallback will be avg_stats
+        and the AvgStatsCallback instance is 
+
+
+** statistics math
+*** standard deviation
+    - 35:30
+    - the data type of variance is not a row number.
+      instead, it is a tensor like;
+
+      #+BEGIN_SRC python
+        tensor(6.8693)
+      #+END_SRC
+
+    - "standard deviation" is used over
+      "mean absolute deviation" 
+      because math proof will be easier
+
+      #+BEGIN_SRC python
+        # mean absolute deviation
+        (t-m).abs().mean()
+
+        # standard deviation
+        (t-m).pow(2).mean().sqrt      
+      #+END_SRC
+
+*** variance
+    - standard deviation is the square root of the variance
+
+      #+BEGIN_SRC python
+        # variance
+        (t-m).pow(2).mean()
+
+        # standard deviation
+        (t-m).pow(2).mean().sqrt
+      #+END_SRC
+
+*** 2 ways to calculate variance
+
+    #+BEGIN_SRC python
+      # 1st way (intuitive, but hard to calculate)
+      (t-m).pow(2).mean(),
+
+      # 2nd way (efficient to calculate)
+      (t*t).mean() - (m*m)
+    #+END_SRC
+
+*** covariance
+    - when two variables are correlaetd, covariance is large
+    - on the otherhand, when two variables are not correlated,
+      covariance is small
+
+*** when softmax should NOT be used
+    - 45:00
+    - two pictures with different 'fishiness',
+      one with 2, and the other only with 0.63
+      will end up having same softmax value
+
+    - softmax calculate values based on the relative magnitude
+      erasing off absolute magnitude
+
+      cat
+      dog
+      plane
+      fish
+      building
+
+    - softmax should be used when we are sure that
+      an input has at least 1 label.
+
+*** binary
+    - 48:30
+    - when we are not sure if an image has at least 1 lalbel,
+      we use binary
+
+*** when softmax is a good idea
+    - language model
+    - there is always a one word
+
+
+
+
+** 05_anneal.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+    #+END_SRC
+
+*** create learner
+
+    #+BEGIN_SRC python
+      #export
+      def create_learner(model_func, loss_func, data):
+          return Learner(*model_func(data), loss_func, data)
+    #+END_SRC
+
+*** get_model_func
+
+    #+BEGIN_SRC python
+      #export
+      def get_model_func(lr=0.5): return partial(get_model, lr=lr)
+    #+END_SRC
+
+    - a function to retun get_model (ver2) 
+      with a specified learning rate applied
+
+*** debugging
+    - 1:59:00
+
+*** Recorder ver1 
+
+    #+BEGIN_SRC python
+      #export
+      class Recorder(Callback):
+          def begin_fit(self): self.lrs,self.losses = [],[]
+
+          def after_batch(self):
+              if not self.in_train: return
+              self.lrs.append(self.opt.param_groups[-1]['lr'])
+              self.losses.append(self.loss.detach().cpu())        
+
+          def plot_lr  (self): plt.plot(self.lrs)
+          def plot_loss(self): plt.plot(self.losses)
+
+
+    #+END_SRC
+
+    - there are possibly more than 1 parameter group, and 
+      each group has 'lr' of different values
+
+    - Recorder records the change of `lr` of only the last parameter group
+      after every batch.
+      
+      #+BEGIN_SRC python
+        self.lrs.append(self.opt.param_groups[-1]['lr'])
+      #+END_SRC
+
+*** ParamScheduler ver 1
+
+    #+BEGIN_SRC python
+      class ParamScheduler(Callback):
+          _order=1
+          def __init__(self, pname, sched_func): self.pname,self.sched_func = pname,sched_func
+
+          def set_param(self):
+              for pg in self.opt.param_groups:
+                  pg[self.pname] = self.sched_func(self.n_epochs/self.epochs)
+                  
+          def begin_batch(self): 
+              if self.in_train: self.set_param()
+    #+END_SRC
+
+
+
+*** sched_lin (that does currying)
+
+    #+BEGIN_SRC python
+      def sched_lin(start, end):
+          def _inner(start, end, pos): return start + pos*(end-start)
+          return partial(_inner, start, end)
+    #+END_SRC
+
+    - `start` is the starting value of a hyper parameter
+    - `end` is the ending value of a hyper parameter
+
+*** annealer (decorator)
+
+    #+BEGIN_SRC python
+      #export
+      def annealer(f):
+          def _inner(start, end): return partial(f, start, end)
+          return _inner
+
+      @annealer
+      def sched_lin(start, end, pos): return start + pos*(end-start)
+    #+END_SRC
+
+    - annealer is a function which returns a function.
+      It accepts a normal scheduler function, and it returns
+      a function that does curriying with the scheduler function.
+
+    - note that `sched_lin` is just a normal scheduler function, and
+      NOT a currying function.
+
+    - In other words, annealer helps to create a
+      currying function from a normal scheduler function
+
+*** monkey patching Tensor.ndim
+
+    #+BEGIN_SRC python
+      #This monkey-patch is there to be able to plot tensors
+      torch.Tensor.ndim = property(lambda x: len(x.shape))
+    #+END_SRC
+    
+    - this is for telling matplot the dimension of a tensor
+      e.g. tensor.Size([50000, 784])
+
+*** combine scheduler
+
+    #+BEGIN_SRC python
+      #export
+      def combine_scheds(pcts, scheds):
+          assert sum(pcts) == 1.
+          pcts = tensor([0] + listify(pcts))
+          assert torch.all(pcts >= 0)
+          pcts = torch.cumsum(pcts, 0)
+          def _inner(pos):
+              idx = (pos >= pcts).nonzero().max()
+              actual_pos = (pos-pcts[idx]) / (pcts[idx+1]-pcts[idx])
+              return scheds[idx](actual_pos)
+          return _inner
+    #+END_SRC
+    
+    - Here is an example: use 30% of the budget to go
+      from 0.3 to 0.6 following a cosine, 
+      then the last 70% of the budget to go from 0.6 to 0.2, 
+      still following a cosine.
+
+* lesson10
+** 05b_early_stopping.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+    #+END_SRC
+    
+
+*** Callback ver3
+
+    #+BEGIN_SRC python
+      #export
+      class Callback():
+          _order=0
+          def set_runner(self, run): self.run=run
+          def __getattr__(self, k): return getattr(self.run, k)
+          
+          @property
+          def name(self):
+              name = re.sub(r'Callback$', '', self.__class__.__name__)
+              return camel2snake(name or 'callback')
+          
+          def __call__(self, cb_name):
+              f = getattr(self, cb_name, None)
+              if f and f(): return True
+              return False
+
+      class TrainEvalCallback(Callback):
+          def begin_fit(self):
+              self.run.n_epochs=0.
+              self.run.n_iter=0
+          
+          def after_batch(self):
+              if not self.in_train: return
+              self.run.n_epochs += 1./self.iters
+              self.run.n_iter   += 1
+              
+          def begin_epoch(self):
+              self.run.n_epochs=self.epoch
+              self.model.train()
+              self.run.in_train=True
+
+          def begin_validate(self):
+              self.model.eval()
+              self.run.in_train=False
+
+      class CancelTrainException(Exception): pass
+      class CancelEpochException(Exception): pass
+      class CancelBatchException(Exception): pass
+    #+END_SRC
+
+    - with Callback ver3, __call__ is added,
+      and a user can add any extra behavior they like 
+      on calling a callback method by overriding
+      __call__, method
+
+*** Cancel class
+
+    #+BEGIN_SRC python
+      class CancelTrainException(Exception): pass
+      class CancelEpochException(Exception): pass
+      class CancelBatchException(Exception): pass
+    #+END_SRC
+
+    - we can make use of the Exception mechanism to 
+      interuppt epoch, fit, 
+
+    - inherit Exception, and just say `pass`
+    - by saying pass, it has all the same behaviors and propeties
+      ,but have different name
+
+*** Runner ver2 (=fit ver10)
+
+    #+BEGIN_SRC python
+      #export
+      class Runner():
+          def __init__(self, cbs=None, cb_funcs=None):
+              cbs = listify(cbs)
+              for cbf in listify(cb_funcs):
+                  cb = cbf()
+                  setattr(self, cb.name, cb)
+                  cbs.append(cb)
+              self.stop,self.cbs = False,[TrainEvalCallback()]+cbs
+
+          @property
+          def opt(self):       return self.learn.opt
+          @property
+          def model(self):     return self.learn.model
+          @property
+          def loss_func(self): return self.learn.loss_func
+          @property
+          def data(self):      return self.learn.data
+
+          def one_batch(self, xb, yb):
+              try:
+                  self.xb,self.yb = xb,yb
+                  self('begin_batch')
+                  self.pred = self.model(self.xb)
+                  self('after_pred')
+                  self.loss = self.loss_func(self.pred, self.yb)
+                  self('after_loss')
+                  if not self.in_train: return
+                  self.loss.backward()
+                  self('after_backward')
+                  self.opt.step()
+                  self('after_step')
+                  self.opt.zero_grad()
+              except CancelBatchException: self('after_cancel_batch')
+              finally: self('after_batch')
+
+          def all_batches(self, dl):
+              self.iters = len(dl)
+              try:
+                  for xb,yb in dl: self.one_batch(xb, yb)
+              except CancelEpochException: self('after_cancel_epoch')
+
+          def fit(self, epochs, learn):
+              self.epochs,self.learn,self.loss = epochs,learn,tensor(0.)
+
+              try:
+                  for cb in self.cbs: cb.set_runner(self)
+                  self('begin_fit')
+                  for epoch in range(epochs):
+                      self.epoch = epoch
+                      if not self('begin_epoch'): self.all_batches(self.data.train_dl)
+
+                      with torch.no_grad(): 
+                          if not self('begin_validate'): self.all_batches(self.data.valid_dl)
+                      self('after_epoch')
+                  
+              except CancelTrainException: self('after_cancel_train')
+              finally:
+                  self('after_fit')
+                  self.learn = None
+
+          def __call__(self, cb_name):
+              res = False
+              for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) or res
+              return res
+    #+END_SRC
+
+    - Runner ver2  makes use of Callback ver3, and
+      a callback instance can be called as `cb(cb_name)`
+
+      #+BEGIN_SRC python
+        def __call__(self, cb_name):
+            res = False
+            for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) or res
+            return res
+      #+END_SRC
+
+    - a line of code to throw CancelTrainException is added to `fit` 
+      to catch CancelTrainException
+
+      #+BEGIN_SRC python
+        except CancelTrainException: self('after_cancel_train')
+      #+END_SRC
+
+
+*** AvgStatsCallback ver2
+
+    #+BEGIN_SRC python
+      #export
+      class AvgStatsCallback(Callback):
+          def __init__(self, metrics):
+              self.train_stats,self.valid_stats = AvgStats(metrics,True),AvgStats(metrics,False)
+              
+          def begin_epoch(self):
+              self.train_stats.reset()
+              self.valid_stats.reset()
+              
+          def after_loss(self):
+              stats = self.train_stats if self.in_train else self.valid_stats
+              with torch.no_grad(): stats.accumulate(self.run)
+          
+          def after_epoch(self):
+              print(self.train_stats)
+              print(self.valid_stats)
+
+    #+END_SRC
+
+*** Recorder ver2 
+
+     #+BEGIN_SRC python
+
+      class Recorder(Callback):
+          def begin_fit(self):
+              self.lrs = [[] for _ in self.opt.param_groups]
+              self.losses = []
+
+          def after_batch(self):
+              if not self.in_train: return
+              for pg,lr in zip(self.opt.param_groups,self.lrs): lr.append(pg['lr'])
+              self.losses.append(self.loss.detach().cpu())        
+
+          def plot_lr  (self, pgid=-1): plt.plot(self.lrs[pgid])
+          def plot_loss(self, skip_last=0): plt.plot(self.losses[:len(self.losses)-skip_last])
+              
+          def plot(self, skip_last=0, pgid=-1):
+              losses = [o.item() for o in self.losses]
+              lrs    = self.lrs[pgid]
+              n = len(losses)-skip_last
+              plt.xscale('log')
+              plt.plot(lrs[:n], losses[:n])
+
+       #+END_SRC
+
+    - with Recorder ver2, `lr` are recorded for all the layers,
+      and with `plot_lr` function, we can choose the layer 
+      for which to plot the change of `lr` 
+      (defaults to the last layer [-1] )
+
+    - in `begin_fit`, it creates
+      - array of "learning rate history array"
+        for each parameter group (`lrs`)
+
+        (each element of `lrs` is 'learning rate history array'
+        for each parameter group)
+
+      - "loss history array" (`losses`)
+
+    - in the end of every batch (inside `after_batch`),
+      for each parameter group, it update "learning rate history array"
+      also, it update "losses history array"
+
+    - `plot` shows (learning rate VS loss)
+      for the parameter group specified by pgid
+      (default to -1 = the last parameter group)
+
+    - `plot_lr` shows "learning rage history array" of 
+      specified paramter group (default to -1 = the last parameter group)
+
+*** ParamScheduler ver2
+
+    #+BEGIN_SRC python
+      class ParamScheduler(Callback):
+          _order=1
+          def __init__(self, pname, sched_func): self.pname,self.sched_func = pname,sched_func
+
+          def set_param(self):
+              for pg in self.opt.param_groups:
+                  pg[self.pname] = self.sched_func(self.n_epochs/self.epochs)
+                  
+          def begin_batch(self): 
+              if self.in_train: self.set_param()
+    #+END_SRC
+
+
+*** LR_Find
+
+    #+BEGIN_SRC python
+      class LR_Find(Callback):
+          _order=1
+          def __init__(self, max_iter=100, min_lr=1e-6, max_lr=10):
+              self.max_iter,self.min_lr,self.max_lr = max_iter,min_lr,max_lr
+              self.best_loss = 1e9
+              
+          def begin_batch(self): 
+              if not self.in_train: return
+              pos = self.n_iter/self.max_iter
+              lr = self.min_lr * (self.max_lr/self.min_lr) ** pos
+              for pg in self.opt.param_groups: pg['lr'] = lr
+                  
+          def after_step(self):
+              if self.n_iter>=self.max_iter or self.loss>self.best_loss*10:
+                  raise CancelTrainException()
+              if self.loss < self.best_loss: self.best_loss = self.loss
+    #+END_SRC
+
+    - in begin_batch, property `lr` of each parameter group 
+      is updated to utilize it in `Recorder`
+
+** 06_cuda_cnn_hooks_init
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+    #+END_SRC
+    
+*** notmrlize_to
+
+    #+BEGIN_SRC python
+      #export
+      def normalize_to(train, valid):
+          m,s = train.mean(),train.std()
+          return normalize(train, m, s), normalize(valid, m, s)
+    #+END_SRC
+
+    - normalize training & validation data set
+
+*** view
+
+    #+BEGIN_SRC python
+      my_x = torch.rand(4,4)
+      my_x.view(16, -1)
+
+      '''
+      tensor([[0.4376],
+              [0.4770],
+              [0.5197],
+              [0.3822],
+              [0.1813],
+              [0.7772],
+              [0.2852],
+              [0.0907],
+              [0.5914],
+              [0.8817],
+              [0.1719],
+              [0.0896],
+              [0.6135],
+              [0.2030],
+              [0.4816],
+              [0.1274]])
+      '''
+    #+END_SRC
+
+    - `view` reshapes a tensor in the way that total numbe of 
+      the elements does not change. This is as if reshaping
+      a rectangle so that the area of the rectangle is preserved
+      https://stackoverflow.com/questions/42479902/how-does-the-view-method-work-in-pytorch
+      https://pytorch.org/docs/stable/tensor_view.html
+
+      |   |   |   |
+      |   |   |   |
+      |   |   |   |
+      |   |   |   |
+
+      =>
+
+      |   |   |
+      |   |   |
+      |   |   |
+      |   |   |
+      |   |   |
+      |   |   |
+
+    - [ ] x.shape(16, -1) gives the same result as x.shape(16, 1)
+      as `-1` means "whatever possible after specifying 16"
+
+*** mnist_resize
+
+    #+BEGIN_SRC python
+      def mnist_resize(x): return x.view(-1, 1, 28, 28)
+    #+END_SRC
+
+    - reshape a mnist batch 
+      from  tensor.Size(512, 784)
+      to    tensor.Size(-1, 1, 28, 28)
+
+    - chanel & width & height are (1, 28, 28)
+    - batch size `-1` means what is possible after specifying 
+      (chahel:1, width:28, height:28) which is 512
+
+
+    #+BEGIN_SRC python
+      my_xb, my_yb = next(iter(data.train_dl))
+      my_xb.shape
+    #+END_SRC
+      
+*** flatten
+
+    #+BEGIN_SRC python
+      def flatten(x):      return x.view(x.shape[0], -1)
+    #+END_SRC
+
+    - flatten reshapes a batch such that
+      - the value for the 1st axis (batch axis) remains the same
+      - the value of the 2nd axis will be the product of the values
+        for channel, width, height
+        e.g. 
+        torch.Size([512, 32, 1, 1]) => torch.Size([512, 32])
+
+    - `-1` means "whatever possible" after specifying 
+      x.shape[0] (=e.g. 512) 
+
+*** Lambda 
+
+    #+BEGIN_SRC python
+      #export
+      class Lambda(nn.Module):
+          def __init__(self, func):
+              super().__init__()
+              self.func = func
+
+          def forward(self, x): return self.func(x)
+
+      def flatten(x):      return x.view(x.shape[0], -1)
+    #+END_SRC
+
+    - `Lambda` is a 'helper' layer to run a reshaping function 
+      such as `flatten`
+
+*** signature of nn.Conv2d
+    - calling nn.Conv2d is in the form like;
+      nn.Conv2d(8, 16, 3, padding=1, stride=2)
+
+    - convolution kernel can be considered as sticks of "金太郎飴"
+      stacked together
+
+    - 8 is length of "金太郎飴"
+
+    - 16 is the number of "金太郎飴"
+
+    - 3 is the size of the face of "金太郎飴"
+
+*** AdaptiveAvgPool2d
+    https://pytorch.org/docs/stable/nn.html
+    
+
+    #+BEGIN_SRC python
+      m = nn.AdaptiveAvgPool2d((5,7))
+      input = torch.randn(1, 64, 8, 9)
+      output = m(input)
+      '''
+      torch.Size([1, 64, 5, 7])
+      '''
+
+      # target output size of 7x7 (square)
+      m = nn.AdaptiveAvgPool2d(7)
+      input = torch.randn(1, 64, 10, 9)
+      output = m(input)
+      '''
+      torch.Size([1, 64, 7, 7])
+      '''
+
+      # target output size is 1x1
+      my_input= torch.randn(512, 32, 2, 2)
+      my_adp = nn.AdaptiveAvgPool2d(1)
+      my_output = my_adp(my_input)
+      my_output.shape
+      '''
+      torch.Size([512, 32, 1, 1])
+      '''
+
+      # target output size of 10x7
+      m = nn.AdaptiveMaxPool2d((None, 7))
+      input = torch.randn(1, 64, 10, 9)
+      output = m(input)
+      '''
+      torch.Size([1, 64, 10, 7])
+      '''
+    #+END_SRC
+
+    - Applies a 2D adaptive average pooling over an
+      input signal composed of several input planes.
+    - The output is of size H x W, for any input size.
+    - The number of output features is equal to the number of 
+      input planes.
+    
+*** get_cnn_model ver1
+
+    #+BEGIN_SRC python
+      def get_cnn_model(data):
+          return nn.Sequential(
+              Lambda(mnist_resize),
+              nn.Conv2d( 1, 8, 5, padding=2,stride=2), nn.ReLU(), #14
+              nn.Conv2d( 8,16, 3, padding=1,stride=2), nn.ReLU(), # 7
+              nn.Conv2d(16,32, 3, padding=1,stride=2), nn.ReLU(), # 4
+              nn.Conv2d(32,32, 3, padding=1,stride=2), nn.ReLU(), # 2
+              nn.AdaptiveAvgPool2d(1),
+              Lambda(flatten),
+              nn.Linear(32,data.c)
+          )
+    #+END_SRC
+
+    - `data` is used for defining the final layer
+      `nn.Linear(32, data.c)`
+
+    - Lambda(mnist_resize) reshapes an input 
+      from  tensor.Size([512, 784])
+      to    tensor.Size([512, 1, 28, 28]) 
+
+    - activation for `nn.Conv2d(32,32, 3, padding=1,stride=2), nn.ReLU()`,
+      is in the form of 
+      torch.Size([512, 32, 2, 2]) 
+
+    - activation for nn.AdaptiveAvgPool2d is in the form of
+      torch.Size([512, 32, 1, 1])
+
+    - Lambda(flatten) reshapes the previous activation 
+      to remove the trailling (1, 1)
+      turning it to the form torch.Size([512, 32])
+
+    - the activation for nn.Linear(32, data.c) is in the form of
+      torch.Size([512, data.c])
+
+*** CudaCallack ver1
+
+    #+BEGIN_SRC python
+      class CudaCallback(Callback):
+          def __init__(self,device): self.device=device
+          def begin_fit(self): self.model.to(self.device)
+          def begin_batch(self): self.run.xb,self.run.yb = self.xb.to(self.device),self.yb.to(self.device)
+    #+END_SRC
+
+    - we could train a model with CPU.
+      actually, the training during lesson 8 - middle of 10
+      are done on CPU
+
+    - but CPU is slow, so we want to train the model on GPU.
+    - in order to do that, we need to load (model, input) to GPU
+    - to load (model, input), we use CudaCallback
+
+*** CudaCallack ver2
+
+    #+BEGIN_SRC python
+      # Somewhat less flexible, but quite convenient
+      torch.cuda.set_device(device)
+
+      class CudaCallback(Callback):
+          def begin_fit(self): self.model.cuda()
+          def begin_batch(self): self.run.xb,self.run.yb = self.xb.cuda(),self.yb.cuda()
+    #+END_SRC
+
+
+*** conv2d
+
+    #+BEGIN_SRC python
+      def conv2d(ni, nf, ks=3, stride=2):
+          return nn.Sequential(
+              nn.Conv2d(ni, nf, ks, padding=ks//2, stride=stride), nn.ReLU())
+    #+END_SRC
+
+    - conv2d is a Sequential module consisting of nn.Conv2d & nn.ReLU
+
+*** BatchTransformXCallback
+
+    #+BEGIN_SRC python
+      #export
+      class BatchTransformXCallback(Callback):
+          _order=2
+          def __init__(self, tfm): self.tfm = tfm
+          def begin_batch(self): self.run.xb = self.tfm(self.xb)
+
+      def view_tfm(*size):
+          def _inner(x): return x.view(*((-1,)+size))
+          return _inner
+    #+END_SRC
+
+*** how to use BatchTransformXCallback
+
+    #+BEGIN_SRC python
+      mnist_view = view_tfm(1,28,28)
+      cbfs.append(partial(BatchTransformXCallback, mnist_view))
+
+      model = get_cnn_model(data, nfs)
+      learn,run = get_runner(model, data, lr=0.4, cbs=cbfs)
+
+    #+END_SRC
+
+
+*** get_cnn_layers ver1 & get_cnn_model ver2
+
+    #+BEGIN_SRC python
+      def get_cnn_layers(data, nfs):
+          nfs = [1] + nfs
+          return [
+              conv2d(nfs[i], nfs[i+1], 5 if i==0 else 3)
+              for i in range(len(nfs)-1)
+          ] + [nn.AdaptiveAvgPool2d(1), Lambda(flatten), nn.Linear(nfs[-1], data.c)]
+
+      def get_cnn_model(data, nfs): return nn.Sequential(*get_cnn_layers(data, nfs))
+    #+END_SRC
+
+    - note that nfs[0] = 1, and the first conv2d will be
+      conv2d(1, 8, 5 if i==0 else 3)
+
+    - `get_cnn_model` ver2 
+      - utilizes conv2d which bundles nn.Conv2d & ReLU
+      - factor out `Lambda(mnist_resize)` for generalization.
+        Instead of `Lambda(mnist_resize)`, we use
+        `BatchTransformXCallback`, and pass it 
+        when creating a model
+
+    - note it is `nn.Sequential` that is used, and 
+      NOT home made `Sequential`
+
+
+*** how to determine filter size (金太郎飴の顔のサイズ)
+    - 1:09:05
+    - 1:17:05
+
+    - first, let's suppose the 1st conv layer is of
+      conv2d(1, 8, 3)
+
+    - so, below are "金太郎飴"
+      - depth: 1
+      - number: 8
+      - face size: 3
+
+    - just focus a (1x3x3) part of the entire input (1x28x28),
+      and what we get out of this part by calculating 
+      dot product with each of the 8 kernels
+
+    - we get a vector consisting of 8 elements
+
+    - this means, we barely reduce amount of information;
+      9=(1x3x3) to 8  (only 1 less)
+      which is a waste of computations
+
+    - on the other hand, for imagenet, input(3x28x28) has 3 channels,
+      and lets' suppose the 1st conv lsyer is of
+      conv2d(3, 27, 7)
+      - length of "金太郎飴" : 3
+      - number of "金太郎飴" : 27
+      - face size of "金太郎飴": 7
+
+    - now, focus a (3x7x7) part of the entire input of (3x28x28)
+      the information can be reduced a lot as a result of the computation
+      from 147=(3x7x7) to 27
+
+    - for the similar reson, we use 5 for the kernel size of 1st layer.
+      this way, the information is reduced 
+      from 25(1x5x5) to 8
+
+*** get_runner
+
+    #+BEGIN_SRC python
+      #export
+      def get_runner(model, data, lr=0.6, cbs=None, opt_func=None, loss_func = F.cross_entropy):
+          if opt_func is None: opt_func = optim.SGD
+          opt = opt_func(model.parameters(), lr=lr)
+          learn = Learner(model, opt, loss_func, data)
+          return learn, Runner(cb_funcs=listify(cbs))
+    #+END_SRC
+
+
+
+*** SequentialModel ver2
+
+    #+BEGIN_SRC python
+      class SequentialModel(nn.Module):
+          def __init__(self, *layers):
+              super().__init__()
+              self.layers = nn.ModuleList(layers)
+              self.act_means = [[] for _ in layers]
+              self.act_stds  = [[] for _ in layers]
+              
+          def __call__(self, x):
+              for i,l in enumerate(self.layers):
+                  x = l(x)
+                  self.act_means[i].append(x.data.mean())
+                  self.act_stds [i].append(x.data.std ())
+              return x
+          
+          def __iter__(self): return iter(self.layers)
+    #+END_SRC
+
+    - it creates "activation mean history" for each layer
+    - it creates "activation std history" for each layer
+    - on every call to the model, for eacn layer, 
+      it record the mean&stds of the resulting activation 
+      on "activation mean history" and "activation std history"
+      for the layer
+    - SequentialModel ver2 is just for showing "clunky code"
+      to record "activation mean history" , "activation std history"
+      ,and not used later. Instead we use nn.Sequential
+
+*** how to interpret "activation mean history"
+    
+    # helpful reference?
+    https://prateekvjoshi.com/2016/03/29/understanding-xavier-initialization-in-deep-neural-networks/
+    https://pouannes.github.io/blog/initialization/    
+
+    - let's look at one layer, layer5
+    - rapid change of "activation mean" is meaning that
+      the weights are updated a lot (=big gradient)
+      and so activation jumps at the next step.
+
+*** TODO why activation mean dropps off the clif suddenly?
+    - think of concaved 3 dimensional loss landscape, with only 2 parameters
+    - steep curves means big gradient,
+    - when gradient is very big, parameter will change a lot
+      resulting in landing onto a the opposite side of
+      loss landscape where the gradient is large in negative direction,
+      then the updated weight will be very small
+
+*** what is Pytorch hooks
+    - it is a callback which can be called back layer-wise,
+      whereas the callbacks we have impelemented so far
+      can be called only batch-wise, or epoch-wise
+
+*** Hook
+
+    #+BEGIN_SRC python
+      #export
+      def children(m): return list(m.children())
+
+      class Hook():
+          def __init__(self, m, f): self.hook = m.register_forward_hook(partial(f, self))
+          def remove(self): self.hook.remove()
+          def __del__(self): self.remove()
+
+      def append_stats(hook, mod, inp, outp):
+          if not hasattr(hook,'stats'): hook.stats = ([],[])
+          means,stds = hook.stats
+          means.append(outp.data.mean())
+          stds .append(outp.data.std())
+
+      # how to use Hook
+      model = get_cnn_model(data, nfs)
+      learn,run = get_runner(model, data, lr=0.5, cbs=cbfs)
+
+      hooks = [Hook(l, append_stats) for l in children(model[:4])]
+    #+END_SRC
+
+    - in __init__, Hook instance register the passed function (`f`)
+      to the passed layer/module (`m`)
+
+    - `f` is the callback called every time a layer calculate
+      forward path, receiving (layer/module, input, output)
+
+    - `f` has reference to the Hook instance so that it can
+      record the result of a calculation on the Hook instance
+      (as `stats` property in the case above)
+
+[[/Users/shun/Google Drive/StudyFastai/figures/studyFastaiNote.org_20200603_134658_879KUy.png]]
+
+*** ListContainer
+
+    #+BEGIN_SRC python
+      #export
+      class ListContainer():
+          def __init__(self, items): self.items = listify(items)
+          def __getitem__(self, idx):
+              if isinstance(idx, (int,slice)): return self.items[idx]
+              if isinstance(idx[0],bool):
+                  assert len(idx)==len(self) # bool mask
+                  return [o for m,o in zip(idx,self.items) if m]
+              return [self.items[i] for i in idx]
+          def __len__(self): return len(self.items)
+          def __iter__(self): return iter(self.items)
+          def __setitem__(self, i, o): self.items[i] = o
+          def __delitem__(self, i): del(self.items[i])
+          def __repr__(self):
+              res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
+              if len(self)>10: res = res[:-1]+ '...]'
+              return res
+    #+END_SRC
+
+    - `ListContainer` give a child class inheritting it
+      behaviors of python List, and some of numpy.
+
+    - `isinstance(idx, (int,slice))` means if `idx` is
+      either of type `int`, or type `slice` (such as slice(0,4))
+
+      #+BEGIN_SRC python
+        type(slice(0,4))
+        '''
+        slice
+        '''
+      #+END_SRC
+
+
+
+*** Hooks
+
+    #+BEGIN_SRC python
+      #export
+      from torch.nn import init
+
+      class Hooks(ListContainer):
+          def __init__(self, ms, f): super().__init__([Hook(m, f) for m in ms])
+          def __enter__(self, *args): return self
+          def __exit__ (self, *args): self.remove()
+          def __del__(self): self.remove()
+
+          def __delitem__(self, i):
+              self[i].remove()
+              super().__delitem__(i)
+              
+          def remove(self):
+              for h in self: h.remove()
+    #+END_SRC
+
+*** using Hooks
+
+    #+BEGIN_SRC python
+      with Hooks(model, append_stats) as hooks:
+          run.fit(2, learn)
+          fig,(ax0,ax1) = plt.subplots(1,2, figsize=(10,4))
+          for h in hooks:
+              ms,ss = h.stats
+              ax0.plot(ms[:10])
+              ax1.plot(ss[:10])
+          plt.legend(range(6));
+          
+          fig,(ax0,ax1) = plt.subplots(1,2, figsize=(10,4))
+          for h in hooks:
+              ms,ss = h.stats
+              ax0.plot(ms)
+              ax1.plot(ss)
+          plt.legend(range(6));
+    #+END_SRC
+
+    - using `with`, the Hooks instance will be destroyed
+      after the code is exceuted.
+
+
+*** how to interpret mean & std historys for layers with initialization
+    # mean history
+    - for layer 0-3, we do not have exponential grouth & crush
+      although we still have for layer 4&5
+
+    # std history
+    - for layers other than layer 4, std for the first 10 steps
+      are much closer to 0, where as they are almost near zero
+      without initilization
+
+*** initialize weights 
+
+    #+BEGIN_SRC python
+      for l in model:
+          if isinstance(l, nn.Sequential):
+              init.kaiming_normal_(l[0].weight)
+              l[0].bias.data.zero_()
+    #+END_SRC
+
+    - it the initialization above, l[0]
+      corresponds to the Conv2d layer of each Sequential module
+
+    - a model consists of several Sequential modules as below;
+
+      #+BEGIN_SRC python
+        Sequential(
+          (0): Sequential(
+            (0): Conv2d(1, 8, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+            (1): ReLU()
+          )
+          (1): Sequential(
+            (0): Conv2d(8, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+            (1): ReLU()
+          )
+          (2): Sequential(
+            (0): Conv2d(16, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+            (1): ReLU()
+          )
+          (3): Sequential(
+            (0): Conv2d(32, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+            (1): ReLU()
+          )
+          (4): AdaptiveAvgPool2d(output_size=1)
+          (5): Lambda()
+          (6): Linear(in_features=32, out_features=10, bias=True)
+        )
+      #+END_SRC
+
+    - `l` in `l in model` is `conv2d` instance, which is nn.Sequential
+      instance consisting of nn.Conv2d & nnReLU instance
+      
+    - so, l[0] is a single nn.Conv2d instance
+
+      
+
+*** TODO creating histogram
+
+    #+BEGIN_SRC python
+      def append_stats(hook, mod, inp, outp):
+          if not hasattr(hook,'stats'): hook.stats = ([],[],[])
+          means,stds,hists = hook.stats
+          means.append(outp.data.mean().cpu())
+          stds .append(outp.data.std().cpu())
+          hists.append(outp.data.cpu().histc(40,0,10)) #histc isn't implemented on the GPU
+    #+END_SRC
+
+    - [ ] "activation histogram history array" is in the form of
+      [[0.1, 0.3, ..., 0.2], [0.2, 0.1, ..., 0.3], ...,  []]
+
+      hists[t][0] always corresponds to the 1st bin
+
+    - the first bin corresponds to the frequency of 
+      each INDIVIDUAL element of an acitivation tensor 
+      whose value is near zero.
+
+      If lots of INDIVIDUAL elements of an acitivation tensor
+      are near zero, the calculations there after will be a waste
+      of computations since they do not contribute to loss
+      and hence gradient
+
+      (NOTE that we are not talking about mean of the activation
+       but individual activations)      
+      
+*** get_min
+
+    #+BEGIN_SRC python
+      def get_min(h):
+          h1 = torch.stack(h.stats[2]).t().float()
+          return h1[:2].sum(0)/h1.sum(0)
+    #+END_SRC
+
+    - h.stats[2] is "activation histogram history"
+    - by stacking "activation history history",
+
+    - h1[0] is the frequency of the first bin,
+
+    - so, h1[:2].sum(0)/h1.sum(0) represents 
+      the history of the proportion of the occurences of 
+      the fitst bin to the sum of the occurences of all the bins.
+
+
+*** GeneralRelu, get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1
+
+    #+BEGIN_SRC python
+      #export
+      def get_cnn_layers(data, nfs, layer, **kwargs):
+          nfs = [1] + nfs
+          return [layer(nfs[i], nfs[i+1], 5 if i==0 else 3, **kwargs)
+                  for i in range(len(nfs)-1)] + [
+              nn.AdaptiveAvgPool2d(1), Lambda(flatten), nn.Linear(nfs[-1], data.c)]
+
+      def conv_layer(ni, nf, ks=3, stride=2, **kwargs):
+          return nn.Sequential(
+              nn.Conv2d(ni, nf, ks, padding=ks//2, stride=stride), GeneralRelu(**kwargs))
+
+      class GeneralRelu(nn.Module):
+          def __init__(self, leak=None, sub=None, maxv=None):
+              super().__init__()
+              self.leak,self.sub,self.maxv = leak,sub,maxv
+
+          def forward(self, x): 
+              x = F.leaky_relu(x,self.leak) if self.leak is not None else F.relu(x)
+              if self.sub is not None: x.sub_(self.sub)
+              if self.maxv is not None: x.clamp_max_(self.maxv)
+              return x
+
+      def init_cnn(m, uniform=False):
+          f = init.kaiming_uniform_ if uniform else init.kaiming_normal_
+          for l in m:
+              if isinstance(l, nn.Sequential):
+                  f(l[0].weight, a=0.1)
+                  l[0].bias.data.zero_()
+
+      def get_cnn_model(data, nfs, layer, **kwargs):
+          return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
+    #+END_SRC
+
+    - now `get_cnn_layers` ver2, `get_cnn_model` ver3
+      taks `**kwags` which will be eventually passed to GeneralRelu
+
+    - `layer` in `get_cnn_layers(data, nfs, layer, **kwargs)` is
+      a function, such as `conv_layer` to create a cnn layer
+
+    - with GeneralRelu, we can improve the ratio of non-zero
+      activation elements in an activation tensor
+
+
+
+*** TODO leaky relu
+    - why leaky relu works better ?
+
+** 07_batchnorm.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+
+    #+END_SRC
+    
+*** TODO BatchNorm
+
+    #+BEGIN_SRC python
+      class BatchNorm(nn.Module):
+          def __init__(self, nf, mom=0.1, eps=1e-5):
+              super().__init__()
+              # NB: pytorch bn mom is opposite of what you'd expect
+              self.mom,self.eps = mom,eps
+              self.mults = nn.Parameter(torch.ones (nf,1,1))
+              self.adds  = nn.Parameter(torch.zeros(nf,1,1))
+              self.register_buffer('vars',  torch.ones(1,nf,1,1))
+              self.register_buffer('means', torch.zeros(1,nf,1,1))
+
+          def update_stats(self, x):
+              m = x.mean((0,2,3), keepdim=True)
+              v = x.var ((0,2,3), keepdim=True)
+              self.means.lerp_(m, self.mom)
+              self.vars.lerp_ (v, self.mom)
+              return m,v
+              
+          def forward(self, x):
+              if self.training:
+                  with torch.no_grad(): m,v = self.update_stats(x)
+              else: m,v = self.means,self.vars
+              x = (x-m) / (v+self.eps).sqrt()
+              return x*self.mults + self.adds
+    #+END_SRC
+
+    - x is rank4 tensor (batch, channel, width, height)
+    - `x.mean((0,2,3), keepdim=True)` takes mean over
+      (batch, width, height).
+    - To do understand this, imagine a number of cubes alinged along batch axis
+    - first, we take mean over batch axis, which corresponds to (0)
+    - then, we have one 3 x <width> x <height> cubes 
+    - this can be considered as "mean input among the batch"
+    - next, take mean over (width, height) which corresponds to (2, 3)
+    - now, we have three 1x1 cube aligned along the chanel axis
+    - each of 1x1 cube represents the mean value over (batch, width ,height)
+      for the chanel
+    - keepdim is for broad casting when subtracting the mean from
+      each x
+
+      #+BEGIN_SRC python
+
+        # example of `mean((0, 2, 3), keepdim=True)`
+        # note we calculate the mean for incoming activation,
+        # we really do not calculate the mean for input, but
+        # can get the idea of what `mean((0, 2, 3), keepdim=True)` does
+
+        my_xb, my_yb = next(iter(data.train_dl))
+        my_xb.shape, my_yb.shape;
+        my_xb_reshaped = my_xb.view(-1, 1, 28, 28)
+        my_xb_reshaped.shape, my_xb_reshaped.mean((0, 2, 3), keepdim=True)
+        '''
+        (torch.Size([512, 1, 28, 28]), tensor([[[[-0.0046]]]]))
+        '''
+      #+END_SRC
+
+    - `mults` is an instance of nn.Parameter, which means it can be learned
+
+    - `nf` corresponds to the value of channel axis of the activation
+      note that channel axis of the input and the activation are different
+
+    - for tarining time, we use mean & vars of that specific batch
+      of activation, whereas for inference time, we use
+      averaged means & vars over many batches of activations
+
+    - `lerp` is torch's linear interpolation 
+      ( little bit of this, and little bit of that; a*0.9 + b*0.1)
+
+    - we use self.register_buffer('vars', torch.ones(1, nf, 1,1))
+      to automatically move `vars` and `means` onto GPU on
+      moving the model to GPU
+
+      When (model, inputs) are GPU, in order to use `vars`
+      and `means` in any calculation within the model, 
+      these variables must be on GPU too.
+
+      we can't add things on GPU with things on CPU
+
+    - [ ] why are `self.eps`, `self.mom` also on GPU when
+      they are created without using self.register_buffer?
+
+      #+BEGIN_SRC python
+        self.mom,self.eps = mom,eps
+      #+END_SRC
+
+    - also, when we save a trained model, variable 
+      defined with register_buffer will also be saved.
+
+      
+*** conv_layer ver2
+
+    #+BEGIN_SRC python
+      def conv_layer(ni, nf, ks=3, stride=2, bn=True, **kwargs):
+          # No bias needed if using bn
+          layers = [nn.Conv2d(ni, nf, ks, padding=ks//2, stride=stride, bias=not bn),
+                    GeneralRelu(**kwargs)]
+          if bn: layers.append(BatchNorm(nf))
+          return nn.Sequential(*layers)
+    #+END_SRC
+
+    - when BathcNorm layer is inserted by setting `bn=True`,
+      we do not need `bias` anymore since it is same 
+      as `add` in the BatchNorm layer
+
+    - `not bn` of `nn.Conv2d(... bias=not bn)` is just the negation of `bn`;
+      if `bn` is True, then `not bn` is `False`
+
+    - bn is default to be true
+
+*** init_cnn, get_learn_run 
+
+    #+BEGIN_SRC python
+      #export
+      def init_cnn_(m, f):
+          if isinstance(m, nn.Conv2d):
+              f(m.weight, a=0.1)
+              if getattr(m, 'bias', None) is not None: m.bias.data.zero_()
+          for l in m.children(): init_cnn_(l, f)
+
+      def init_cnn(m, uniform=False):
+          f = init.kaiming_uniform_ if uniform else init.kaiming_normal_
+          init_cnn_(m, f)
+
+      def get_learn_run(nfs, data, lr, layer, cbs=None, opt_func=None, uniform=False, **kwargs):
+          model = get_cnn_model(data, nfs, layer, **kwargs)
+          init_cnn(model, uniform=uniform)
+          return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
+    #+END_SRC
+
+    - the name of `init_cnn_` and `init_cnn` are slightly different!
+      look at the last "_"
+
+    - get_cnn_model & get_runner & get_cnn_layers are as below
+
+      #+BEGIN_SRC python
+        # get_cnn_layers ver2
+        def get_cnn_layers(data, nfs, layer, **kwargs):
+            nfs = [1] + nfs
+            return [layer(nfs[i], nfs[i+1], 5 if i==0 else 3, **kwargs)
+                    for i in range(len(nfs)-1)] + [
+                nn.AdaptiveAvgPool2d(1), Lambda(flatten), nn.Linear(nfs[-1], data.c)]
+        # layer is a function, such as `conv_layer`, to create a cnn layer
+
+        # get_cnn_model ver3
+        def get_cnn_model(data, nfs, layer, **kwargs):
+            return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
+
+        # get_runner
+        def get_runner(model, data, lr=0.6, cbs=None, opt_func=None, loss_func = F.cross_entropy):
+            if opt_func is None: opt_func = optim.SGD
+            opt = opt_func(model.parameters(), lr=lr)
+            learn = Learner(model, opt, loss_func, data)
+            return learn, Runner(cb_funcs=listify(cbs))
+
+      #+END_SRC
+
+
+
+
+*** debiase BatchNorm 
+
+    #+BEGIN_SRC python
+      # initialize
+      def __init__(self, nf, mom=0.1, eps=1e-5):
+          super().__init__()
+          
+          # constants
+          self.mom,self.eps = mom,eps
+          
+          # add scale and offset parameters to the model
+          # note: nf is the number of channels
+          # Q1: shouldn't self.mults and self.adds have size [1,nf,1,1]?
+          self.mults = nn.Parameter(torch.ones (nf,1,1))
+          self.adds = nn.Parameter(torch.zeros(nf,1,1))
+          
+          # register_buffer adds a persistent buffer to the module, usually used for a non-model parameter
+          self.register_buffer('sums', torch.zeros(1,nf,1,1))
+          self.register_buffer('sqrs', torch.zeros(1,nf,1,1))
+          self.register_buffer('batch', tensor(0.))
+          self.register_buffer('count', tensor(0.))
+          self.register_buffer('step', tensor(0.))
+          self.register_buffer('dbias', tensor(0.))
+
+      # compute updates to buffered tensors
+      def update_stats(self, x):
+          
+          # batchsize, number of channels
+          bs,nc,*_ = x.shape
+          
+          # Note: for a tensor t, t.detach_() means detach t from the computation graph, i.e. don't keep track of its gradients;
+          #     the '_' prefix means do it "in place"
+          # Q2: why don't we also use .detach_() for self.batch, self.count, self.step, and self.dbias?
+          self.sums.detach_()
+          self.sqrs.detach_()
+          
+          # the input x is a four-dimensional tensor: 
+          #    dimensions 0, 2, 3 refer to batch samples, weight matrix rows, and weight matrix columns, respectively
+          #    dimension 1 refers to channels
+          dims = (0,2,3)
+          
+          # compute s and ss, which are the sum of the weights and the sum of the squares of the weights 
+          #     over dimensions (0,2,3) for this batch. s and ss each consist of one number for each channel;
+          #     because keepdim=True s, and ss are each of size [1,nf,1,1]
+          s = x.sum(dims, keepdim=True)
+          ss = (x*x).sum(dims, keepdim=True)
+          
+          # Notes: 
+          #   x.numel() is the number of elements in the 4-D tensor x,
+          #       which is the total number of weights in the batch
+          #   x.numel()/nc is the number of weights per channel in the batch
+          #   y = tensor.new_tensor(x) is equivalent to y = x.clone().detach(), 
+          #       the latter is the preferred way to make a copy of a tensor
+          #   c is a one-dimensional tensor with a value equal to the number of weights per channel for this batch
+          #       note that the number of weights per channel of a batch depends on the number of samples in the 
+          #       batch; not all batches have the same number of samples
+          c = self.count.new_tensor(x.numel()/nc)
+          
+          # momentum
+          # mom1 is the 'weight' to be used in lerp_() to compute EWMAs
+          #     -- see pytorch documentation for lerp_
+          # if mom is 0.1 and batch size is 2, then mom1 ~ 1 - 0.9/1 = 0.1
+          # if mom is 0.1 and batch size is 64, then mom1 ~ 1 - 0.9/7 ~ 0.9; 
+          #     in general, mom1 increases with batch size
+          # Q3: What's the logic behind the following formula for mom1?
+          mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)
+          # self.mom1 is a one-dimensional tensor, with a value equal to mom1
+          self.mom1 = self.dbias.new_tensor(mom1)
+          
+          # update EWMAs of sums, sqrs, which, like s and ss, have size [1,1,nf,1] 
+          self.sums.lerp_(s, self.mom1)
+          self.sqrs.lerp_(ss, self.mom1)
+
+          # update EWMA of count
+          # self.count keeps track of the EWMA of c,
+          #     which is the number of weights per channel for a batch
+          # Q4: why do we need the EWMA of c?  Aren't batch sizes always the same, except for the last batch?
+          self.count.lerp_(c, self.mom1)
+          
+       
+          # Q5: what is the logic behind the following formula for dbias?
+          self.dbias = self.dbias*(1-self.mom1) + self.mom1
+          
+          # update the total number of samples that have been processed up till now, 
+          #     i.e. the number of samples in this batch and all previous batches so far
+          self.batch += bs
+          
+          # update the total number of batches that have been processed
+          self.step += 1
+
+      # apply a forward pass to the current batch
+      def forward(self, x):
+          
+          # main idea of RunningBatchNorm:
+          #     to normalize the batch:
+          #     in training mode, use the current EWMAs accumulated in the buffers at this step (batch), 
+          #         and the *current* fitted values of the model parameters mults and adds at this step
+          #     in validation mode, use the final values of the EWMAs accumulated in the buffers after training,
+          #         and the final fitted values of mults and adds
+          if self.training: self.update_stats(x)
+              
+          # get the current values of the EWMAs of sums, sqrs and count from the buffers
+          sums = self.sums
+          sqrs = self.sqrs
+          c = self.count
+          
+          # if the current batch number is less than 100, scale the EWMAs by 1/self.dbias
+          # Q6: Why?
+          if self.step<100:
+              sums = sums / self.dbias
+              sqrs = sqrs / self.dbias
+              c    = c    / self.dbias
+              
+          # scale sums by 1/c to get the mean of the weights
+          means = sums/c
+          
+          # scale sqrs by 1/c to get the mean of the squared weights
+          #     then subtract the square of the mean weight from the mean of the squared weights
+          # note: we recognize this as the 'computationally efficient' formula for the variance that we've seen before 
+          vars = (sqrs/c).sub_(means*means)
+          
+          # if there are less than 20 samples so far, clamp vars to 0.01 (in case any of them becomes very small)
+          if bool(self.batch < 20): vars.clamp_min_(0.01)
+              
+          # normalize the batch in the usual way, i.e. subtract the mean and divide by std
+          # Q7: but why do we need to add eps, when we've already clamped the vars to 0.01? 
+          x = (x-means).div_((vars.add_(self.eps)).sqrt())
+          
+          # return a scaled and offset version of the normalized batch, where the
+          #     scale factors (self.mults) and offsets (self.adds) are parameters in the model
+          #     Note: there's a size mismatch: self.mults and self.adds have size [nf,1,1], while x has size [1,nf,1,1]
+          return x.mul_(self.mults).add_(self.adds)
+    #+END_SRC
