@@ -23,9 +23,11 @@
 *** (most of the time) statistics for a parameter are tensors, not a scalar
     - for example, AverageGrad
 
-*** important fastai code
+*** essential fastai codes
     - Runner ver1
+    - Optimizer ver2
     - StatefulOptimizer
+    - Learner ver2
 
 * things to understand
 ** basics of deep learning
@@ -5151,10 +5153,7 @@ class BatchNorm(nn.Module):
     #+END_SRC
 
     - params refers to the weights & bias tensor for each layer.
-
-    - if `params` is a list of list, it means we chose to
-      split up parameters into groups. See below for an example;
-
+      param groups looks like below
       #+BEGIN_SRC python
         # the 1st param group is for layer 1 to m (main body)
         # the 2nd param group is for layer m+1 to n (last few layers)
@@ -5163,6 +5162,9 @@ class BatchNorm(nn.Module):
             [Wm+1, Bm+1 ..., Wn, Bn]
         ]
       #+END_SRC
+
+    - if `params` is a list of list, it means we chose to
+      split up parameters into groups. 
 
     - if `params` is not a list of list, it means we chose to
       create only a single parameter group that contains the
@@ -5197,7 +5199,7 @@ class BatchNorm(nn.Module):
 
     - the dictionary will be default to `{**defaults}` ,
       where `defaults` is a dictionary created based on 
-      the arguent passed.
+      the argument passed.
 
       #+BEGIN_SRC python
         Optimizer(..., lr=0.6, mom=0.1, ...)
@@ -5209,8 +5211,8 @@ class BatchNorm(nn.Module):
     - we do `{**defaults}` to clone `defaults` and
       not refering to the same dicrionary
 
-    - `zip` inside `grad_params` does below
-      and `self.hypers` 
+    - `zip` part inside `grad_params` creates a list of tuples
+      from `self.param_groups` and `self.hypers`
 
       #+BEGIN_SRC python
         # self.param_groups
@@ -6052,8 +6054,25 @@ class BatchNorm(nn.Module):
                 self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
       #+END_SRC
 
-    - so, properties `opt`, `model`, `loss_func`, `data` 
+    - so, properties `model`, `loss_func`, `data` 
       defined with `@property` becomes unnecessary and are removed.
+
+    - also, in `Runner` ver2, we used to call `set_runner` in `fit`
+      to set on each callback a reference to `Runner` object,
+      whereas in `Learner` ver2 (=`Runner` ver3), that part is 
+      factored out as `add_cbs` and `add_cb` which are called
+      in two places in `__init__` and `fit`
+
+    - in `Runner` ver2, we can pass callbacks only to `__init__`,
+      whereas with `Learner` ver2 (=`Runner` ver3), 
+      there is a chance to pass callbacks when calling `fit`
+
+    - in `Runner` ver2, optimizer object is passed stored in `Learner`
+      object, whereas in `Learner` ver2 (=`Runner` ver3), 
+      a CONSTRUCTOR to create optimizer is passed,
+      and an optimizer object is created and set to `self.opt`
+      on the fly in `fit`
+
 
 *** get_learner
 
@@ -6517,6 +6536,10 @@ class BatchNorm(nn.Module):
       creating a batch before we move a batch to GPU
 
     - fastai v1 is not equipped with data augumentation for batch
+
+* lesson12
+
+
 
 * articles from web
 ** part1
