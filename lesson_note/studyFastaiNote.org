@@ -1,8 +1,73 @@
-* my note
-*** normalizing & initialization
+* things to keep in mind
+*** normalization & initialization
     - what we care is to have "good activations" during the training
     - normalization is for activations of layers ("input" is considered as first activation)
     - initialization is for weight, but results in good activation
+
+*** dampening & debiasing 
+    - dampening & debiasing are two different things
+
+    - dampening is to multiply the current value by (1-beta)
+      when calculating exponentially weighted moving average
+
+    - debiasing is to devide the exponentially weighted moving average 
+      by the sum of the coefficients for calculating the 
+      exponentially weighted moving average.
+
+      - 1-beta^n+1                 (with dampening)
+      - (1-beta^n+1)/1-beta        (without dampening)
+
+    - note that without the dampening, the sum of the coefficients
+      becomes just a sum of a proportional sequence (等比数列)
+
+*** (most of the time) statistics for a parameter are tensors, not a scalar
+    - for example, AverageGrad
+
+*** important fastai code
+    - Runner ver1
+    - StatefulOptimizer
+
+* things to understand
+** basics of deep learning
+*** CNN
+
+** algorithms for deep learning 
+*** debiasing exponentially weighted moving average
+    https://www.youtube.com/watch?v=lWzo8CajF5s
+
+*** momentum
+    https://www.youtube.com/watch?v=k8fTYJPd3_I&t=1s
+
+*** RMSprop
+    https://www.youtube.com/watch?v=_e-LFe_igno
+
+*** ADAM
+    https://www.youtube.com/watch?v=JXQT_vxqwIs
+
+*** LAMB
+    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+    https://arxiv.org/pdf/1904.00962.pdf
+    
+** pyotrch
+*** pytorch > tensor broadcasting
+    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
+
+*** pytorch > tensor related operation (stack, squeeze)
+
+*** pytorch > tensor mean, std
+
+** pyhton
+*** python > if not
+
+*** python > return value of `and`, `or`
+
+*** pytorch > auto grad
+    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+
+** handling images
+*** can we flip, resize while a image is still a byte (before byte tensor, float tensor)
+
 
 * lesson8
 ** 00_exports.ipynb
@@ -294,6 +359,8 @@
     https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
     https://pytorch.org/docs/stable/autograd.html
 
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+
 
 *** forward & backward ver1
 
@@ -328,7 +395,7 @@
     #+END_SRC
 
     - illustration
-[[[[/Users/shun/Google Drive/StudyFastai/figures/studyFastaiNote.org_20200604_141232_34024h7r.png]]]]
+[[[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200604_141232_34024h7r.png]]]]
 
     - by definition, the grad should be in the form such that
       grad * input will be of the same shape as output
@@ -1027,7 +1094,7 @@
 *** nn.Sequential
     - nn.Sequential is equivalent of SequentialModel implemented above
 
-*** Optimizer
+*** Optimizer ver1
 
     #+BEGIN_SRC python
       class Optimizer():
@@ -1043,8 +1110,8 @@
 
     - we create optimizer to make parameter update more consice
       in fit ver1
-      
-      # fit ver1
+
+*** ver ver1
       #+BEGIN_SRC python
         def fit():
             for epoch in range(epochs):
@@ -1162,7 +1229,6 @@
     #+END_SRC
 
     - DataLoader is for removing for loop in fit ver3
-
       #+BEGIN_SRC python
         for epoch in range(epochs):
             for i in range((n-1)//bs + 1):
@@ -1303,18 +1369,12 @@
 
     - zip(*b) returns tuple
 
-      
-      
-
-
       https://www.youtube.com/watch?v=VbBozykILZ0
 
-
-    
-
-
-
-
+    - note that `DataLoader` itself does not do transform.
+      it is `ds` passed that could do transform.
+      especially, `ItemList`, `ImageItemList` does transform, 
+      and `DataSet` does NOT do transform
 
 *** validation loss
 
@@ -1351,7 +1411,7 @@
       and nn.Dropout to ensure appropriate behaviour 
       for these different phases.
 
-*** get_dls
+*** get_dls ver1
 
     #+BEGIN_SRC python
       def get_dls(train_ds, valid_ds, bs, **kwargs):
@@ -1362,7 +1422,7 @@
     - get_dls is just a convinent helper for getting tuple of 
       (DL for train_ds, DL for valid_ds)
 
-    - DL for valid_ds is has bigger batch size than DL for training_ds
+    - DL for valid_ds  has bigger batch size than DL for training_ds
       because it is used with torch.no_grad(), and thus
       we have more memory space (1:14:00)
 
@@ -1472,7 +1532,7 @@
 *** get_model ver2
 
     #+BEGIN_SRC python
-      # get_dls already implemented
+      # get_dls ver1
       def get_dls(train_ds, valid_ds, bs, **kwargs):
           return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
                   DataLoader(valid_ds, batch_size=bs*2, **kwargs))
@@ -1861,14 +1921,15 @@
                   if f and f(): return True
               return False
     #+END_SRC
-    - with fit ver9, `fit` is a method defined on Runner class
+    - with Runner ver1 (=fit ver9), `fit` is a method defined on Runner class
 
-    - with fit ver9, Learner instance which contains
+    - with Runner ver1 (=fit ver9), Learner instance which contains
       (model, opt, loss_func, data) is passed dynamically 
       to `fit` method, which is SAME AS fit ver8.
 
-    - However, with fit ver9, `fit` function sets `self.learn`
-      of the Runner instance to the Learner instance 
+    - However, with Runner ver1 (fit ver9), 
+      `fit` function sets `self.learn` of the Runner instance 
+      to the Learner instance 
 
     - this way, (model, opt, loss_func, data) becomes accessible
       from `one_batch`, `all_batches`, etc and `fit` itself
@@ -1989,9 +2050,35 @@
         when calling self('begin_fit'), self('self_batch'), etc
         inside `fit`, `one_batch` function
 
-      - also, when a callbackis passed as a CONSTRUCTOR,
+      - also, when a callback is passed as a CONSTRUCTOR,
         the callback instance created during init becomes
-        available as the property of the `Runner` instance
+        available as the property of the `Runner` instance,
+        whereas when a callback is passed as an object,
+        we need to refer to the callback object to
+        refers to statistics which the callback calculates
+
+
+    #+BEGIN_SRC python
+      # when passed as a constructor
+      learn = Learner(*get_model(data), loss_func, data)
+      stats = AvgStatsCallback([accuracy])
+      run = Runner(cbs=stats)
+      run.fit(2, learn)
+
+      loss,acc = stats.valid_stats.avg_stats
+      assert acc>0.9
+      loss,acc
+
+      # when passed as an object
+      acc_cbf = partial(AvgStatsCallback,accuracy)
+      run = Runner(cb_funcs=acc_cbf)
+      run.fit(1, learn)
+      run.avg_stats.valid_stats.avg_stats
+
+
+    #+END_SRC
+
+        
 
 *** Callback ver2
       #+BEGIN_SRC python
@@ -2815,7 +2902,7 @@
     - parameter group is in the form of 
       [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
 
-*** LR_Find
+*** LR_Find ver1
 
     #+BEGIN_SRC python
       class LR_Find(Callback):
@@ -3179,8 +3266,7 @@
     - note it is `nn.Sequential` that is used, and 
       NOT home made `Sequential`
 
-
-*** how to determine filter size (金太郎飴の顔のサイズ)
+*** how to determine filter size (the "face size" of "金太郎飴")
     - 1:09:05
     - 1:17:05
 
@@ -3209,7 +3295,7 @@
       - number of "金太郎飴" : 27
       - face size of "金太郎飴": 7
 
-    - now, focus a (3x7x7) part of the entire input of (3x28x28)
+    - now, focus on a (3x7x7) part of the entire input of (3x28x28)
       the information can be reduced a lot as a result of the computation
       from 147=(3x7x7) to 27
 
@@ -3311,6 +3397,13 @@
     - in __init__, Hook instance register the passed function (`f`)
       to the passed layer/module (`m`)
 
+    - `partial(f,self)` is the hook(=callback) registered to a module.
+
+    - In order to have a place to record the calculation result of hook(=callback),
+      instead of passing a "normal" function, we pass a method of an object.
+      This way, the passed hook(=callback) can record a calculation result on
+      the instance to which the hoook belongs to
+
     - `f` is the callback called every time a layer calculate
       forward path, receiving (layer/module, input, output)
 
@@ -3318,7 +3411,7 @@
       record the result of a calculation on the Hook instance
       (as `stats` property in the case above)
 
-[[/Users/shun/Google Drive/StudyFastai/figures/studyFastaiNote.org_20200603_134658_879KUy.png]]
+[[[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200603_134658_879KUy.png]]]]
 
 *** ListContainer
 
@@ -3823,7 +3916,7 @@ class BatchNorm(nn.Module):
 
     - bn is default to be true
 
-*** init_cnn, get_learn_run 
+*** init_cnn, get_learn_run ver1
 
     #+BEGIN_SRC python
       #export
@@ -4192,7 +4285,6 @@ class BatchNorm(nn.Module):
 
     #+END_SRC
     
-
 *** ConvLayer
 
     #+BEGIN_SRC python
@@ -4246,7 +4338,7 @@ class BatchNorm(nn.Module):
           hook.mean,hook.std = d.mean().item(),d.std().item()
     #+END_SRC
 
-*** lsuv_module
+*** TODO lsuv_module
 
     #+BEGIN_SRC python
       #export
@@ -4260,7 +4352,7 @@ class BatchNorm(nn.Module):
           return h.mean,h.std
     #+END_SRC
 
-    - why use `m.weight.data`
+    - [ ] why use `m.weight.data`
       https://discuss.pytorch.org/t/layer-weight-vs-weight-data/24271
 
     - in each of the `while` loops of ,lsuv_module, the same 
@@ -4272,10 +4364,14 @@ class BatchNorm(nn.Module):
     - note that ConvLayer does NOT contain a BatchNorm layer
       for normalizing the outgoing activation of the layer.
 
-    - instead, we do "initialization" of Conv2d & GeneralRelu layers
+    - instead, we do "initialization" for each of (Conv2d, GeneralRelu) layers
       by gradually do the following;
       - the weight of Conv2d layer
       - the leakyness of GeneralRelu layer
+
+        #+BEGIN_SRC python
+          for m in mods: print(lsuv_module(m, xb))
+        #+END_SRC
 
 ** 08_data_block.ipynb
 *** imports
@@ -4464,17 +4560,19 @@ class BatchNorm(nn.Module):
           def get(self, fn): return PIL.Image.open(fn)
     #+END_SRC
 
-    - `compose` applys apssed functions in "pipe-line"
+    - `compose` applys apssed `funcs` in "pipe-line"
       x2 = f1(x1)
       x3 = f2(x2)
-      ...
+      
+      - `funcs` are arranged according to `_order` property
 
-    - in the code above, `compose` is used to apply the functions
-      in `self.tfms` in "pipe-line"
 
       #+BEGIN_SRC python
         def _get(self, i): return compose(self.get(i), self.tfms)
       #+END_SRC
+
+    - Since it implements __getitem__, identical to that of `DataSet`, 
+      `ItemList` instance can be passed to `DataLoader`     
 
 *** Transform, MakeRGB
 
@@ -4487,6 +4585,38 @@ class BatchNorm(nn.Module):
 
       def make_rgb(item): return item.convert('RGB')
     #+END_SRC
+
+    - `_order` is used to sort transfoms in `compose` 
+      which is called from `_get` of `ItemList`
+      (`_get` is called from `__getitem__`)
+
+      #+BEGIN_SRC python
+        compose(x, funcs, *args, order_key='_order', **kwargs):
+        key = lambda o: getattr(o, order_key, 0)
+        for f in sorted(listify(funcs), key=key): x = f(x, **kwargs)
+        return x
+
+        class ItemList(ListContainer):
+        def __init__(self, items, path='.', tfms=None):
+            super().__init__(items)
+            self.path,self.tfms = Path(path),tfms
+
+        def __repr__(self): return f'{super().__repr__()}\nPath: {self.path}'
+
+        def new(self, items, cls=None):
+            if cls is None: cls=self.__class__
+            return cls(items, self.path, tfms=self.tfms)
+
+        def  get(self, i): return i
+        def _get(self, i): return compose(self.get(i), self.tfms)
+
+        def __getitem__(self, idx):
+            res = super().__getitem__(idx)
+            if isinstance(res,list): return [self._get(o) for o in res]
+                return self._get(res)
+      #+END_SRC
+    
+
 
 *** grandparent_splitter, split_by_func
 
@@ -4547,7 +4677,7 @@ class BatchNorm(nn.Module):
           def __repr__(self): return f'{self.__class__.__name__}\nTrain: {self.train}\nValid: {self.valid}\n'
     #+END_SRC
 
-    - `SplitData` is a storage to store training & validation data
+    - `SplitData` is just a storage to store training & validation data
 
     - `SplitData::split_by_func` is a factory method to create `SplitData` instance
       - `split_by_func` is the one previously defined, which 
@@ -4645,6 +4775,48 @@ class BatchNorm(nn.Module):
           return SplitData(train,valid)
     #+END_SRC
 
+    - `LabeledData` is almost same as ItemList, and it stores the
+      "processed" version of x(=input) & y(=target)
+
+    - `LabeledData` is identical as `DataSet`. 
+      Since it implements __getitem__, identical to that of `DataSet`, 
+      `LabeledData` instance can be passed to `DataLoader` inside `get_dls`
+
+      - when indexed,  it returns a tuple of (x[idx], y[idx]) 
+        #+BEGIN_SRC python
+          def __getitem__(self,idx): return self.x[idx],self.y[idx]
+        #+END_SRC
+        
+      - `Dataset` is as below
+        #+BEGIN_SRC python
+          #export
+          class Dataset():
+              def __init__(self, x, y): self.x,self.y = x,y
+              def __len__(self): return len(self.x)
+              def __getitem__(self, i): return self.x[i],self.y[i]
+        #+END_SRC
+
+      - `DataLoader` is as below
+        #+BEGIN_SRC python
+              def collate(b):
+                  xs,ys = zip(*b)
+                  return torch.stack(xs),torch.stack(ys)
+
+              class DataLoader():
+                  def __init__(self, ds, sampler, collate_fn=collate):
+                      self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
+                      
+                  def __iter__(self):
+                      for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
+        #+END_SRC
+
+      - `get_dls` is as below
+        #+BEGIN_SRC python
+          def get_dls(train_ds, valid_ds, bs, **kwargs):
+              return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
+                      DataLoader(valid_ds, batch_size=bs*2, **kwargs))
+        #+END_SRC
+
     - `parent_labeler` tells the label of a file
       since the name of the parent directory is same as label
 
@@ -4654,10 +4826,7 @@ class BatchNorm(nn.Module):
       - `f` is a function such as `parent_labeler`
       - return value:
         ['tench', 'cat', 'dog', ...]
-
-    - `LabeledData` is a storage to store the "processed" version of 
-      x(=input) & y(=target)
-    
+   
     - `LabeledData::process` clone "processed" version of 
       the passed list item.
       - `il is an `ItemList` instance, for example
@@ -4685,6 +4854,7 @@ class BatchNorm(nn.Module):
 
       - since `ItemList` inherits `ListContainer`, it has `self.items`
         which is guaranteed to be a list by `listify`
+        
         #+BEGIN_SRC python
       #export
       class ListContainer():
@@ -4715,6 +4885,8 @@ class BatchNorm(nn.Module):
       by applying LabeledData::label_fy_func to 
       `.train` & `.valid` of the original `SplitData` instance
 
+
+
 *** Putting SplitData & LabeledData & CategoryProcessor altogether
 
     #+BEGIN_SRC python
@@ -4732,5 +4904,1929 @@ class BatchNorm(nn.Module):
       which is created by splitting the `il` (ImageList instance)
       based on if a file is under training folder or validation folder
 
-    - 
+*** ResizeFixed, to_byte_tensor, to_float_tensor
 
+    #+BEGIN_SRC python
+      #export
+      class ResizeFixed(Transform):
+          _order=10
+          def __init__(self,size):
+              if isinstance(size,int): size=(size,size)
+              self.size = size
+              
+          def __call__(self, item): return item.resize(self.size, PIL.Image.BILINEAR)
+
+      def to_byte_tensor(item):
+          res = torch.ByteTensor(torch.ByteStorage.from_buffer(item.tobytes()))
+          w,h = item.size
+          return res.view(h,w,-1).permute(2,0,1)
+      to_byte_tensor._order=20
+
+      def to_float_tensor(item): return item.float().div_(255.)
+      to_float_tensor._order=30
+    #+END_SRC
+
+    - for the raw image, a data type(=dtype) is unsigned int 8 (=uint8)
+
+      #+BEGIN_SRC python
+        import numpy
+        imga = numpy.array(img)
+
+        imga.shape # (160, 213, 3)
+
+        imga[:10,:10,0]
+        '''
+        array([[1, 1, 1, 1, ..., 1, 1, 1, 1],
+               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+               ...,
+               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+               [1, 1, 1, 1, ..., 1, 1, 1, 1]], dtype=uint8)
+        '''
+      #+END_SRC
+
+
+*** show_image
+
+    #+BEGIN_SRC python
+      #export
+      def show_image(im, figsize=(3,3)):
+          plt.figure(figsize=figsize)
+          plt.axis('off')
+          plt.imshow(im.permute(1,2,0))
+    #+END_SRC
+
+
+*** DataBunch
+
+    #+BEGIN_SRC python
+      #export
+      class DataBunch():
+          def __init__(self, train_dl, valid_dl, c_in=None, c_out=None):
+              self.train_dl,self.valid_dl,self.c_in,self.c_out = train_dl,valid_dl,c_in,c_out
+
+          @property
+          def train_ds(self): return self.train_dl.dataset
+
+          @property
+          def valid_ds(self): return self.valid_dl.dataset
+
+    #+END_SRC
+
+*** databunchify
+
+    #+BEGIN_SRC python
+      #export
+      def databunchify(sd, bs, c_in=None, c_out=None, **kwargs):
+          dls = get_dls(sd.train, sd.valid, bs, **kwargs)
+          return DataBunch(*dls, c_in=c_in, c_out=c_out)
+
+      SplitData.to_databunch = databunchify
+    #+END_SRC
+
+*** TODO normalize_chan
+
+    #+BEGIN_SRC python
+      #export
+      def normalize_chan(x, mean, std):
+          return (x-mean[...,None,None]) / std[...,None,None]
+
+      _m = tensor([0.47, 0.48, 0.45])
+      _s = tensor([0.29, 0.28, 0.30])
+      norm_imagenette = partial(normalize_chan, mean=_m.cuda(), std=_s.cuda())
+    #+END_SRC
+    
+    - [ ] why do we need to add `[...,None,None]` for broadcasting?
+
+***  get_cnn_layers ver3, get_cnn_model ver4, get_learn_run ver2
+
+    #+BEGIN_SRC python
+      #export
+      import math
+      def prev_pow_2(x): return 2**math.floor(math.log2(x))
+
+      def get_cnn_layers(data, nfs, layer, **kwargs):
+          def f(ni, nf, stride=2): return layer(ni, nf, 3, stride=stride, **kwargs)
+          l1 = data.c_in
+          l2 = prev_pow_2(l1*3*3)
+          layers =  [f(l1  , l2  , stride=1),
+                     f(l2  , l2*2, stride=2),
+                     f(l2*2, l2*4, stride=2)]
+          nfs = [l2*4] + nfs
+          layers += [f(nfs[i], nfs[i+1]) for i in range(len(nfs)-1)]
+          layers += [nn.AdaptiveAvgPool2d(1), Lambda(flatten), 
+                     nn.Linear(nfs[-1], data.c_out)]
+          return layers
+
+      def get_cnn_model(data, nfs, layer, **kwargs):
+          return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
+
+      def get_learn_run(nfs, data, lr, layer, cbs=None, opt_func=None, **kwargs):
+          model = get_cnn_model(data, nfs, layer, **kwargs)
+          init_cnn(model)
+          return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
+    #+END_SRC
+
+     - `get_cnn_layers` ver3 inserts a preceding 3 layers into a cnn layer, for a better feature representation
+       - it calculates, for the first layer, the right number of kernels(numbers of "金太郎飴") 
+         GIVEN the kernel size (=3x3, face size of "金太郎飴")
+
+       - the reson for the kernel size (face size of "金太郎飴") of 3x3 is also discussed around 1:00:00
+         (see "Bag of tricks" paper for more detail)
+
+       - note that "1:09:05", "1:17:05" of lesson10 was discussing about the
+         right kernel size (face size of "金太郎飴") for the first layer 
+         GIVEN the number of the kernels  (numbers of "金太郎飴")
+
+       - in summary, in lesson11, the number of the kernels for the 1st layer is chosen so that the
+         computation is not wasted, and in addition, the right kernel size is also discussed 
+
+     - `get_cnn_model` ver4 is same as ver3, but refering to `get_cnn_layers` ver3
+     - `get_learn_run` ver2 is same as ver1, but refering to `get_cnn_model` ver4
+
+*** putting get_cnn_layers ver3, get_cnn_model ver4, get_learn_run ver2 all together       
+
+    #+BEGIN_SRC python
+      sched = combine_scheds([0.3,0.7], cos_1cycle_anneal(0.1,0.3,0.05))
+
+      learn,run = get_learn_run(nfs, data, 0.2, conv_layer, cbs=cbfs+[
+          partial(ParamScheduler, 'lr', sched)
+      ])
+    #+END_SRC
+
+
+*** model_summary
+
+    #+BEGIN_SRC python
+      #export
+      def model_summary(run, learn, data, find_all=False):
+          xb,yb = get_batch(data.valid_dl, run)
+          device = next(learn.model.parameters()).device#Model may not be on the GPU yet
+          xb,yb = xb.to(device),yb.to(device)
+          mods = find_modules(learn.model, is_lin_layer) if find_all else learn.model.children()
+          f = lambda hook,mod,inp,out: print(f"{mod}\n{out.shape}\n")
+          with Hooks(mods, f) as hooks: learn.model(xb)
+    #+END_SRC
+
+** 09_optimizers.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+    #+END_SRC
+
+*** TODO Optimizer ver2
+
+    #+BEGIN_SRC python
+      class Optimizer():
+          def __init__(self, params, steppers, **defaults):
+              # might be a generator
+              self.param_groups = list(params)
+              # ensure params is a list of lists
+              if not isinstance(self.param_groups[0], list): self.param_groups = [self.param_groups]
+              self.hypers = [{**defaults} for p in self.param_groups]
+              self.steppers = listify(steppers)
+
+          def grad_params(self):
+              return [(p,hyper) for pg,hyper in zip(self.param_groups,self.hypers)
+                  for p in pg if p.grad is not None]
+
+          def zero_grad(self):
+              for p,hyper in self.grad_params():
+                  p.grad.detach_()
+                  p.grad.zero_()
+
+          def step(self):
+              for p,hyper in self.grad_params(): compose(p, self.steppers, **hyper)
+    #+END_SRC
+
+    - params refers to the weights & bias tensor for each layer.
+
+    - if `params` is a list of list, it means we chose to
+      split up parameters into groups. See below for an example;
+
+      #+BEGIN_SRC python
+        # the 1st param group is for layer 1 to m (main body)
+        # the 2nd param group is for layer m+1 to n (last few layers)
+        [
+            [W1, B1, ..., Wm, Bm],
+            [Wm+1, Bm+1 ..., Wn, Bn]
+        ]
+      #+END_SRC
+
+    - if `params` is not a list of list, it means we chose to
+      create only a single parameter group that contains the
+      parameters for all the layers.
+
+      #+BEGIN_SRC python
+        [W1, B1, ..., Wn, Bn]
+      #+END_SRC
+
+    - in order to handle both cases (split & non-split),
+      we make sure that non-split parameters is tunred into
+      a list of list.
+
+      #+BEGIN_SRC python
+        if not isinstance(self.param_groups[0], list): self.param_groups = [self.param_groups]
+      #+END_SRC
+
+    - each parameter group associates with 1 dictionary which
+      determines hyper parameters for the parameter group.
+      These dictionaries are stored in self.hypers.
+
+      #+BEGIN_SRC python
+        self.hypers = [{**defaults} for p in self.param_groups]
+
+        # a hyper parameter dictionary looks like
+        {'lr': 0.5, 'mom':0.1 ...}
+
+        # self.hypers looks like
+        [{'lr': 0.5, 'mom':0.1 ...}, {'lr': 0.4, 'mom':0.1...}]
+
+      #+END_SRC
+
+    - the dictionary will be default to `{**defaults}` ,
+      where `defaults` is a dictionary created based on 
+      the arguent passed.
+
+      #+BEGIN_SRC python
+        Optimizer(..., lr=0.6, mom=0.1, ...)
+
+        # {**defaults} looks like
+        {'lr':0.6, 'mom':0.1}
+      #+END_SRC
+
+    - we do `{**defaults}` to clone `defaults` and
+      not refering to the same dicrionary
+
+    - `zip` inside `grad_params` does below
+      and `self.hypers` 
+
+      #+BEGIN_SRC python
+        # self.param_groups
+        [
+            [W1, B1, ..., Wm, Bm],
+            [Wm+1, Bm+1, ..., Wn, Bn]
+        ]
+
+        # self.hypers
+        [{'lr': 0.5, 'mom':0.1 ...}, {'lr': 0.4, 'mom':0.1...}]
+
+
+        # zip(self.param_groups, self.hypers)
+        [
+            ([W1, B1, ..., Wm, Bm],  {'lr': 0.5, 'mom':0.1 ...})
+            ([Wm+1, Bm+1,  ..., Wn,Bn],  {'lr': 0.4, 'mom':0.1...})
+        ]
+      #+END_SRC
+
+    - `grad_params` has double for-loops. The outer for-loop
+      is looped through `zip(self.param_groups,self.hypers)` and
+      the inner for-loop is looped through `pg`, and the
+      returned list consists of `(p, hyper)` created in
+      each of the inner for loop.
+
+    - in the end, `grad_params` returns below;
+
+      #+BEGIN_SRC python
+
+        [
+            (W1, {'lr': 0.5, 'mom':0.1 ...}),
+            (B1, {'lr': 0.5, 'mom':0.1 ...}),
+            ...
+            (Wm, {'lr': 0.4, 'mom':0.1 ...}),
+            (Bm, {'lr': 0.4, 'mom':0.1 ...}),
+
+            (Wm+1, {'lr': 0.4, 'mom':0.1 ...}),
+            (Bm+1, {'lr': 0.4, 'mom':0.1 ...}),    
+            ...
+            (Wn, {'lr': 0.4, 'mom':0.1 ...}),
+            (Bn, {'lr': 0.4, 'mom':0.1 ...}),    
+
+        ]
+      #+END_SRC
+
+    - inside `step`, `hyper` is passed down as **kwargs of `compose`
+
+    - `step` applys each stepper inside `steppers` one by one
+      to `p` in a "pip-line" way
+
+    - [ ] what `p.grad.detach_()` does 
+      - 1:09:00
+      - `detach` removes any gradient computational history
+
+      http://www.bnikolic.co.uk/blog/pytorch-detach.html
+
+
+      https://discuss.pytorch.org/t/detach-no-grad-and-requires-grad/16915/2
+
+      "detach() detaches the output from the computationnal graph. So no gradient will be backproped along this variable.
+      torch.no_grad says that no operation should build the graph.
+      The difference is that one refers to only a given variable on which it’s called. The other affects all operations taking place within the with statement."
+
+*** sgd_step
+
+    #+BEGIN_SRC python
+      #export
+      def sgd_step(p, lr, **kwargs):
+          p.data.add_(-lr, p.grad.data)
+          return p
+    #+END_SRC
+
+*** Recorder ver3, ParamScheduler ver3
+
+    #+BEGIN_SRC python
+      #export
+      class Recorder(Callback):
+          def begin_fit(self): self.lrs,self.losses = [],[]
+
+          def after_batch(self):
+              if not self.in_train: return
+              self.lrs.append(self.opt.hypers[-1]['lr'])
+              self.losses.append(self.loss.detach().cpu())        
+
+          def plot_lr  (self): plt.plot(self.lrs)
+          def plot_loss(self): plt.plot(self.losses)
+              
+          def plot(self, skip_last=0):
+              losses = [o.item() for o in self.losses]
+              n = len(losses)-skip_last
+              plt.xscale('log')
+              plt.plot(self.lrs[:n], losses[:n])
+
+      class ParamScheduler(Callback):
+          _order=1
+          def __init__(self, pname, sched_funcs):
+              self.pname,self.sched_funcs = pname,listify(sched_funcs)
+
+          def begin_batch(self): 
+              if not self.in_train: return
+              fs = self.sched_funcs
+              if len(fs)==1: fs = fs*len(self.opt.param_groups)
+              pos = self.n_epochs/self.epochs
+              for f,h in zip(fs,self.opt.hypers): h[self.pname] = f(pos)
+              
+      # LR_Find ver1      
+      class LR_Find(Callback):
+          _order=1
+          def __init__(self, max_iter=100, min_lr=1e-6, max_lr=10):
+              self.max_iter,self.min_lr,self.max_lr = max_iter,min_lr,max_lr
+              self.best_loss = 1e9
+              
+          def begin_batch(self): 
+              if not self.in_train: return
+              pos = self.n_iter/self.max_iter
+              lr = self.min_lr * (self.max_lr/self.min_lr) ** pos
+              for pg in self.opt.hypers: pg['lr'] = lr
+                  
+          def after_step(self):
+              if self.n_iter>=self.max_iter or self.loss>self.best_loss*10:
+                  raise CancelTrainException()
+              if self.loss < self.best_loss: self.best_loss = self.loss
+    #+END_SRC
+
+*** using Optimizer ver2
+
+    #+BEGIN_SRC python
+      #export
+      def sgd_step(p, lr, **kwargs):
+          p.data.add_(-lr, p.grad.data)
+          return p
+
+      opt_func = partial(Optimizer, steppers=[sgd_step])
+
+      sched = combine_scheds([0.3, 0.7], [sched_cos(0.3, 0.6), sched_cos(0.6, 0.2)])
+
+      cbfs = [partial(AvgStatsCallback,accuracy),
+              CudaCallback, Recorder,
+              partial(ParamScheduler, 'lr', sched)]
+
+      learn,run = get_learn_run(nfs, data, 0.4, conv_layer, cbs=cbfs, opt_func=opt_func)
+
+      run.fit(1, learn)
+
+    #+END_SRC
+
+*** weight decay & l2 regularization
+    - "l2 regularization" refers to add extra wd*weight to `weight.grad` 
+      whereas "weight decay" refers to updating the weight
+      by the equation below;
+
+      #+BEGIN_SRC python
+        # l2 regularization
+        weight.grad += wd * weight
+
+        # weight decay
+        new_weight = weight - lr*(weight.grad + wd*weight)
+      #+END_SRC
+
+    - the above two become equivalent for SGD, but NOT
+      for RMSProp and Adam.
+
+    - with RMSProp and Adam, updating equation is different than
+      `new_weight = weight - lr * (weight.grad )`
+
+    - so substituting `weight.grad` with `weight.grad + wd * weight` 
+      in the weight updating equation yields an equation different than
+      `new_weight = weight - lr * (weight.grad )`
+
+    - for Adam optimizer, 
+      https://arxiv.org/pdf/1711.05101.pdf
+
+*** weight_decay
+
+    #+BEGIN_SRC python
+      #export
+      def weight_decay(p, lr, wd, **kwargs):
+          p.data.mul_(1 - lr*wd)
+          return p
+      weight_decay._defaults = dict(wd=0.)
+    #+END_SRC
+
+    - to introduce weight decay, we can either modify the loss function or
+      the equation for updating gradient.
+      `weight_decay` corresponds to modifying the equation for
+      updating gradient.
+
+    - modifying the equation for updating gradient is done by
+      adding `weight_decay` as a stepper
+
+*** l2_reg
+
+    #+BEGIN_SRC python
+      #export
+      def l2_reg(p, lr, wd, **kwargs):
+          p.grad.data.add_(wd, p.data)
+          return p
+      l2_reg._defaults = dict(wd=0.)
+    #+END_SRC
+
+    - `add_` adds up `p.data` after multiplying it by `wd`
+
+*** maybe_update
+
+    #+BEGIN_SRC python
+      #export
+      def maybe_update(os, dest, f):
+          for o in os:
+              for k,v in f(o).items():
+                  if k not in dest: dest[k] = v
+
+      def get_defaults(d): return getattr(d,'_defaults',{})
+    #+END_SRC
+
+    - `getattr`
+    - `items()` returns tuples of key&value pairs
+
+*** Optimizer ver3
+
+    #+BEGIN_SRC python
+      #export
+      class Optimizer():
+          def __init__(self, params, steppers, **defaults):
+              self.steppers = listify(steppers)
+              maybe_update(self.steppers, defaults, get_defaults)
+              # might be a generator
+              self.param_groups = list(params)
+              # ensure params is a list of lists
+              if not isinstance(self.param_groups[0], list): self.param_groups = [self.param_groups]
+              self.hypers = [{**defaults} for p in self.param_groups]
+
+          def grad_params(self):
+              return [(p,hyper) for pg,hyper in zip(self.param_groups,self.hypers)
+                  for p in pg if p.grad is not None]
+
+          def zero_grad(self):
+              for p,hyper in self.grad_params():
+                  p.grad.detach_()
+                  p.grad.zero_()
+
+          def step(self):
+              for p,hyper in self.grad_params(): compose(p, self.steppers, **hyper)
+    #+END_SRC
+
+    - `defaults` provides a dictionary of hyper parameters used as default
+      #+BEGIN_SRC python
+        Optimizer(..., lr=0.6, mom=0.1, ...)
+
+        # {**defaults} looks like
+        {'lr':0.6, 'mom':0.1}
+      #+END_SRC
+
+    - `maybe_update` populates `defaults` with a default 
+      value of a hyper parameter that is stored on the 
+      stepper that uses the hyper parameter 
+      (if the default is missing)
+
+      e.g., 
+      {'wd': 0.} is stored on `_defaults` of `weight_decay` or `l2_reg`
+
+    - thanks to this, we do not have to think about 
+      for which hyper parameters we have to provide default values
+      looking through all the steppers.
+
+    - instead, a stepper that requires a hyper parameter provides
+      the default value by itself.
+
+
+*** Stat
+    #+BEGIN_SRC python
+      #export
+      class Stat():
+          _defaults = {}
+          def init_state(self, p): raise NotImplementedError
+          def update(self, p, state, **kwargs): raise NotImplementedError    
+    #+END_SRC
+
+*** AverageGrad ver1
+
+    #+BEGIN_SRC python
+      class AverageGrad(Stat):
+          _defaults = dict(mom=0.9)
+
+          def init_state(self, p): return {'grad_avg': torch.zeros_like(p.grad.data)}
+          def update(self, p, state, mom, **kwargs):
+              state['grad_avg'].mul_(mom).add_(p.grad.data)
+              return state
+    #+END_SRC
+
+    - `torch.zeros_like` returns a tensor, filled with 0, 
+      of the same size as the passed argument
+      https://pytorch.org/docs/master/generated/torch.zeros_like.html
+
+    - why use p.grad.data
+      https://discuss.pytorch.org/t/layer-weight-vs-weight-data/24271
+
+*** momentum_step
+
+    #+BEGIN_SRC python
+      #export
+      def momentum_step(p, lr, grad_avg, **kwargs):
+          p.data.add_(-lr, grad_avg)
+          return p
+    #+END_SRC
+
+*** StatefulOptimizer
+
+    #+BEGIN_SRC python
+      #export
+      class StatefulOptimizer(Optimizer):
+          def __init__(self, params, steppers, stats=None, **defaults): 
+              self.stats = listify(stats)
+              maybe_update(self.stats, defaults, get_defaults)
+              super().__init__(params, steppers, **defaults)
+              self.state = {}
+              
+          def step(self):
+              for p,hyper in self.grad_params():
+                  if p not in self.state:
+                      #Create a state for p and call all the statistics to initialize it.
+                      self.state[p] = {}
+                      maybe_update(self.stats, self.state[p], lambda o: o.init_state(p))
+                  state = self.state[p]
+                  for stat in self.stats: state = stat.update(p, state, **hyper)
+                  compose(p, self.steppers, **state, **hyper)
+                  self.state[p] = state
+                 
+    #+END_SRC
+
+    - a single stat in `stats` are, for example, `AverageGrad()`.
+
+    - stat is used for each single parameter to create some statistics
+      for it.
+
+    - `super().__init__(params, steppers, **defaults)` does
+      `__init__` of Optimizer ver3 which is to set
+      `self.param_groups`, `self.hypers` and `self.steppers`
+
+    - for each single parameter such as 
+      `W1`(the weight tensor of the 1st layer),
+      we register a state on `self.state[p]` based on 
+      some statistics of a property of the parameter,
+      such as "moving average" of property `grad` 
+
+      - self.state[p] looks like, for example
+        {'grad_avg'}
+
+      - note `p.__repr__` is called when using `p` as an indexing key.
+
+    - for better readability, `self.state[p]` is stored on `state`
+      inside `step`
+
+    - for each step, `self.state[p]` (=`state`) is updated by `stat.update`.
+      #+BEGIN_SRC python
+        for stat in self.stats: state = stat.update(p, state, **hyper)
+      #+END_SRC
+
+    - for example, below is `update` of `AverageGrad`
+
+      #+BEGIN_SRC python
+        def update(self, p, state, mom, **kwargs):
+            state['grad_avg'].mul_(mom).add_(p.grad.data)
+            return state
+      #+END_SRC
+
+    - and then `p` is updated by `self.steppers` utilizing 
+      `self.state[p]` (=`state`)
+
+      #+BEGIN_SRC python
+        compose(p, self.steppers, **state, **hyper)
+      #+END_SRC
+
+    - for example, `momentum_step` utilizes `grad_avg` in `state`
+
+      #+BEGIN_SRC python
+        #export
+        def momentum_step(p, lr, grad_avg, **kwargs):
+            p.data.add_(-lr, grad_avg)
+            return p
+      #+END_SRC
+
+*** how to use StatefulOptimizer
+
+    #+BEGIN_SRC python
+      # how to use
+      sgd_mom_opt = partial(StatefulOptimizer, steppers=[momentum_step,weight_decay],
+                        stats=AverageGrad(), wd=0.01)
+    #+END_SRC
+
+    
+*** TODO L2 Regularrization vs BatchNorm
+    - Suppose we set a very large weight decay of 1e6.
+      Now doing following gives us the same activation, making the weight penalty term negligible
+      which is calculated by `wd * Σw^2`
+      - set a very large number around 1e6 for parameter 'multi' for BatchNorm layer.
+      - devide all the weight parameter by 1e6
+
+    - ref
+      https://vitalab.github.io/article/2020/01/24/L2-reg-vs-BN.html
+      https://blog.janestreet.com/l2-regularization-and-batch-norm/
+      https://www.semion.io/doc/l2-regularization-versus-batch-and-weight-normalization
+
+
+*** plot_mom
+
+    #+BEGIN_SRC python
+      x = torch.linspace(-4, 4, 200)
+      y = torch.randn(200) + 0.3
+      betas = [0.5, 0.7, 0.9, 0.99]
+
+      def plot_mom(f):
+          _,axs = plt.subplots(2,2, figsize=(12,8))
+          for beta,ax in zip(betas, axs.flatten()):
+              ax.plot(y, linestyle='None', marker='.')
+              avg,res = None,[]
+              for i,yi in enumerate(y):
+                  avg,p = f(avg, beta, yi, i)
+                  res.append(p)
+              ax.plot(res, color='red')
+              ax.set_title(f'beta={beta}')
+    #+END_SRC
+
+    - `y` is a list of 200 random numbers with (mean, std) = (0.3, 1)
+    - `plot_mom` uses only `y`
+    - `f` is a function which 
+      - calculates the next value of `avg` based on the current value of `avg`
+      - calculates some value `p` based on `avg` & `yi`
+      - when `f` is `mom1`, `avg` and `p` are same 
+
+*** mom1
+
+    #+BEGIN_SRC python
+      def mom1(avg, beta, yi, i): 
+          if avg is None: avg=yi
+          res = beta*avg + yi
+          return res,res
+      plot_mom(mom1)
+
+    #+END_SRC
+
+*** lin_comb
+
+    #+BEGIN_SRC python
+      #export
+      def lin_comb(v1, v2, beta): return beta*v1 + (1-beta)*v2
+    #+END_SRC
+
+*** mom2
+
+    #+BEGIN_SRC python
+      def mom2(avg, beta, yi, i):
+          if avg is None: avg=yi
+          avg = lin_comb(avg, yi, beta)
+          return avg, avg
+      plot_mom(mom2)
+    #+END_SRC
+
+    - note that `avg` = y0, and "avg0" will be equal to "y0"
+      avg0 = beta * avg + (1-beta) * y0
+           = beta * y0 + (1-beta) * y0
+           = y0
+
+*** mom3
+
+    #+BEGIN_SRC python
+      def mom3(avg, beta, yi, i):
+          if avg is None: avg=0
+          avg = lin_comb(avg, yi, beta)
+          return avg, avg/(1-beta**(i+1))
+      plot_mom(mom3)
+    #+END_SRC
+
+    - mom3 is "debiased exponentially weighted moving average"
+    - `(1-beta**(i+1))` is the correction term
+
+    - note that different from mom2, `avg` is set to 0 instead of y0,
+      and "avg0" will be equal to (1-beta) * y0, and
+      debiased "avg0" will be "y0"
+
+    - avg0 = beta*avg + (1-beta) * y0
+           = (1-beta) * y0
+
+    - debiased avg0 = (1-beta) * y0 / (1-beta)^(0+1)
+                    = y0
+
+    - note that 
+      - debiased exponentially weighted moving average"
+        still uses `avg` to calculates the next value of `avg`
+
+      - however, what we plot in the end is the debiased version of `avg`, 
+        and so `avg` is just a "by-product"
+      
+*** Adam
+    - Adam is
+
+      (dampened debiased momentum)
+      ---------------------------------------------
+      (dampened debiased root sum of square gradient)
+
+*** AverageGrad ver2
+
+    #+BEGIN_SRC python
+      #export
+      class AverageGrad(Stat):
+          _defaults = dict(mom=0.9)
+          
+          def __init__(self, dampening:bool=False): self.dampening=dampening
+          def init_state(self, p): return {'grad_avg': torch.zeros_like(p.grad.data)}
+          def update(self, p, state, mom, **kwargs):
+              state['mom_damp'] = 1-mom if self.dampening else 1.
+              state['grad_avg'].mul_(mom).add_(state['mom_damp'], p.grad.data)
+              return state
+    #+END_SRC
+
+    - note that state['grad_avg'] is NOT a scalar, 
+    but a tensor which looks like
+
+    #+BEGIN_SRC python
+      [[g11, g12, g13]
+       [g21, g22, g23],
+       [g31, g32, g33]]
+
+    #+END_SRC
+
+    - `AverageGrad` ver2 is almost same as `AverageGrad` ver1
+      except `AverageGrad` ver2 has the dampening term
+
+    - keep in mind that `AverageGrad` is just another
+      `State` class which calculates some statistics
+      for each weight parameter based on some 
+      property (e.g. grad) of the parameter
+
+    - `AverageGrad` calculates damped/not-damped
+      exponentially weighted moving average
+
+*** AverageSqrGrad
+
+    #+BEGIN_SRC python
+      #export
+      class AverageSqrGrad(Stat):
+          _defaults = dict(sqr_mom=0.99)
+          
+          def __init__(self, dampening:bool=True): self.dampening=dampening
+          def init_state(self, p): return {'sqr_avg': torch.zeros_like(p.grad.data)}
+          def update(self, p, state, sqr_mom, **kwargs):
+              state['sqr_damp'] = 1-sqr_mom if self.dampening else 1.
+              state['sqr_avg'].mul_(sqr_mom).addcmul_(state['sqr_damp'], p.grad.data, p.grad.data)
+              return state
+    #+END_SRC
+
+    - note that, same as 'grad_avg', 'sqr_avg' is NOT a scalar,
+      but a tensor which looks like
+
+      #+BEGIN_SRC python
+        [[s11, s12, s13]
+         [s21, s22, s23],
+         [s31, s32, s33]]
+
+       #+END_SRC
+
+    - `addcmul`
+      https://pytorch.org/docs/master/generated/torch.addcmul.html
+      - multiply, in  ELEMENT-WISE, `p.grad.data` and  `p.grad.data` element-wise
+      - mulitply the result by `state['sqr_mom']`
+
+*** StepCount
+
+    #+BEGIN_SRC python
+      #export
+      class StepCount(Stat):
+          def init_state(self, p): return {'step': 0}
+          def update(self, p, state, **kwargs):
+              state['step'] += 1
+              return state
+    #+END_SRC
+
+*** debias
+
+    #+BEGIN_SRC python
+      #export
+      def debias(mom, damp, step): return damp * (1 - mom**step) / (1-mom)
+    #+END_SRC
+
+    - keep in mind that dampening and debiasing are two 
+      different things, so it is possible to apply debiasing
+      to no-dampening momentum.
+
+    - `debias` function covers both cases below
+      - with dampening    : damp = (1-mom), so debias is (1 - mom**step)
+      - without dampening : damp=1, so debias is (1 - mom**step) / (1-mom)
+
+    - inside `StatefulOptimizer`, when the first time `step` is called, 
+      `stat.update` is called before any steppers.
+
+    - especially, `StepCount` is called to increment `step` by 1.
+
+    - so by the time a stepper that refers to `step`
+      (e.g. adam_stepper) is called for the first time,
+      `step` is already 1.
+
+    - for step=1 to calculate EWMA of grad,
+      avg1 = beta*avg0 + (1-beta)*grad1, 
+      where avg0(=initial value of grad_avg') is defined to be zero
+
+      debiasing term is defined to be 1-beta^i according to 
+      Andrew Ng's lesson 
+      https://www.youtube.com/watch?v=lWzo8CajF5s
+
+      # this means, exponentially weighted moving averate is now indexed
+      # such that the index starts from 1, and the very first term is avg1,
+      # and so the equation for debiasing now becomes 1-beta^step
+      # intead of 1-beta^(step+1)
+      
+      avg0 = beta*grad_avg + (1-beta)*grad
+      = (1-beta) * grad
+
+      debiased avg0 = avg0/(1-beta)^(0+1) = avg0/(1-beta)^step
+
+      so, debias function should contain `1 - mom**step`
+      instead of `1-mom**(step+1)`
+
+*** adam_step
+
+    #+BEGIN_SRC python
+      #export
+      def adam_step(p, lr, mom, mom_damp, step, sqr_mom, sqr_damp, grad_avg, sqr_avg, eps, **kwargs):
+          debias1 = debias(mom,     mom_damp, step)
+          debias2 = debias(sqr_mom, sqr_damp, step)
+          p.data.addcdiv_(-lr / debias1, grad_avg, (sqr_avg/debias2).sqrt() + eps)
+          return p
+      adam_step._defaults = dict(eps=1e-5)
+    #+END_SRC
+    
+    - note again that `grad_avg` and `sqr_avg` are tensor, not a scalar,
+      so each single element of p (= Wij of a weight tensor W )
+      is updated according to
+      each single element of tensors `grad_avg`, `sqr_avg`
+      (= Gij of a gradient tensor G, Sij of a gradient square tensor S)
+
+    - addcdiv
+      https://pytorch.org/docs/master/generated/torch.addcdiv.html
+      - devide `grad_avg` by `(sqr_avg/debias2).sqrt() + eps)`
+      - multiply by `-lr / debias1`
+
+*** adap_opt
+
+    #+BEGIN_SRC python
+      #export
+      def adam_opt(xtra_step=None, **kwargs):
+          return partial(StatefulOptimizer, steppers=[adam_step,weight_decay]+listify(xtra_step),
+                         stats=[AverageGrad(dampening=True), AverageSqrGrad(), StepCount()], **kwargs)
+    #+END_SRC
+
+*** TODO lamb_step
+
+    #+BEGIN_SRC python
+      def lamb_step(p, lr, mom, mom_damp, step, sqr_mom, sqr_damp, grad_avg, sqr_avg, eps, wd, **kwargs):
+          debias1 = debias(mom,     mom_damp, step)
+          debias2 = debias(sqr_mom, sqr_damp, step)
+          r1 = p.data.pow(2).mean().sqrt()
+          step = (grad_avg/debias1) / ((sqr_avg/debias2).sqrt()+eps) + wd*p.data
+          r2 = step.pow(2).mean().sqrt()
+          p.data.add_(-lr * min(r1/r2,10), step)
+          return p
+      lamb_step._defaults = dict(eps=1e-6, wd=0.)
+    #+END_SRC
+
+    - note that r1, r2 are scalar, NOT a tensor
+
+    - different from adam_step, we normalize the amount of an update
+      for a single step, using scalars r1, r2, each of which is
+      an average of some value over all the element
+      of a parameter (= a weight tensor)
+
+    - ⊙ which appears in the algorithm of LAMB in 09_optimizers.ipynb
+      means element-wise multiplication
+
+    - [ ] what is the idea behind the algorithm?
+
+      https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+      https://arxiv.org/pdf/1904.00962.pdf
+
+
+*** the right value for `eps` of ADAM
+    - 1:44:00
+
+** 09b_learner.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+    #+END_SRC
+
+*** Learner ver2 (= Runner ver3)
+   #+BEGIN_SRC python
+     #export
+     def param_getter(m): return m.parameters()
+
+     class Learner():
+         def __init__(self, model, data, loss_func, opt_func=sgd_opt, lr=1e-2, splitter=param_getter,
+                      cbs=None, cb_funcs=None):
+             self.model,self.data,self.loss_func,self.opt_func,self.lr,self.splitter = model,data,loss_func,opt_func,lr,splitter
+             self.in_train,self.logger,self.opt = False,print,None
+             
+             # NB: Things marked "NEW" are covered in lesson 12
+             # NEW: avoid need for set_runner
+             self.cbs = []
+             self.add_cb(TrainEvalCallback())
+             self.add_cbs(cbs)
+             self.add_cbs(cbf() for cbf in listify(cb_funcs))
+
+         def add_cbs(self, cbs):
+             for cb in listify(cbs): self.add_cb(cb)
+                 
+         def add_cb(self, cb):
+             cb.set_runner(self)
+             setattr(self, cb.name, cb)
+             self.cbs.append(cb)
+
+         def remove_cbs(self, cbs):
+             for cb in listify(cbs): self.cbs.remove(cb)
+                 
+         def one_batch(self, i, xb, yb):
+             try:
+                 self.iter = i
+                 self.xb,self.yb = xb,yb;                        self('begin_batch')
+                 self.pred = self.model(self.xb);                self('after_pred')
+                 self.loss = self.loss_func(self.pred, self.yb); self('after_loss')
+                 if not self.in_train: return
+                 self.loss.backward();                           self('after_backward')
+                 self.opt.step();                                self('after_step')
+                 self.opt.zero_grad()
+             except CancelBatchException:                        self('after_cancel_batch')
+             finally:                                            self('after_batch')
+
+         def all_batches(self):
+             self.iters = len(self.dl)
+             try:
+                 for i,(xb,yb) in enumerate(self.dl): self.one_batch(i, xb, yb)
+             except CancelEpochException: self('after_cancel_epoch')
+
+         def do_begin_fit(self, epochs):
+             self.epochs,self.loss = epochs,tensor(0.)
+             self('begin_fit')
+
+         def do_begin_epoch(self, epoch):
+             self.epoch,self.dl = epoch,self.data.train_dl
+             return self('begin_epoch')
+
+         def fit(self, epochs, cbs=None, reset_opt=False):
+             # NEW: pass callbacks to fit() and have them removed when done
+             self.add_cbs(cbs)
+             # NEW: create optimizer on fit(), optionally replacing existing
+             if reset_opt or not self.opt: self.opt = self.opt_func(self.splitter(self.model), lr=self.lr)
+                 
+             try:
+                 self.do_begin_fit(epochs)
+                 for epoch in range(epochs):
+                     if not self.do_begin_epoch(epoch): self.all_batches()
+
+                     with torch.no_grad(): 
+                         self.dl = self.data.valid_dl
+                         if not self('begin_validate'): self.all_batches()
+                     self('after_epoch')
+                 
+             except CancelTrainException: self('after_cancel_train')
+             finally:
+                 self('after_fit')
+                 self.remove_cbs(cbs)
+
+         ALL_CBS = {'begin_batch', 'after_pred', 'after_loss', 'after_backward', 'after_step',
+             'after_cancel_batch', 'after_batch', 'after_cancel_epoch', 'begin_fit',
+             'begin_epoch', 'begin_validate', 'after_epoch',
+             'after_cancel_train', 'after_fit'}
+         
+         def __call__(self, cb_name):
+             res = False
+             assert cb_name in self.ALL_CBS
+             for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) and res
+             return res
+   #+END_SRC
+
+    - `Leaner` ver2 is `Runner` ver2 with 
+      every property of `Learner` ver1 moved into `Runner` ver2
+
+      #+BEGIN_SRC python
+        class Learner():
+            def __init__(self, model, opt, loss_func, data):
+                self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
+      #+END_SRC
+
+    - so, properties `opt`, `model`, `loss_func`, `data` 
+      defined with `@property` becomes unnecessary and are removed.
+
+*** get_learner
+
+    #+BEGIN_SRC python
+      #export
+      def get_learner(nfs, data, lr, layer, loss_func=F.cross_entropy,
+                      cb_funcs=None, opt_func=sgd_opt, **kwargs):
+          model = get_cnn_model(data, nfs, layer, **kwargs)
+          init_cnn(model)
+          return Learner(model, data, loss_func, lr=lr, cb_funcs=cb_funcs, opt_func=opt_func)
+    #+END_SRC
+
+** 09c_add_progress_bar.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+    #+END_SRC
+
+*** AvgStatsCallback
+
+    #+BEGIN_SRC python
+      # export 
+      class AvgStatsCallback(Callback):
+          def __init__(self, metrics):
+              self.train_stats,self.valid_stats = AvgStats(metrics,True),AvgStats(metrics,False)
+          
+          def begin_fit(self):
+              met_names = ['loss'] + [m.__name__ for m in self.train_stats.metrics]
+              names = ['epoch'] + [f'train_{n}' for n in met_names] + [
+                  f'valid_{n}' for n in met_names] + ['time']
+              self.logger(names)
+          
+          def begin_epoch(self):
+              self.train_stats.reset()
+              self.valid_stats.reset()
+              self.start_time = time.time()
+              
+          def after_loss(self):
+              stats = self.train_stats if self.in_train else self.valid_stats
+              with torch.no_grad(): stats.accumulate(self.run)
+          
+          def after_epoch(self):
+              stats = [str(self.epoch)] 
+              for o in [self.train_stats, self.valid_stats]:
+                  stats += [f'{v:.6f}' for v in o.avg_stats] 
+              stats += [format_time(time.time() - self.start_time)]
+              self.logger(stats)
+    #+END_SRC
+
+*** ProgressCallback
+
+    #+BEGIN_SRC python
+      # export 
+      class ProgressCallback(Callback):
+          _order=-1
+          def begin_fit(self):
+              self.mbar = master_bar(range(self.epochs))
+              self.mbar.on_iter_begin()
+              self.run.logger = partial(self.mbar.write, table=True)
+              
+          def after_fit(self): self.mbar.on_iter_end()
+          def after_batch(self): self.pb.update(self.iter)
+          def begin_epoch   (self): self.set_pb()
+          def begin_validate(self): self.set_pb()
+              
+          def set_pb(self):
+              self.pb = progress_bar(self.dl, parent=self.mbar)
+              self.mbar.update(self.epoch)
+    #+END_SRC
+
+
+** 10_augmentation.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+    #+END_SRC
+
+*** do augmentation in byte, not in float
+    - 1:58:30
+    - should do a augmentation by flip while a data is still a byte,
+      hence the transformation function should be given an `_order` property higher than
+      that of `to_byte_tensor`,  `to_float_tensor` (20, and 30 respectively)
+
+*** get_il
+
+    #+BEGIN_SRC python
+      def get_il(tfms): return ImageList.from_files(path, tfms=tfms)
+    #+END_SRC
+
+*** pil_random_flip
+
+    #+BEGIN_SRC python
+      def pil_random_flip(x):
+          return x.transpose(PIL.Image.FLIP_LEFT_RIGHT) if random.random()<0.5 else x
+    #+END_SRC
+
+*** show_image, show_batch
+
+    #+BEGIN_SRC python
+      #export
+      def show_image(im, ax=None, figsize=(3,3)):
+          if ax is None: _,ax = plt.subplots(1, 1, figsize=figsize)
+          ax.axis('off')
+          ax.imshow(im.permute(1,2,0))
+
+      def show_batch(x, c=4, r=None, figsize=None):
+          n = len(x)
+          if r is None: r = int(math.ceil(n/c))
+          if figsize is None: figsize=(c*3,r*3)
+          fig,axes = plt.subplots(r,c, figsize=figsize)
+          for xi,ax in zip(x,axes.flat): show_image(xi, ax)
+    #+END_SRC
+
+*** PilRandomFlip
+
+    #+BEGIN_SRC python
+      class PilRandomFlip(Transform):
+          _order=11
+          def __init__(self, p=0.5): self.p=p
+          def __call__(self, x):
+              return x.transpose(PIL.Image.FLIP_LEFT_RIGHT) if random.random()<self.p else x
+    #+END_SRC
+
+    - flipping is a kind of transforamtion that does not break
+      a fine feature of a image when applied even while a image is 
+      still a byte, so we set `_order` to 11 so that it will be
+      applied before `to_byte_tensor` or `to_byte_tensor` are applied
+
+*** PilTransform, PilRandomFlip
+
+    #+BEGIN_SRC python
+      #export
+      class PilTransform(Transform): _order=11
+
+      class PilRandomFlip(PilTransform):
+          def __init__(self, p=0.5): self.p=p
+          def __call__(self, x):
+              return x.transpose(PIL.Image.FLIP_LEFT_RIGHT) if random.random()<self.p else x
+    #+END_SRC
+
+*** PilRandomDihedral
+
+    #+BEGIN_SRC python
+      #export
+      class PilRandomDihedral(PilTransform):
+          def __init__(self, p=0.75): self.p=p*7/8 #Little hack to get the 1/8 identity dihedral transform taken into account.
+          def __call__(self, x):
+              if random.random()>self.p: return x
+              return x.transpose(random.randint(0,6))
+    #+END_SRC
+
+*** do several image data augumentations at once
+    - 2:04:00
+
+      #+BEGIN_SRC python
+        %timeit -n 10 img.crop(cnr2).resize((128,128), resample=resample)
+
+        img.transform((128,128), PIL.Image.EXTENT, cnr2, resample=resample)
+      #+END_SRC
+
+    - Although it is faster to do transformation while a
+      image is still a byte, for destuctive transformation
+      like cropping (or especially multiple destuctive transformations)
+      wait it until the data becomes float since otherwise it 
+      would break a fine feature (such as check pattern of a shirt) of a image
+
+    - on transformation, byte rounds off and disappear will saturate,
+      and so destuctive transformation on byte looses some feature
+
+    - on the other hand, float does not disappear, so transformation
+      on float does not loose a fine feature of a image 
+
+    - if destuctive transformations are really necessary on byte, 
+      at least do it at one go.
+
+*** thinking about time budget
+    - 2:06:00
+
+*** GeneralCrop
+
+    #+BEGIN_SRC python
+      #export
+      from random import randint
+
+      def process_sz(sz):
+          sz = listify(sz)
+          return tuple(sz if len(sz)==2 else [sz[0],sz[0]])
+
+      def default_crop_size(w,h): return [w,w] if w < h else [h,h]
+
+      class GeneralCrop(PilTransform):
+          def __init__(self, size, crop_size=None, resample=PIL.Image.BILINEAR): 
+              self.resample,self.size = resample,process_sz(size)
+              self.crop_size = None if crop_size is None else process_sz(crop_size)
+              
+          def default_crop_size(self, w,h): return default_crop_size(w,h)
+
+          def __call__(self, x):
+              csize = self.default_crop_size(*x.size) if self.crop_size is None else self.crop_size
+              return x.transform(self.size, PIL.Image.EXTENT, self.get_corners(*x.size, *csize), resample=self.resample)
+          
+          def get_corners(self, w, h): return (0,0,w,h)
+
+      class CenterCrop(GeneralCrop):
+          def __init__(self, size, scale=1.14, resample=PIL.Image.BILINEAR):
+              super().__init__(size, resample=resample)
+              self.scale = scale
+              
+          def default_crop_size(self, w,h): return [w/self.scale,h/self.scale]
+          
+          def get_corners(self, w, h, wc, hc):
+              return ((w-wc)//2, (h-hc)//2, (w-wc)//2+wc, (h-hc)//2+hc)
+    #+END_SRC
+
+    - `GeneralCrop` inherits `PilTransform`, so it has `_order`
+      set to 11
+
+      #+BEGIN_SRC python
+        class PilTransform(Transform): _order=11
+      #+END_SRC
+
+*** RandomResizedCrop
+
+    #+BEGIN_SRC python
+      # export
+      class RandomResizedCrop(GeneralCrop):
+          def __init__(self, size, scale=(0.08,1.0), ratio=(3./4., 4./3.), resample=PIL.Image.BILINEAR):
+              super().__init__(size, resample=resample)
+              self.scale,self.ratio = scale,ratio
+          
+          def get_corners(self, w, h, wc, hc):
+              area = w*h
+              #Tries 10 times to get a proper crop inside the image.
+              for attempt in range(10):
+                  area = random.uniform(*self.scale) * area
+                  ratio = math.exp(random.uniform(math.log(self.ratio[0]), math.log(self.ratio[1])))
+                  new_w = int(round(math.sqrt(area * ratio)))
+                  new_h = int(round(math.sqrt(area / ratio)))
+                  if new_w <= w and new_h <= h:
+                      left = random.randint(0, w - new_w)
+                      top  = random.randint(0, h - new_h)
+                      return (left, top, left + new_w, top + new_h)
+              
+              # Fallback to squish
+              if   w/h < self.ratio[0]: size = (w, int(w/self.ratio[0]))
+              elif w/h > self.ratio[1]: size = (int(h*self.ratio[1]), h)
+              else:                     size = (w, h)
+              return ((w-size[0])//2, (h-size[1])//2, (w+size[0])//2, (h+size[1])//2)
+    #+END_SRC
+
+
+*** apply RandomResizedCrop for NLP
+    - 2:07:10
+
+*** warping > find_coeffs
+
+    #+BEGIN_SRC python
+
+      # export
+      from torch import FloatTensor,LongTensor
+
+      def find_coeffs(orig_pts, targ_pts):
+          matrix = []
+          #The equations we'll need to solve.
+          for p1, p2 in zip(targ_pts, orig_pts):
+              matrix.append([p1[0], p1[1], 1, 0, 0, 0, -p2[0]*p1[0], -p2[0]*p1[1]])
+              matrix.append([0, 0, 0, p1[0], p1[1], 1, -p2[1]*p1[0], -p2[1]*p1[1]])
+
+          A = FloatTensor(matrix)
+          B = FloatTensor(orig_pts).view(8, 1)
+          #The 8 scalars we seek are solution of AX = B
+          return list(torch.solve(B,A)[0][:,0])
+    #+END_SRC
+
+*** warping > warp
+
+    #+BEGIN_SRC python
+      # export
+      def warp(img, size, src_coords, resample=PIL.Image.BILINEAR):
+          w,h = size
+          targ_coords = ((0,0),(0,h),(w,h),(w,0))
+          c = find_coeffs(src_coords,targ_coords)
+          res = img.transform(size, PIL.Image.PERSPECTIVE, list(c), resample=resample)
+          return res
+    #+END_SRC
+
+*** warping > PilTiltRandomCrop ver1
+
+    #+BEGIN_SRC python
+      class PilTiltRandomCrop(PilTransform):
+          def __init__(self, size, crop_size=None, magnitude=0., resample=PIL.Image.NEAREST): 
+              self.resample,self.size,self.magnitude = resample,process_sz(size),magnitude
+              self.crop_size = None if crop_size is None else process_sz(crop_size)
+              
+          def __call__(self, x):
+              csize = default_crop_size(*x.size) if self.crop_size is None else self.crop_size
+              up_t,lr_t = uniform(-self.magnitude, self.magnitude),uniform(-self.magnitude, self.magnitude)
+              left,top = randint(0,x.size[0]-csize[0]),randint(0,x.size[1]-csize[1])
+              src_corners = tensor([[-up_t, -lr_t], [up_t, 1+lr_t], [1-up_t, 1-lr_t], [1+up_t, lr_t]])
+              src_corners = src_corners * tensor(csize).float() + tensor([left,top]).float()
+              src_corners = tuple([(int(o[0].item()), int(o[1].item())) for o in src_corners])
+              return warp(x, self.size, src_corners, resample=self.resample)
+    #+END_SRC
+
+*** warping > PilTiltRandomCrop ver2
+
+    #+BEGIN_SRC python
+      # export
+      class PilTiltRandomCrop(PilTransform):
+          def __init__(self, size, crop_size=None, magnitude=0., resample=PIL.Image.BILINEAR): 
+              self.resample,self.size,self.magnitude = resample,process_sz(size),magnitude
+              self.crop_size = None if crop_size is None else process_sz(crop_size)
+              
+          def __call__(self, x):
+              csize = default_crop_size(*x.size) if self.crop_size is None else self.crop_size
+              left,top = randint(0,x.size[0]-csize[0]),randint(0,x.size[1]-csize[1])
+              top_magn = min(self.magnitude, left/csize[0], (x.size[0]-left)/csize[0]-1)
+              lr_magn  = min(self.magnitude, top /csize[1], (x.size[1]-top) /csize[1]-1)
+              up_t,lr_t = uniform(-top_magn, top_magn),uniform(-lr_magn, lr_magn)
+              src_corners = tensor([[-up_t, -lr_t], [up_t, 1+lr_t], [1-up_t, 1-lr_t], [1+up_t, lr_t]])
+              src_corners = src_corners * tensor(csize).float() + tensor([left,top]).float()
+              src_corners = tuple([(int(o[0].item()), int(o[1].item())) for o in src_corners])
+              return warp(x, self.size, src_corners, resample=self.resample)
+    #+END_SRC
+
+
+
+*** faster conversion to float_tensor
+
+    #+BEGIN_SRC python
+      #export
+      import numpy as np
+
+      def np_to_float(x): return torch.from_numpy(np.array(x, dtype=np.float32, copy=False)).permute(2,0,1).contiguous()/255.
+      np_to_float._order = 30
+    #+END_SRC
+    
+    - this converts numpy array to float_tensor directly and
+      much faster than applying `to_byte_tensor` and `to_float_tensor`
+      successively
+
+*** data augumentation for batch
+    - [ ] in order to perform transformations on GPU, 
+      that is, after calling x.cuda(), we would like to
+      have a batch of image without applying any transform yet.
+
+    - For that purpose, we need to store images in `DataSet` 
+      instead of `ImageItemList` when passing to `DataLoader` object
+      since otherwise `ImageItemList` would do transform on
+      creating a batch before we move a batch to GPU
+
+    - fastai v1 is not equipped with data augumentation for batch
+
+* articles from web
+** part1
+*** embedding 
+    https://towardsdatascience.com/neural-network-embeddings-explained-4d028e6f0526
+    https://medium.com/@michi.jeremias/embeddings-in-tabular-data-990202daa59f
+    https://towardsdatascience.com/how-to-gain-state-of-the-art-result-on-tabular-data-with-deep-learning-and-embedding-layers-d1eb6b83c52c
+
+*** SGD with momentum
+    - https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
+
+*** cross entropy
+    - https://www.youtube.com/watch?v=ErfnhcEV1O8
+
+*** CNN
+    https://towardsdatascience.com/the-most-intuitive-and-easiest-guide-for-convolutional-neural-network-3607be47480
+
+*** SGD with momentum
+    https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
+
+*** adam
+    https://towardsdatascience.com/adam-latest-trends-in-deep-learning-optimization-6be9a291375c
+
+*** res net
+    https://www.youtube.com/watch?v=ZILIbUvp5lk
+    https://towardsdatascience.com/an-overview-of-resnet-and-its-variants-5281e2f56035
+
+*** unet
+    https://towardsdatascience.com/u-net-b229b32b4a71
+    https://towardsdatascience.com/understanding-semantic-segmentation-with-unet-6be4f42d4b47
+    https://www.google.com/search?q=toward+data+science+u+net
+
+
+*** batch norm
+    https://towardsdatascience.com/understanding-batch-normalization-for-neural-networks-1cd269786fa6
+
+
+*** stack
+    https://www.youtube.com/watch?time_continue=296&v=kF2AlpykJGY&feature=emb_logo
+
+
+*** normalization
+    https://jamesmccaffrey.wordpress.com/2019/01/04/how-to-normalize-training-and-test-data-for-machine-learning/
+
+*** kaiming initialization
+    https://towardsdatascience.com/understand-kaiming-initialization-and-implementation-detail-in-pytorch-f7aa967e9138
+
+
+*** dimension reduction
+    https://www.youtube.com/watch?v=Zbr5hyJNGCs
+
+*** tabular data & CNN
+    https://towardsdatascience.com/convolutional-neural-network-on-a-structured-bank-customer-data-358e6b8aa759
+
+*** matrix calculus
+    https://explained.ai/matrix-calculus/index.html
+
+** part2
+*** tensor
+    https://www.youtube.com/watch?v=f5liqUk0ZTw
+
+*** derivative with respect to a vector
+    https://www.youtube.com/watch?v=iWxY7VdcSH8
+    https://www.youtube.com/watch?v=uoejt0FCWWA
+    https://www.youtube.com/watch?v=i6fqfH5hx60&list=PLvSdMJxMoHLsBaO5PqRUeX1FU4ydKpe6W&index=4
+
+
+*** derivatives of matrix
+    https://www.youtube.com/watch?v=e73033jZTCI
+
+*** with torch.no_grad()
+    https://forums.fast.ai/t/why-torch-no-grad-lesson-9/71420
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+
+*** lesson9 with torch.no_grad
+    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html
+    https://pytorch.org/tutorials/beginner/former_torchies/autograd_tutorial_old.html
+
+*** lesson10, appropriate kernel size
+    https://towardsdatascience.com/deciding-optimal-filter-size-for-cnns-d6f7b56f9363
+
+*** lesson10, RunningBatchNorm
+    https://forums.fast.ai/t/questions-about-runningbatchnorm-in-lesson-10/56331
+
+# initialize
+def __init__(self, nf, mom=0.1, eps=1e-5):
+    super().__init__()
+    
+    # constants
+    self.mom,self.eps = mom,eps
+    
+    # add scale and offset parameters to the model
+    # note: nf is the number of channels
+    # Q1: shouldn't self.mults and self.adds have size [1,nf,1,1]?
+    self.mults = nn.Parameter(torch.ones (nf,1,1))
+    self.adds = nn.Parameter(torch.zeros(nf,1,1))
+    
+    # register_buffer adds a persistent buffer to the module, usually used for a non-model parameter
+    self.register_buffer('sums', torch.zeros(1,nf,1,1))
+    self.register_buffer('sqrs', torch.zeros(1,nf,1,1))
+    self.register_buffer('batch', tensor(0.))
+    self.register_buffer('count', tensor(0.))
+    self.register_buffer('step', tensor(0.))
+    self.register_buffer('dbias', tensor(0.))
+
+# compute updates to buffered tensors
+def update_stats(self, x):
+    
+    # batchsize, number of channels
+    bs,nc,*_ = x.shape
+    
+    # Note: for a tensor t, t.detach_() means detach t from the computation graph, i.e. don't keep track of its gradients;
+    #     the '_' prefix means do it "in place"
+    # Q2: why don't we also use .detach_() for self.batch, self.count, self.step, and self.dbias?
+    self.sums.detach_()
+    self.sqrs.detach_()
+    
+    # the input x is a four-dimensional tensor: 
+    #    dimensions 0, 2, 3 refer to batch samples, weight matrix rows, and weight matrix columns, respectively
+    #    dimension 1 refers to channels
+    dims = (0,2,3)
+    
+    # compute s and ss, which are the sum of the weights and the sum of the squares of the weights 
+    #     over dimensions (0,2,3) for this batch. s and ss each consist of one number for each channel;
+    #     because keepdim=True s, and ss are each of size [1,nf,1,1]
+    s = x.sum(dims, keepdim=True)
+    ss = (x*x).sum(dims, keepdim=True)
+    
+    # Notes: 
+    #   x.numel() is the number of elements in the 4-D tensor x,
+    #       which is the total number of weights in the batch
+    #   x.numel()/nc is the number of weights per channel in the batch
+    #   y = tensor.new_tensor(x) is equivalent to y = x.clone().detach(), 
+    #       the latter is the preferred way to make a copy of a tensor
+    #   c is a one-dimensional tensor with a value equal to the number of weights per channel for this batch
+    #       note that the number of weights per channel of a batch depends on the number of samples in the 
+    #       batch; not all batches have the same number of samples
+    c = self.count.new_tensor(x.numel()/nc)
+    
+    # momentum
+    # mom1 is the 'weight' to be used in lerp_() to compute EWMAs
+    #     -- see pytorch documentation for lerp_
+    # if mom is 0.1 and batch size is 2, then mom1 ~ 1 - 0.9/1 = 0.1
+    # if mom is 0.1 and batch size is 64, then mom1 ~ 1 - 0.9/7 ~ 0.9; 
+    #     in general, mom1 increases with batch size
+    # Q3: What's the logic behind the following formula for mom1?
+    mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)
+    # self.mom1 is a one-dimensional tensor, with a value equal to mom1
+    self.mom1 = self.dbias.new_tensor(mom1)
+    
+    # update EWMAs of sums, sqrs, which, like s and ss, have size [1,1,nf,1] 
+    self.sums.lerp_(s, self.mom1)
+    self.sqrs.lerp_(ss, self.mom1)
+
+    # update EWMA of count
+    # self.count keeps track of the EWMA of c,
+    #     which is the number of weights per channel for a batch
+    # Q4: why do we need the EWMA of c?  Aren't batch sizes always the same, except for the last batch?
+    self.count.lerp_(c, self.mom1)
+    
+ 
+    # Q5: what is the logic behind the following formula for dbias?
+    self.dbias = self.dbias*(1-self.mom1) + self.mom1
+    
+    # update the total number of samples that have been processed up till now, 
+    #     i.e. the number of samples in this batch and all previous batches so far
+    self.batch += bs
+    
+    # update the total number of batches that have been processed
+    self.step += 1
+
+# apply a forward pass to the current batch
+def forward(self, x):
+    
+    # main idea of RunningBatchNorm:
+    #     to normalize the batch:
+    #     in training mode, use the current EWMAs accumulated in the buffers at this step (batch), 
+    #         and the *current* fitted values of the model parameters mults and adds at this step
+    #     in validation mode, use the final values of the EWMAs accumulated in the buffers after training,
+    #         and the final fitted values of mults and adds
+    if self.training: self.update_stats(x)
+        
+    # get the current values of the EWMAs of sums, sqrs and count from the buffers
+    sums = self.sums
+    sqrs = self.sqrs
+    c = self.count
+    
+    # if the current batch number is less than 100, scale the EWMAs by 1/self.dbias
+    # Q6: Why?
+    if self.step<100:
+        sums = sums / self.dbias
+        sqrs = sqrs / self.dbias
+        c    = c    / self.dbias
+        
+    # scale sums by 1/c to get the mean of the weights
+    means = sums/c
+    
+    # scale sqrs by 1/c to get the mean of the squared weights
+    #     then subtract the square of the mean weight from the mean of the squared weights
+    # note: we recognize this as the 'computationally efficient' formula for the variance that we've seen before 
+    vars = (sqrs/c).sub_(means*means)
+    
+    # if there are less than 20 samples so far, clamp vars to 0.01 (in case any of them becomes very small)
+    if bool(self.batch < 20): vars.clamp_min_(0.01)
+        
+    # normalize the batch in the usual way, i.e. subtract the mean and divide by std
+    # Q7: but why do we need to add eps, when we've already clamped the vars to 0.01? 
+    x = (x-means).div_((vars.add_(self.eps)).sqrt())
+    
+    # return a scaled and offset version of the normalized batch, where the
+    #     scale factors (self.mults) and offsets (self.adds) are parameters in the model
+    #     Note: there's a size mismatch: self.mults and self.adds have size [nf,1,1], while x has size [1,nf,1,1]
+    return x.mul_(self.mults).add_(self.adds)
+
+
+*** exponentially weighted averages
+    https://www.coursera.org/lecture/deep-neural-network/exponentially-weighted-averages-duStO
+
+*** debiasing
+    https://www.youtube.com/watch?v=lWzo8CajF5s
+
+*** adam
+    https://www.youtube.com/watch?v=JXQT_vxqwIs
+
+*** lesson11 weght decay
+    https://jamesmccaffrey.wordpress.com/2019/05/09/the-difference-between-neural-network-l2-regularization-and-weight-decay/
+
+*** lesson11, L2 regularization with batch norm
+    https://blog.janestreet.com/l2-regularization-and-batch-norm/
+
+*** lesson11, LAMB
+    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+
+*** lesson11 data augumentation
+    https://www.coursera.org/lecture/convolutional-neural-networks/data-augmentation-AYzbX
+
+** python
+*** **kwarg
+    https://www.youtube.com/watch?v=WcTXxX3vYgY
+
+*** function argument unpacking  (* for tuple, ** for dictionary)
+    https://www.youtube.com/watch?v=bj717GHdzjo
+
+    def myfunc(x, y ,z)
+      print(x,y,z)
+
+    tuple_vec = (1,0,1)
+    dict_vec = {'x':1, 'y':0, 'z':1}
+    
+    myfunc(*tuple_vec)
+    # 1,0,1
+
+    myfunc(**dict_vec)
+    # 1,0,1
+    
+*** packing & unpacking 
+    https://www.youtube.com/watch?v=YWY4BZi_o28
+
+*** list comprehension (for loop and square brackets)
+    https://www.youtube.com/watch?v=AhSvKGTh28Q
+
+*** generator
+    https://realpython.com/lessons/what-are-python-generators/
+
+*** yield
+    https://www.youtube.com/watch?v=vOMtQ4ocMGI
+
+*** with statement
+    https://dbader.org/blog/python-context-managers-and-with-statement
+
+*** python `or` operator
+    https://realpython.com/python-or-operator/
+
+*** short circuting
+    https://www.geeksforgeeks.org/short-circuiting-techniques-python/
+
+
+** pytorch
+*** torch summary
+    https://kunpengsong.github.io/2019/06/Pytorch-cheat-sheet/
+
+*** torch.cat
+    
+
+*** stack
+    https://www.youtube.com/watch?v=fCVuiW9AFzY
+
+*** flatten, reshape, squeeze
+    https://www.youtube.com/watch?v=fCVuiW9AFzY
+
+** computational linear algebra
+   https://github.com/fastai/numerical-linear-algebra/blob/master/README.md
+
+   https://www.youtube.com/watch?v=8iGzBMboA0I&list=PLtmWHNX-gukIc92m1K0P6bIOnZb-mg0hY&index=2&t=0s
+   https://github.com/fastai/numerical-linear-algebra/blob/master/README.md
+
+
+** language model
+   https://nlp.fast.ai/
+
+** fastai audio
+   https://towardsdatascience.com/sound-classification-using-images-68d4770df426
+   https://www.kaggle.com/nathanh12/new-fastai-audio
+
+   https://forums.fast.ai/t/deep-learning-with-audio-thread/38123
+
+
+** dataset
+*** japanese text
+    https://lionbridge.ai/datasets/japanese-language-text-datasets/
+
+*** facebook children's story
+    https://venturebeat.com/2016/02/18/facebook-releases-1-6gb-data-set-of-childrens-stories-for-training-its-ai/
