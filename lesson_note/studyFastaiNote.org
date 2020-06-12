@@ -29,6 +29,26 @@
     - StatefulOptimizer
     - Learner ver2
 
+*** components of deep learning
+    - techniques to initialize parameters & normalize activations in order to keep activations nice
+      - kaiming initialization
+      - lsuv (initialization)
+      - BatchNorm (normalization)
+
+    - techniques to update parameters
+      - ADAM
+      - LAMB
+
+    - techniques to handle noisy label
+      - Label smoothing
+
+    - techniques to augment data
+      - affine transformation (for image)
+      - mix up
+
+    - techniques to increase the layers
+      - res-net
+
 * things to understand
 ** basics of deep learning
 *** CNN
@@ -766,12 +786,15 @@
       #+END_SRC
 
 *** cross entropy
-    - cross entropy represents can be considered as 
+    - cross entropy can be considered as 
       'amount of money' that nenral net must pay for
       occurences of events
+
     - amount of money to pay for occurence of an event
       is equal to -log(P) where P is the predicted probability
+
     - amount of money to pay decrease if P is big
+
     - in order to minimize the amount of money to pay,
       neural net does its best to predict large probability
       for the 'events' that actually occurs, and
@@ -786,32 +809,41 @@
       some probaility must be small, and some probaility must be large
 
 *** log_softmax
+
+    #+BEGIN_SRC python
+      def log_softmax(x): return x - x.exp().sum(-1,keepdim=True).log()
+    #+END_SRC
+
     - x is prediction for ENTIRE training set, and so
       of torch.Size([50000,10])
       - where 50000 is number of images
       - 10 corresonds to the number of labels (0,1,...,9)
+      - each row contains values corresponding 10 labels
 
-    - x.exp() operates on every elements of x (torch.Size([50000,10])
+    - `x.exp()` operates element-wise (i.e. every elements of x (torch.Size([50000,10]) )
       and result is also torch.Size([50000,10]) 
 
-    - x.exp().sum(-1, keepdim=True) takes sum along the last axis
-      ,which is along each row (50000 rows)
+    - `x.exp().sum(-1, keepdim=True)` takes sum along the last axis,
+      which is along each row (50000 rows),
 
-    - since keepdim=True, after summing up along each row,
-      the sum will be torch.Size([1]) instead of torch.Size(1), 
-      a scalar, and so resulting tensor is of torch.Size([50000,1])
+    - with keepdim=True, after summing up along each row,
+      the sum will be torch.Size([1]) instead of torch.Size(1), a scalar, 
+      and so resulting tensor is of torch.Size([50000,1]) 
+      which is helpful when broadcasting later
 
     - x.exp() / (x.exp().sum(-1, keepdim=True)) is done element-wise
       using broadcasting, and result is of torch.Size([50000,10])
       - x.exp() => torch.Size([50000,10])
       - x.exp().sum(...) => torch.Size([50000,1])
 
-    # definiton of log softmax
-    #+BEGIN_SRC python
-      def log_softmax(x):
-          return (x.exp()/(x.exp().sum(-1,keepdim=True))).log()
-    #+END_SRC
+    - `log()` happens element-wise, and now the *(-1) of value for
+      each single element represents cross-entropy
+      (how much suprizing if that heppens)
 
+    - small cross-entropy (i.e. high probability) means it is less suprizing
+      when it happnes
+
+*** the output of log_softmax 
 
     # my log softmax with print
     #+BEGIN_SRC python
@@ -854,11 +886,23 @@
     #+END_SRC
 
 *** nll
-    - calculates 
 
-    - `input` is log_softmax of pred (log of softmaxed probabilities)
+    #+BEGIN_SRC python
+      def nll(input, target): return -input[range(target.shape[0]), target].mean()
+    #+END_SRC
+
+    - nll calculates cross-entropy LOSS using cross-entropies
+
+    - since the label is one-hot encoded, we can utilizing numpy
+      integer indexing.
+
+    - `input` is log_softmax of pred, and is a 2rank tensor 
+      with each row containing entropies for 
+
     - target is the label
+
     - `target.shape[0]` is same as the number of data
+
     - with 'integer array indexing', nll returns
       
     - using integer array indexing, 
@@ -866,12 +910,10 @@
 
       (-1) x log softmax of a predicted probability for the label
 
-    - then,  .mean() returns the sum devided by number of the data
+    - the calculated vlaue is a rank1 tensor consisting of 
+      cross entropy losses 
 
-      #+BEGIN_SRC python
-        def nll(input, target):
-            return -input[range(target.shape[0]), target].mean()
-      #+END_SRC
+    - then,  .mean() returns the sum devided by number of the data
 
 *** logsumexp
     https://pytorch.org/docs/master/generated/torch.logsumexp.html
@@ -909,8 +951,6 @@
                 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 1., 1.,
                 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
       #+END_SRC
-
-    
 
 *** basic training loop
 
@@ -5001,7 +5041,7 @@ class BatchNorm(nn.Module):
       norm_imagenette = partial(normalize_chan, mean=_m.cuda(), std=_s.cuda())
     #+END_SRC
     
-    - [ ] why do we need to add `[...,None,None]` for broadcasting?
+    - [ ] why are we indexing `[...,None,None]` ?
 
 ***  get_cnn_layers ver3, get_cnn_model ver4, get_learn_run ver2
 
@@ -5479,6 +5519,13 @@ class BatchNorm(nn.Module):
 
     - instead, a stepper that requires a hyper parameter provides
       the default value by itself.
+
+*** sgd_opt
+
+    #+BEGIN_SRC python
+      #export 
+      sgd_opt = partial(Optimizer, steppers=[weight_decay, sgd_step])
+    #+END_SRC
 
 
 *** Stat
@@ -6074,7 +6121,7 @@ class BatchNorm(nn.Module):
       on the fly in `fit`
 
 
-*** get_learner
+*** get_learner ver1
 
     #+BEGIN_SRC python
       #export
@@ -6538,318 +6585,653 @@ class BatchNorm(nn.Module):
     - fastai v1 is not equipped with data augumentation for batch
 
 * lesson12
+** 10b_mixup_label_smoothing.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+    #+END_SRC
+
+*** loss function for mixup
+    - the loss function for mixup is defined to be just a cross-entropy loss
+      where target is in the form of (0.7, 0.3, 0, 0, 0).
+
+    - the cross-entropy loss is just a linear combination of
+      cross-entropy loss for label1 and cross-entropy loss for label2
+      so can be writen as 
+
+      #+BEGIN_SRC python
+        loss(output, new_target) = t * loss(output, target1) + (1-t) * loss(output, target2)
+      #+END_SRC
+
+    - why does cross-entropy loss make sense for mixup?
+    - 
+    - for simplicity, think of a case where there are only 2 labels (such as dog or cat), and t = 0.7
+
+    - keep in mind that cross-entropy loss is calculated for a batch of image
+
+    - for a specific mixedup image, cross entropy loss is 0.7*(-logP1) + 0.3*(-logP2) where P1+P2=1
+
+    - when will it be smallest?
+
+    - naive guess is that we may choose a value close to 1 for P1, since it makes 0.7*(-logP1) small
+      but since P1+P2 must add up to 1, P1 getting closer to 1 means P2 getting closer to 0, which
+      makes (-logP2) goes to inifnity!
+
+    - P1 should be not too close to 1, but somewhat bigger than P2, 
+      reflecting how much the coefficient of "-logP1" (0.7) is
+      bigger than that of "-logP2" (0.3)
+
+    - this means, the neural net will be trained to predict label(i)-ishness properly
+
+    - _old
+
+    # - to calculate the loss for the mixuped image,
+    #   we use TWO target for ONE mixedup image,
+    #   and calculate a cross-entropy loss for each of the two targets
+    #   - each of the targets is one-hot encoding targets
+
+    # - in English, let's say the new target is consisted of target1 and target2
+    #   - firstly we pretend the new target is just a target1 and compute loss
+    #     but because the new target has just "t" of target1-ness,
+    #     we scale down the loss by factor of "t"
+
+    #   - then, we pretend the new target is just a target2 and compute loss,
+    #     but because the new target has just "1-t" of target2-ness,
+    #     we scale down the loss by factor of "1-t"
+
+*** gamma 
+
+    #+BEGIN_SRC python
+      # PyTorch has a log-gamma but not a gamma, so we'll create one
+      Γ = lambda x: x.lgamma().exp()
+    #+END_SRC
+
+*** NoneReduce
+
+    #+BEGIN_SRC python
+      #export
+      class NoneReduce():
+          def __init__(self, loss_func): 
+              self.loss_func,self.old_red = loss_func,None
+              
+          def __enter__(self):
+              if hasattr(self.loss_func, 'reduction'):
+                  self.old_red = getattr(self.loss_func, 'reduction')
+                  setattr(self.loss_func, 'reduction', 'none')
+                  return self.loss_func
+              else: return partial(self.loss_func, reduction='none')
+              
+          def __exit__(self, type, value, traceback):
+              if self.old_red is not None: setattr(self.loss_func, 'reduction', self.old_red)    
+    #+END_SRC
+
+*** unsqueeze, reduce_loss
+
+    #+BEGIN_SRC python
+      #export
+      from torch.distributions.beta import Beta
+
+      def unsqueeze(input, dims):
+          for dim in listify(dims): input = torch.unsqueeze(input, dim)
+          return input
+
+      def reduce_loss(loss, reduction='mean'):
+          return loss.mean() if reduction=='mean' else loss.sum() if reduction=='sum' else loss    
+    #+END_SRC
+
+    - reduce loss 
+
+*** MixUp
+
+    #+BEGIN_SRC python
+      #export
+      class MixUp(Callback):
+          _order = 90 #Runs after normalization and cuda
+          def __init__(self, α:float=0.4): self.distrib = Beta(tensor([α]), tensor([α]))
+          
+          def begin_fit(self): self.old_loss_func,self.run.loss_func = self.run.loss_func,self.loss_func
+          
+          def begin_batch(self):
+              if not self.in_train: return #Only mixup things during training
+              λ = self.distrib.sample((self.yb.size(0),)).squeeze().to(self.xb.device)
+              λ = torch.stack([λ, 1-λ], 1)
+              self.λ = unsqueeze(λ.max(1)[0], (1,2,3))
+              shuffle = torch.randperm(self.yb.size(0)).to(self.xb.device)
+              xb1,self.yb1 = self.xb[shuffle],self.yb[shuffle]
+              self.run.xb = lin_comb(self.xb, xb1, self.λ)
+              
+          def after_fit(self): self.run.loss_func = self.old_loss_func
+          
+          def loss_func(self, pred, yb):
+              if not self.in_train: return self.old_loss_func(pred, yb)
+              with NoneReduce(self.old_loss_func) as loss_func:
+                  loss1 = loss_func(pred, yb)
+                  loss2 = loss_func(pred, self.yb1)
+              loss = lin_comb(loss1, loss2, self.λ)
+              return reduce_loss(loss, getattr(self.old_loss_func, 'reduction', 'mean'))
+    #+END_SRC
+
+    - define 'base' and 'mixing pair' to be the image corresponding to
+      x1 and x2 respectively where
+      x(mixup) = t * x1 + (1-t) * x2
+
+    - Although `Runner` ver3 is actually called `Learner`, 
+      `Callback` ver3 still uses term `run` in `self.run` or
+      `set_runner`.
+
+    - for a batch of 'base' images, a batch of 'mixing pair' images
+      is created just by randomly permiting the batch of 'base' images
+
+    - `self.yb` is a batch of the labels for the corresponding
+      batch of `mixing-pair` images
+
+    - `self.run.xb = lin_comb(self.xb, xb1, self.λ)` sets
+      a batch of mixed up images to `xb` property  of the `Learner` instance
+
+    - in `loss_func`, 
+      - `yb` is a batch of the labels for the corresponding 
+        batch of 'base' images
+
+      - `self.yb1` is a batch of the labels for the corresponding
+        batch of `mixing pair` images
+
+      - a loss function such as F.cross_entropy returns 
+        the reduced version of the rank1 tensor consisting 
+        of losses for a batch in the form of either sum or mean.
+
+      - However, while calculating the loss for each of
+        'base', or 'mixing pair' to calculate the loss
+        for mixedup image, we would like to keep the result
+        before reduction.
+
+      - In order to do that, we apply a context manager 
+        NoneReduce to self.old_loss_func (= F.cross_entropy ), 
+        which sets to self.loss_func  the non-reduction
+        version of self.old_loss_func
+
+      - in the end of `MixUp::loss_func`, we reduce the 
+        rank1 tensor for the loss for a batch of mixedup images
+        by `reduce_loss` and return.
 
 
 
-* articles from web
-** part1
-*** embedding 
-    https://towardsdatascience.com/neural-network-embeddings-explained-4d028e6f0526
-    https://medium.com/@michi.jeremias/embeddings-in-tabular-data-990202daa59f
-    https://towardsdatascience.com/how-to-gain-state-of-the-art-result-on-tabular-data-with-deep-learning-and-embedding-layers-d1eb6b83c52c
-
-*** SGD with momentum
-    - https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
-
-*** cross entropy
-    - https://www.youtube.com/watch?v=ErfnhcEV1O8
-
-*** CNN
-    https://towardsdatascience.com/the-most-intuitive-and-easiest-guide-for-convolutional-neural-network-3607be47480
-
-*** SGD with momentum
-    https://towardsdatascience.com/stochastic-gradient-descent-with-momentum-a84097641a5d
-
-*** adam
-    https://towardsdatascience.com/adam-latest-trends-in-deep-learning-optimization-6be9a291375c
-
-*** res net
-    https://www.youtube.com/watch?v=ZILIbUvp5lk
-    https://towardsdatascience.com/an-overview-of-resnet-and-its-variants-5281e2f56035
-
-*** unet
-    https://towardsdatascience.com/u-net-b229b32b4a71
-    https://towardsdatascience.com/understanding-semantic-segmentation-with-unet-6be4f42d4b47
-    https://www.google.com/search?q=toward+data+science+u+net
 
 
-*** batch norm
-    https://towardsdatascience.com/understanding-batch-normalization-for-neural-networks-1cd269786fa6
+*** get_learner ver2
 
+    #+BEGIN_SRC python
+      def get_learner(nfs, data, lr, layer, loss_func=F.cross_entropy,
+                      cb_funcs=None, opt_func=optim.SGD, **kwargs):
+          model = get_cnn_model(data, nfs, layer, **kwargs)
+          init_cnn(model)
+          return Learner(model, data, loss_func, lr=lr, cb_funcs=cb_funcs, opt_func=opt_func)
+    #+END_SRC
 
-*** stack
-    https://www.youtube.com/watch?time_continue=296&v=kF2AlpykJGY&feature=emb_logo
+*** what is Label smoothing
+    - label smoothing is technique to handle data with noisy label.
+      with this technique, we can skip all the cleaning task
 
+*** LabelSmoothingCrossEntropy
 
-*** normalization
-    https://jamesmccaffrey.wordpress.com/2019/01/04/how-to-normalize-training-and-test-data-for-machine-learning/
+    #+BEGIN_SRC python
+      #export
+      class LabelSmoothingCrossEntropy(nn.Module):
+          def __init__(self, ε:float=0.1, reduction='mean'):
+              super().__init__()
+              self.ε,self.reduction = ε,reduction
+          
+          def forward(self, output, target):
+              c = output.size()[-1]
+              log_preds = F.log_softmax(output, dim=-1)
+              loss = reduce_loss(-log_preds.sum(dim=-1), self.reduction)
+              nll = F.nll_loss(log_preds, target, reduction=self.reduction)
+              return lin_comb(loss/c, nll, self.ε)
+    #+END_SRC
 
-*** kaiming initialization
-    https://towardsdatascience.com/understand-kaiming-initialization-and-implementation-detail-in-pytorch-f7aa967e9138
+    - `LabelSmoothing` works well with MixUp and substitutes
+      the calculation of cross-entropy loss for the label of
+      `base` iamge and label of `mixing-up` image.
 
+    - the loss for LabelSmoothing is defined as
+      𝑙𝑜𝑠𝑠=(1−ε)𝑐𝑒(𝑖)+ε∑𝑐𝑒(𝑗)/𝑁
 
-*** dimension reduction
-    https://www.youtube.com/watch?v=Zbr5hyJNGCs
+    - the definition of `LabelSmoothing` is for a single image,
+      so if we calculate it for a batch, we end up with
+      rank1 tensor consisting of losses for each of the single images
 
-*** tabular data & CNN
-    https://towardsdatascience.com/convolutional-neural-network-on-a-structured-bank-customer-data-358e6b8aa759
+    - however, `forward` needs to return some scalar value,
+      so we reduce the rank1 tensor to a scalar by taking 
+      the the average over the batch
 
-*** matrix calculus
-    https://explained.ai/matrix-calculus/index.html
+    - since the loss for LabelSmoothing is a linear combination of
+      two terms, it is ok to take the average over the batch
+      independently and add them up together in the end.
 
-** part2
-*** tensor
-    https://www.youtube.com/watch?v=f5liqUk0ZTw
+    - `c` is number of the labels
 
-*** derivative with respect to a vector
-    https://www.youtube.com/watch?v=iWxY7VdcSH8
-    https://www.youtube.com/watch?v=uoejt0FCWWA
-    https://www.youtube.com/watch?v=i6fqfH5hx60&list=PLvSdMJxMoHLsBaO5PqRUeX1FU4ydKpe6W&index=4
+    - `-log_preds` is a rank2 tensor.
+      - each row corresponds to a single image in a batch
+      - each row contains the cros entropies for corresponding labels
 
-
-*** derivatives of matrix
-    https://www.youtube.com/watch?v=e73033jZTCI
-
-*** with torch.no_grad()
-    https://forums.fast.ai/t/why-torch-no-grad-lesson-9/71420
-    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
-
-*** lesson9 with torch.no_grad
-    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html
-    https://pytorch.org/tutorials/beginner/former_torchies/autograd_tutorial_old.html
-
-*** lesson10, appropriate kernel size
-    https://towardsdatascience.com/deciding-optimal-filter-size-for-cnns-d6f7b56f9363
-
-*** lesson10, RunningBatchNorm
-    https://forums.fast.ai/t/questions-about-runningbatchnorm-in-lesson-10/56331
-
-# initialize
-def __init__(self, nf, mom=0.1, eps=1e-5):
-    super().__init__()
-    
-    # constants
-    self.mom,self.eps = mom,eps
-    
-    # add scale and offset parameters to the model
-    # note: nf is the number of channels
-    # Q1: shouldn't self.mults and self.adds have size [1,nf,1,1]?
-    self.mults = nn.Parameter(torch.ones (nf,1,1))
-    self.adds = nn.Parameter(torch.zeros(nf,1,1))
-    
-    # register_buffer adds a persistent buffer to the module, usually used for a non-model parameter
-    self.register_buffer('sums', torch.zeros(1,nf,1,1))
-    self.register_buffer('sqrs', torch.zeros(1,nf,1,1))
-    self.register_buffer('batch', tensor(0.))
-    self.register_buffer('count', tensor(0.))
-    self.register_buffer('step', tensor(0.))
-    self.register_buffer('dbias', tensor(0.))
-
-# compute updates to buffered tensors
-def update_stats(self, x):
-    
-    # batchsize, number of channels
-    bs,nc,*_ = x.shape
-    
-    # Note: for a tensor t, t.detach_() means detach t from the computation graph, i.e. don't keep track of its gradients;
-    #     the '_' prefix means do it "in place"
-    # Q2: why don't we also use .detach_() for self.batch, self.count, self.step, and self.dbias?
-    self.sums.detach_()
-    self.sqrs.detach_()
-    
-    # the input x is a four-dimensional tensor: 
-    #    dimensions 0, 2, 3 refer to batch samples, weight matrix rows, and weight matrix columns, respectively
-    #    dimension 1 refers to channels
-    dims = (0,2,3)
-    
-    # compute s and ss, which are the sum of the weights and the sum of the squares of the weights 
-    #     over dimensions (0,2,3) for this batch. s and ss each consist of one number for each channel;
-    #     because keepdim=True s, and ss are each of size [1,nf,1,1]
-    s = x.sum(dims, keepdim=True)
-    ss = (x*x).sum(dims, keepdim=True)
-    
-    # Notes: 
-    #   x.numel() is the number of elements in the 4-D tensor x,
-    #       which is the total number of weights in the batch
-    #   x.numel()/nc is the number of weights per channel in the batch
-    #   y = tensor.new_tensor(x) is equivalent to y = x.clone().detach(), 
-    #       the latter is the preferred way to make a copy of a tensor
-    #   c is a one-dimensional tensor with a value equal to the number of weights per channel for this batch
-    #       note that the number of weights per channel of a batch depends on the number of samples in the 
-    #       batch; not all batches have the same number of samples
-    c = self.count.new_tensor(x.numel()/nc)
-    
-    # momentum
-    # mom1 is the 'weight' to be used in lerp_() to compute EWMAs
-    #     -- see pytorch documentation for lerp_
-    # if mom is 0.1 and batch size is 2, then mom1 ~ 1 - 0.9/1 = 0.1
-    # if mom is 0.1 and batch size is 64, then mom1 ~ 1 - 0.9/7 ~ 0.9; 
-    #     in general, mom1 increases with batch size
-    # Q3: What's the logic behind the following formula for mom1?
-    mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)
-    # self.mom1 is a one-dimensional tensor, with a value equal to mom1
-    self.mom1 = self.dbias.new_tensor(mom1)
-    
-    # update EWMAs of sums, sqrs, which, like s and ss, have size [1,1,nf,1] 
-    self.sums.lerp_(s, self.mom1)
-    self.sqrs.lerp_(ss, self.mom1)
-
-    # update EWMA of count
-    # self.count keeps track of the EWMA of c,
-    #     which is the number of weights per channel for a batch
-    # Q4: why do we need the EWMA of c?  Aren't batch sizes always the same, except for the last batch?
-    self.count.lerp_(c, self.mom1)
-    
- 
-    # Q5: what is the logic behind the following formula for dbias?
-    self.dbias = self.dbias*(1-self.mom1) + self.mom1
-    
-    # update the total number of samples that have been processed up till now, 
-    #     i.e. the number of samples in this batch and all previous batches so far
-    self.batch += bs
-    
-    # update the total number of batches that have been processed
-    self.step += 1
-
-# apply a forward pass to the current batch
-def forward(self, x):
-    
-    # main idea of RunningBatchNorm:
-    #     to normalize the batch:
-    #     in training mode, use the current EWMAs accumulated in the buffers at this step (batch), 
-    #         and the *current* fitted values of the model parameters mults and adds at this step
-    #     in validation mode, use the final values of the EWMAs accumulated in the buffers after training,
-    #         and the final fitted values of mults and adds
-    if self.training: self.update_stats(x)
+    - `loss` is sum of cross entropies
         
-    # get the current values of the EWMAs of sums, sqrs and count from the buffers
-    sums = self.sums
-    sqrs = self.sqrs
-    c = self.count
+    - `log_preds.sum(dim=-1)` is a rank1 tensor
+      with each row containing the sum of the cross-entropies 
+      for the labels
+
+    - `reduce_loss(-log_preds.sum(dim=-1), self.reduction)`
+      takes the average (over a batch) of the sum of the
+      cross-entropies, which corresponds to taking the average
+      over a batch for the 2nd term of the definition of
+      the loss for `LabelSmoothing`
+      
+
+    - `F.nll_loss(log_preds, target, reduction=self.reduction)` 
+      calculates cross-entropy LOSS for each row, and then
+      takes the average of the cross-entropy losses over the batch
+
+    - 
+
+** 10c_fp16.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+    #+END_SRC
+
+*** bn_to_float
+
+    #+BEGIN_SRC python
+      def bn_to_float(model):
+          if isinstance(model, bn_types): model.float()
+          for child in model.children():  bn_to_float(child)
+          return model
+    #+END_SRC
+
+*** model_to_half
+
+    #+BEGIN_SRC python
+      def model_to_half(model):
+          model = model.half()
+          return bn_to_float(model)
+    #+END_SRC
+
+*** check_weights
+
+    #+BEGIN_SRC python
+      def check_weights(model):
+          for i,t in enumerate([torch.float16, torch.float32, torch.float16]):
+              assert model[i].weight.dtype == t
+              assert model[i].bias.dtype   == t
+    #+END_SRC
+
+*** get_master ver1
+
+    #+BEGIN_SRC python
+      from torch.nn.utils import parameters_to_vector
+
+      def get_master(model, flat_master=False):
+          model_params = [param for param in model.parameters() if param.requires_grad]
+          if flat_master:
+              master_param = parameters_to_vector([param.data.float() for param in model_params])
+              master_param = torch.nn.Parameter(master_param, requires_grad=True)
+              if master_param.grad is None: master_param.grad = master_param.new(*master_param.size())
+              return model_params, [master_param]
+          else:
+              master_params = [param.clone().float().detach() for param in model_params]
+              for param in master_params: param.requires_grad_(True)
+              return model_params, master_params
+    #+END_SRC
     
-    # if the current batch number is less than 100, scale the EWMAs by 1/self.dbias
-    # Q6: Why?
-    if self.step<100:
-        sums = sums / self.dbias
-        sqrs = sqrs / self.dbias
-        c    = c    / self.dbias
-        
-    # scale sums by 1/c to get the mean of the weights
-    means = sums/c
-    
-    # scale sqrs by 1/c to get the mean of the squared weights
-    #     then subtract the square of the mean weight from the mean of the squared weights
-    # note: we recognize this as the 'computationally efficient' formula for the variance that we've seen before 
-    vars = (sqrs/c).sub_(means*means)
-    
-    # if there are less than 20 samples so far, clamp vars to 0.01 (in case any of them becomes very small)
-    if bool(self.batch < 20): vars.clamp_min_(0.01)
-        
-    # normalize the batch in the usual way, i.e. subtract the mean and divide by std
-    # Q7: but why do we need to add eps, when we've already clamped the vars to 0.01? 
-    x = (x-means).div_((vars.add_(self.eps)).sqrt())
-    
-    # return a scaled and offset version of the normalized batch, where the
-    #     scale factors (self.mults) and offsets (self.adds) are parameters in the model
-    #     Note: there's a size mismatch: self.mults and self.adds have size [nf,1,1], while x has size [1,nf,1,1]
-    return x.mul_(self.mults).add_(self.adds)
+*** same_lists
+
+    #+BEGIN_SRC python
+      def same_lists(ps1, ps2):
+          assert len(ps1) == len(ps2)
+          for (p1,p2) in zip(ps1,ps2): 
+              assert p1.requires_grad == p2.requires_grad
+              assert torch.allclose(p1.data.float(), p2.data.float())
+    #+END_SRC
+
+*** get_master ver2
+
+    #+BEGIN_SRC python
+      def get_master(opt, flat_master=False):
+          model_params = [[param for param in pg if param.requires_grad] for pg in opt.param_groups]
+          if flat_master:
+              master_params = []
+              for pg in model_params:
+                  mp = parameters_to_vector([param.data.float() for param in pg])
+                  mp = torch.nn.Parameter(mp, requires_grad=True)
+                  if mp.grad is None: mp.grad = mp.new(*mp.size())
+                  master_params.append(mp)
+          else:
+              master_params = [[param.clone().float().detach() for param in pg] for pg in model_params]
+              for pg in master_params:
+                  for param in pg: param.requires_grad_(True)
+          return model_params, master_params
+    #+END_SRC
+
+*** to_master_grads ver1
+
+    #+BEGIN_SRC python
+      def to_master_grads(model_params, master_params, flat_master:bool=False)->None:
+          if flat_master:
+              if master_params[0].grad is None: master_params[0].grad = master_params[0].data.new(*master_params[0].data.size())
+              master_params[0].grad.data.copy_(parameters_to_vector([p.grad.data.float() for p in model_params]))
+          else:
+              for model, master in zip(model_params, master_params):
+                  if model.grad is not None:
+                      if master.grad is None: master.grad = master.data.new(*master.data.size())
+                      master.grad.data.copy_(model.grad.data)
+                  else: master.grad = None
+    #+END_SRC
+
+*** check_grads
+#+BEGIN_SRC python
+  def check_grads(m1, m2):
+      for p1,p2 in zip(m1,m2): 
+          if p1.grad is None: assert p2.grad is None
+          else: assert torch.allclose(p1.grad.data, p2.grad.data) 
+#+END_SRC
+
+*** to_model_params ver1
+#+BEGIN_SRC python
+  from torch._utils import _unflatten_dense_tensors
+
+  def to_model_params(model_params, master_params, flat_master:bool=False)->None:
+      if flat_master:
+          for model, master in zip(model_params, _unflatten_dense_tensors(master_params[0].data, model_params)):
+              model.data.copy_(master)
+      else:
+          for model, master in zip(model_params, master_params): model.data.copy_(master.data)
+#+END_SRC
+
+*** get_master ver3
+
+    #+BEGIN_SRC python
+      # export 
+      def get_master(opt, flat_master=False):
+          model_pgs = [[param for param in pg if param.requires_grad] for pg in opt.param_groups]
+          if flat_master:
+              master_pgs = []
+              for pg in model_pgs:
+                  mp = parameters_to_vector([param.data.float() for param in pg])
+                  mp = torch.nn.Parameter(mp, requires_grad=True)
+                  if mp.grad is None: mp.grad = mp.new(*mp.size())
+                  master_pgs.append([mp])
+          else:
+              master_pgs = [[param.clone().float().detach() for param in pg] for pg in model_pgs]
+              for pg in master_pgs:
+                  for param in pg: param.requires_grad_(True)
+          return model_pgs, master_pgs
+    #+END_SRC
 
 
-*** exponentially weighted averages
-    https://www.coursera.org/lecture/deep-neural-network/exponentially-weighted-averages-duStO
 
-*** debiasing
-    https://www.youtube.com/watch?v=lWzo8CajF5s
+*** to_master_grads ver2
 
-*** adam
-    https://www.youtube.com/watch?v=JXQT_vxqwIs
+    #+BEGIN_SRC python
+      # export 
+      def to_master_grads(model_pgs, master_pgs, flat_master:bool=False)->None:
+          for (model_params,master_params) in zip(model_pgs,master_pgs):
+              fp16.model_grads_to_master_grads(model_params, master_params, flat_master=flat_master)
+    #+END_SRC
 
-*** lesson11 weght decay
-    https://jamesmccaffrey.wordpress.com/2019/05/09/the-difference-between-neural-network-l2-regularization-and-weight-decay/
+*** to_model_params ver2
 
-*** lesson11, L2 regularization with batch norm
-    https://blog.janestreet.com/l2-regularization-and-batch-norm/
+    #+BEGIN_SRC python
+      # export 
+      def to_model_params(model_pgs, master_pgs, flat_master:bool=False)->None:
+          for (model_params,master_params) in zip(model_pgs,master_pgs):
+              fp16.master_params_to_model_params(model_params, master_params, flat_master=flat_master)
+    #+END_SRC
 
-*** lesson11, LAMB
-    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+*** MixedPrecision ver1
 
-*** lesson11 data augumentation
-    https://www.coursera.org/lecture/convolutional-neural-networks/data-augmentation-AYzbX
+    #+BEGIN_SRC python
+      class MixedPrecision(Callback):
+          _order = 99
+          def __init__(self, loss_scale=512, flat_master=False):
+              assert torch.backends.cudnn.enabled, "Mixed precision training requires cudnn."
+              self.loss_scale,self.flat_master = loss_scale,flat_master
 
-** python
-*** **kwarg
-    https://www.youtube.com/watch?v=WcTXxX3vYgY
+          def begin_fit(self):
+              self.run.model = fp16.convert_network(self.model, dtype=torch.float16)
+              self.model_pgs, self.master_pgs = get_master(self.opt, self.flat_master)
+              #Changes the optimizer so that the optimization step is done in FP32.
+              self.run.opt.param_groups = self.master_pgs #Put those param groups inside our runner.
+              
+          def after_fit(self): self.model.float()
 
-*** function argument unpacking  (* for tuple, ** for dictionary)
-    https://www.youtube.com/watch?v=bj717GHdzjo
+          def begin_batch(self): self.run.xb = self.run.xb.half() #Put the inputs to half precision
+          def after_pred(self):  self.run.pred = self.run.pred.float() #Compute the loss in FP32
+          def after_loss(self):  self.run.loss *= self.loss_scale #Loss scaling to avoid gradient underflow
 
-    def myfunc(x, y ,z)
-      print(x,y,z)
+          def after_backward(self):
+              #Copy the gradients to master and unscale
+              to_master_grads(self.model_pgs, self.master_pgs, self.flat_master)
+              for master_params in self.master_pgs:
+                  for param in master_params:
+                      if param.grad is not None: param.grad.div_(self.loss_scale)
 
-    tuple_vec = (1,0,1)
-    dict_vec = {'x':1, 'y':0, 'z':1}
-    
-    myfunc(*tuple_vec)
-    # 1,0,1
+          def after_step(self):
+              #Zero the gradients of the model since the optimizer is disconnected.
+              self.model.zero_grad()
+              #Update the params from master to model.
+              to_model_params(self.model_pgs, self.master_pgs, self.flat_master)
+    #+END_SRC
 
-    myfunc(**dict_vec)
-    # 1,0,1
-    
-*** packing & unpacking 
-    https://www.youtube.com/watch?v=YWY4BZi_o28
+*** get_learner
+#+BEGIN_SRC python
+  def get_learner(nfs, data, lr, layer, loss_func=F.cross_entropy,
+                  cb_funcs=None, opt_func=adam_opt(), **kwargs):
+      model = get_cnn_model(data, nfs, layer, **kwargs)
+      init_cnn(model)
+      return Learner(model, data, loss_func, lr=lr, cb_funcs=cb_funcs, opt_func=opt_func)
+#+END_SRC
 
-*** list comprehension (for loop and square brackets)
-    https://www.youtube.com/watch?v=AhSvKGTh28Q
+*** test_overflow
+#+BEGIN_SRC python
+  # export 
+  def test_overflow(x):
+      s = float(x.float().sum())
+      return (s == float('inf') or s == float('-inf') or s != s)
+#+END_SRC
 
-*** generator
-    https://realpython.com/lessons/what-are-python-generators/
+*** grad_overflow
 
-*** yield
-    https://www.youtube.com/watch?v=vOMtQ4ocMGI
+    #+BEGIN_SRC python
+      # export 
+      def grad_overflow(param_groups):
+          for group in param_groups:
+              for p in group:
+                  if p.grad is not None:
+                      s = float(p.grad.data.float().sum())
+                      if s == float('inf') or s == float('-inf') or s != s: return True
+          return False
+    #+END_SRC
 
-*** with statement
-    https://dbader.org/blog/python-context-managers-and-with-statement
+*** MixedPrecision ver2
 
-*** python `or` operator
-    https://realpython.com/python-or-operator/
+    #+BEGIN_SRC python
+      # export 
+      class MixedPrecision(Callback):
+          _order = 99
+          def __init__(self, loss_scale=512, flat_master=False, dynamic=True, max_loss_scale=2.**24, div_factor=2.,
+                       scale_wait=500):
+              assert torch.backends.cudnn.enabled, "Mixed precision training requires cudnn."
+              self.flat_master,self.dynamic,self.max_loss_scale = flat_master,dynamic,max_loss_scale
+              self.div_factor,self.scale_wait = div_factor,scale_wait
+              self.loss_scale = max_loss_scale if dynamic else loss_scale
 
-*** short circuting
-    https://www.geeksforgeeks.org/short-circuiting-techniques-python/
+          def begin_fit(self):
+              self.run.model = fp16.convert_network(self.model, dtype=torch.float16)
+              self.model_pgs, self.master_pgs = get_master(self.opt, self.flat_master)
+              #Changes the optimizer so that the optimization step is done in FP32.
+              self.run.opt.param_groups = self.master_pgs #Put those param groups inside our runner.
+              if self.dynamic: self.count = 0
+
+          def begin_batch(self): self.run.xb = self.run.xb.half() #Put the inputs to half precision
+          def after_pred(self):  self.run.pred = self.run.pred.float() #Compute the loss in FP32
+          def after_loss(self):  
+              if self.in_train: self.run.loss *= self.loss_scale #Loss scaling to avoid gradient underflow
+
+          def after_backward(self):
+              #First, check for an overflow
+              if self.dynamic and grad_overflow(self.model_pgs):
+                  #Divide the loss scale by div_factor, zero the grad (after_step will be skipped)
+                  self.loss_scale /= self.div_factor
+                  self.model.zero_grad()
+                  return True #skip step and zero_grad
+              #Copy the gradients to master and unscale
+              to_master_grads(self.model_pgs, self.master_pgs, self.flat_master)
+              for master_params in self.master_pgs:
+                  for param in master_params:
+                      if param.grad is not None: param.grad.div_(self.loss_scale)
+              #Check if it's been long enough without overflow
+              if self.dynamic:
+                  self.count += 1
+                  if self.count == self.scale_wait:
+                      self.count = 0
+                      self.loss_scale *= self.div_factor
+
+          def after_step(self):
+              #Zero the gradients of the model since the optimizer is disconnected.
+              self.model.zero_grad()
+              #Update the params from master to model.
+              to_model_params(self.model_pgs, self.master_pgs, self.flat_master)
+    #+END_SRC
 
 
-** pytorch
-*** torch summary
-    https://kunpengsong.github.io/2019/06/Pytorch-cheat-sheet/
-
-*** torch.cat
-    
-
-*** stack
-    https://www.youtube.com/watch?v=fCVuiW9AFzY
-
-*** flatten, reshape, squeeze
-    https://www.youtube.com/watch?v=fCVuiW9AFzY
-
-** computational linear algebra
-   https://github.com/fastai/numerical-linear-algebra/blob/master/README.md
-
-   https://www.youtube.com/watch?v=8iGzBMboA0I&list=PLtmWHNX-gukIc92m1K0P6bIOnZb-mg0hY&index=2&t=0s
-   https://github.com/fastai/numerical-linear-algebra/blob/master/README.md
 
 
-** language model
-   https://nlp.fast.ai/
 
-** fastai audio
-   https://towardsdatascience.com/sound-classification-using-images-68d4770df426
-   https://www.kaggle.com/nathanh12/new-fastai-audio
+* NLP course
+  https://www.fast.ai/2019/07/08/fastai-nlp/
 
-   https://forums.fast.ai/t/deep-learning-with-audio-thread/38123
+* NLP playlist
+  https://www.youtube.com/playlist?list=PLtmWHNX-gukKocXQOkQjuVxglSDYWsSh9
 
-
-** dataset
-*** japanese text
-    https://lionbridge.ai/datasets/japanese-language-text-datasets/
-
-*** facebook children's story
-    https://venturebeat.com/2016/02/18/facebook-releases-1-6gb-data-set-of-childrens-stories-for-training-its-ai/
