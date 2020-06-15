@@ -31,11 +31,12 @@
 
 *** components of deep learning
     - techniques to initialize parameters & normalize activations in order to keep activations nice
-      - kaiming initialization
-      - lsuv (initialization)
-      - BatchNorm (normalization)
+      - kaiming initialization (weight initialization)
+      - lsuv (weight initialization)
+      - BatchNorm (activation normalization)
 
     - techniques to update parameters
+      - parameter scheduling
       - ADAM
       - LAMB
 
@@ -46,14 +47,23 @@
       - affine transformation (for image)
       - mix up
 
-    - techniques to increase the layers
+    - techniques to improve network architecture
       - res-net
+      - Xres-net
 
 * things to understand
-** basics of deep learning
+** CNN
 *** CNN
 
-** algorithms for deep learning 
+*** right kernel size for CNN
+
+*** meaning of filters & channels
+    - are they used interchangably?
+
+** initialization & normalization
+*** why BatchNorm works
+
+** optimization
 *** debiasing exponentially weighted moving average
     https://www.youtube.com/watch?v=lWzo8CajF5s
 
@@ -70,6 +80,12 @@
     https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
     https://arxiv.org/pdf/1904.00962.pdf
     
+** architecture design
+*** detail of 'bag of tricks' paper which considers
+    - how we can make use of all the input we have
+    - how we can take advantage of computations we are doing
+
+
 ** pyotrch
 *** pytorch > tensor broadcasting
     https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
@@ -3740,7 +3756,7 @@
     # forum
     https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
 
-*** TODO BatchNorm
+*** BatchNorm
 
     #+BEGIN_SRC python
       class BatchNorm(nn.Module):
@@ -3803,13 +3819,20 @@
         '''
       #+END_SRC
 
-    - `mults` is an instance of nn.Parameter, which means it can be learned
+    - `mults` is an instance of nn.Parameter, which means
+      it can be learned
 
-    - `nf` corresponds to the value of channel axis of the activation
-      note that channel axis of the input and the activation are different
+    - since `mults` is a type of weight and  `adds` is a type of bias,
+      BatchNorm is considered as special kind of a linear layer
+
+    - `nf` corresponds to the value of the channel axis of
+      the activations of the precedeing layer
+
+    - ?? note that the channel axis of the input and the
+      activation are different
 
     - for tarining time, we use mean & vars of that specific batch
-      of activation, whereas for inference time, we use
+      of activations, whereas for inference time, we use
       averaged means & vars over many batches of activations
 
     - `lerp` is torch's linear interpolation 
@@ -3825,43 +3848,10 @@
 
       we can't add things on GPU with things on CPU
 
-    - [ ] why are `self.eps`, `self.mom` also on GPU when
-      they are created without using self.register_buffer?
 
-      #+BEGIN_SRC python
-        self.mom,self.eps = mom,eps
-      #+END_SRC
-
-    - what Jeremy said
+    - [ ] `self.eps`, and `self.mom` are scalars, and
+      different from tensors, they will go to GPU automatically
       
-      Why do we not use register_buffer for defining self.eps in class BatchNorm?
-      in lesson10?
-      
-      At 1:43:12 of the lesson10 lecture video, 
-      Jeremy explains why we use self.register_buffer('vars', torch.ones(1,nf,1,1)) 
-      for defining self.vars instead of just saying self.vars = torch.ones(1,nf,1,1), 
-      as below;
-      
-      "If we move the model to the GPU anything registered as buffer
-      will be moved to GPU as well
-      If we didn't do that, then it tries to do the calculation down here,
-      and vars and means are not on the GPU, but everything else is on the GPU
-      we get an error."
-
-      If that is the case, then why do we not have to define
-      "eps" using buffer as well, which is also involved 
-      in the calculation inside "forward"?
-
-      Since self.eps is defined
-      as "self.eps = eps", it will NOT automatically moved on 
-      GPU when the model is moved to GPU, if I understand correctly.
-
-      Then,we should get an error while 
-      "x = (x-m) / (v+self.eps).sqrt()"  is executed 
-      where we it uses a thing on the GPU with a thing(= "eps") 
-      NOT on the GPU.
-
-
     - also, when we save a trained model, variable 
       defined with register_buffer will also be saved.
 
@@ -5072,19 +5062,26 @@ class BatchNorm(nn.Module):
           return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
     #+END_SRC
 
-     - `get_cnn_layers` ver3 inserts a preceding 3 layers into a cnn layer, for a better feature representation
-       - it calculates, for the first layer, the right number of kernels(numbers of "金太郎飴") 
-         GIVEN the kernel size (=3x3, face size of "金太郎飴")
+     - `get_cnn_layers` ver3 inserts a preceding 3 layers into 
+       a cnn layer, for a better feature representation
 
-       - the reson for the kernel size (face size of "金太郎飴") of 3x3 is also discussed around 1:00:00
+       - it calculates, for the first layer, the right number
+         of kernels(numbers of "金太郎飴")  GIVEN
+         the kernel size (=3x3, face size of "金太郎飴")
+
+       - the reson for the kernel size (face size of "金太郎飴") of
+         3x3 is also discussed around 1:00:00
          (see "Bag of tricks" paper for more detail)
 
-       - note that "1:09:05", "1:17:05" of lesson10 was discussing about the
-         right kernel size (face size of "金太郎飴") for the first layer 
+       - note that "1:09:05" & "1:17:05" of lesson10 was
+         discussing about the right kernel size
+         (face size of "金太郎飴") for the first layer 
          GIVEN the number of the kernels  (numbers of "金太郎飴")
 
-       - in summary, in lesson11, the number of the kernels for the 1st layer is chosen so that the
-         computation is not wasted, and in addition, the right kernel size is also discussed 
+       - in summary, in lesson11, the number of the
+         kernels for the 1st layer is chosen so that the
+         computation is not wasted, and in addition, 
+         the right kernel size is also discussed 
 
      - `get_cnn_model` ver4 is same as ver3, but refering to `get_cnn_layers` ver3
      - `get_learn_run` ver2 is same as ver1, but refering to `get_cnn_model` ver4
@@ -7225,8 +7222,322 @@ class BatchNorm(nn.Module):
               to_model_params(self.model_pgs, self.master_pgs, self.flat_master)
     #+END_SRC
 
+** 11_train_imagenette.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+      ! git clone --recursive https://github.com/NVIDIA/apex.git
 
 
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+      !python notebook2script.py 10c_fp16.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+    #+END_SRC
+
+*** Flatten
+
+    #+BEGIN_SRC python
+      #export
+      def noop(x): return x
+
+      class Flatten(nn.Module):
+          def forward(self, x): return x.view(x.size(0), -1)
+
+      def conv(ni, nf, ks=3, stride=1, bias=False):
+          return nn.Conv2d(ni, nf, kernel_size=ks, stride=stride, padding=ks//2, bias=bias)
+    #+END_SRC
+
+*** init_cnn, conv_layer ver4
+
+    #+BEGIN_SRC python
+      #export
+      act_fn = nn.ReLU(inplace=True)
+
+      def init_cnn(m):
+          if getattr(m, 'bias', None) is not None: nn.init.constant_(m.bias, 0)
+          if isinstance(m, (nn.Conv2d,nn.Linear)): nn.init.kaiming_normal_(m.weight)
+          for l in m.children(): init_cnn(l)
+
+      def conv_layer(ni, nf, ks=3, stride=1, zero_bn=False, act=True):
+          bn = nn.BatchNorm2d(nf)
+          nn.init.constant_(bn.weight, 0. if zero_bn else 1.)
+          layers = [conv(ni, nf, ks, stride=stride), bn]
+          if act: layers.append(act_fn)
+          return nn.Sequential(*layers)
+    #+END_SRC
+
+*** ResBlock
+
+    #+BEGIN_SRC python
+      #export
+      class ResBlock(nn.Module):
+          def __init__(self, expansion, ni, nh, stride=1):
+              super().__init__()
+              nf,ni = nh*expansion,ni*expansion
+              layers  = [conv_layer(ni, nh, 3, stride=stride),
+                         conv_layer(nh, nf, 3, zero_bn=True, act=False)
+              ] if expansion == 1 else [
+                         conv_layer(ni, nh, 1),
+                         conv_layer(nh, nh, 3, stride=stride),
+                         conv_layer(nh, nf, 1, zero_bn=True, act=False)
+              ]
+              self.convs = nn.Sequential(*layers)
+              self.idconv = noop if ni==nf else conv_layer(ni, nf, 1, act=False)
+              self.pool = noop if stride==1 else nn.AvgPool2d(2, ceil_mode=True)
+
+          def forward(self, x): return act_fn(self.convs(x) + self.idconv(self.pool(x)))
+    #+END_SRC
+
+    - expansion is either 1 or 4.
+
+    - `expansion==1` corresponds to small ResNet (ResNet18, ResNet34) 
+      where there are only 2 layers (two 3x3 conv layers)
+
+      #+BEGIN_SRC python
+        layers  = [conv_layer(ni, nh, 3, stride=stride),
+                   conv_layer(nh, nf, 3, zero_bn=True, act=False)
+      #+END_SRC
+
+    - when `expansion` is 1 (`nh` and `nf` are same),
+      - the number of channel may or may not increases after the 1st conv layer, and 'face' size may or may not change
+      - the number of channel stays SAME after the 2nd conv layer, and 'fase' size stays the same
+
+    - `expansion==4` corresponds to ResNet50 onwards, and
+      ResBlock consists of 3 conv layers, called 'bottle neck layer',
+      which squishes the number of channels and expand again, 
+
+      #+BEGIN_SRC python
+        conv_layer(ni, nh, 1),
+        conv_layer(nh, nh, 3, stride=stride),
+        conv_layer(nh, nf, 1, zero_bn=True, act=False)
+      #+END_SRC
+
+    - when `expansion==4` (nf == 4*nh, nh=ni/4)
+      - the number of channel is squished by 4 after the 1st conv layer
+      - the number of channel stays same after the 2nd conv layer
+      - the number channel is expanded after the 3rd layer
+
+      for e.g.  64 channels => 16 channels => 16 channels => 64 channels
+
+    - we initialize BatchNorm layer of the 3rd conv_layer
+      with zero weight to train deep networks,
+      corresponding to ResNet-D in 'back of trick' paper
+      (32:00)
+
+    - in either of below 2 cases, we cannot add up `self.conv(x)`
+      with an activation for an identity path
+      - changing the grid size by stride2
+      - changing the number of channels
+        (when we use stride2, we generally double the number
+        of channels)
+
+    - in order to resolve either cases, we need to insert 
+      extra layer(s) to an identity layer depending on 
+      
+      - stride is 2 => insert AvgPool layer
+      - the number of channels changes => insert stride1 conv layer
+
+    - we apply stride2 on the 2nd conv layer since
+      applying on the 1st conv layer results in throwing away inputs
+
+    - note that `ni` is multiplied by 4 when `expansion` is 4
+
+*** XResNet
+
+    #+BEGIN_SRC python
+      #export
+      class XResNet(nn.Sequential):
+          @classmethod
+          def create(cls, expansion, layers, c_in=3, c_out=1000):
+              nfs = [c_in, (c_in+1)*8, 64, 64]
+              stem = [conv_layer(nfs[i], nfs[i+1], stride=2 if i==0 else 1)
+                  for i in range(3)]
+
+              nfs = [64//expansion,64,128,256,512]
+              res_layers = [cls._make_layer(expansion, nfs[i], nfs[i+1],
+                                            n_blocks=l, stride=1 if i==0 else 2)
+                        for i,l in enumerate(layers)]
+              res = cls(
+                  ,*stem,
+                  nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+                  ,*res_layers,
+                  nn.AdaptiveAvgPool2d(1), Flatten(),
+                  nn.Linear(nfs[-1]*expansion, c_out),
+              )
+              init_cnn(res)
+              return res
+
+          @staticmethod
+          def _make_layer(expansion, ni, nf, n_blocks, stride):
+              return nn.Sequential(
+                  *[ResBlock(expansion, ni if i==0 else nf, nf, stride if i==0 else 1)
+                    for i in range(n_blocks)])
+    #+END_SRC
+
+    - 1st `nfs` defines the channel numbers of 
+      [input, 1st activation, 2nd activation, 3rd activation]
+
+    - note that 2nd `nfs` can be re-written as
+      [64//expansion, 64, 2*64, 2*2*64, 2*2*2*64]
+
+    - note that the value of `nh` for a certain laer will be
+      `ni` for the successing layer
+
+    - for a certain layer, 
+      - the number of the channels of the activation of the
+        last ResBlock is 4 times `nh` for the layer
+
+      - the number of the channels of the input for the
+        1st ResBlock of the successing layer is 4 times
+        `ni` of the successing layer
+
+      - since `nh` for a certain layer is same as `ni` for
+        the successing layer, the two numbers above will be same
+
+    - for the concrete example, see below
+
+    - layers is, for example, in the form of
+      [3, 4, 6, 3]
+
+      # 1st layer
+    - with the example above, for the 1st layer
+      (index 0 of `enumerate(layers)`, we have 3 blocks and use 
+      - nfs[0]==64//expansion,
+      - nfs[1]==64
+
+    - for the 1st block of the 1st layer(with 3 blocks), we use
+      - ni==nfs[0]==64//expansion,
+      - nf==nfs[1]==64
+
+      => 
+      ResBlock::__init__(self, expansion, 64//expansion, 64)
+
+      if `expansion==4`, inside __init__, 
+      - `ni` will be 64 (4*ni)
+      - `nh` will be 64 
+      - `nf` will be 256 (4*nh)
+
+    - for the 2nd & 3rd ResBlock of the 1st layer(with 3 blocks ), we use
+      - ni==nfs[1]==64
+      - nf==nfs[1]==64
+
+      => 
+      ResBlock::__init__(self, expansion, 64, 64)
+      
+      if `expansion==4`, inside __init__, 
+      - `ni` will be 256 (4*ni)
+      - `nh` will be 64
+      - `nf` will be 256 (4*nh)
+
+      # 2nd layer
+    - with the example above, for the 2nd layer
+      (index 1 of `enumerate(layers)`, we have 4 blocks and use 
+      - nfs[1]==64
+      - nfs[2]==128
+
+    - for the 1st block of the 1st layer(with 4 blocks), we use
+      - ni==nfs[1]==64
+      - nf==nfs[2]==128
+
+      => 
+      ResBlock::__init__(self, expansion, 64, 128)
+
+      if `expansion==4`, inside __init__, 
+      - `ni` will be 256 (4*ni)
+      - `nh` will be 128
+      - `nf` will be 512 (4*nh)
+
+    - for the 2nd & 3rd & 4th ResBlocks of the 1st layer(with 4 blocks ), we use
+      - ni==nfs[2]==128
+      - nf==nfs[2]==128
+
+      => 
+      ResBlock::__init__(self, expansion, 128, 128)
+      
+      if `expansion==4`, inside __init__, 
+      - `ni` will be 512 (4*ni)
+      - `nh` will be 128 
+      - `nf` will be 512 (4*nh)
+        
+
+
+*** how to use Xres
+
+    #+BEGIN_SRC python
+      #export
+      def xresnet18 (**kwargs): return XResNet.create(1, [2, 2,  2, 2], **kwargs)
+      def xresnet34 (**kwargs): return XResNet.create(1, [3, 4,  6, 3], **kwargs)
+      def xresnet50 (**kwargs): return XResNet.create(4, [3, 4,  6, 3], **kwargs)
+      def xresnet101(**kwargs): return XResNet.create(4, [3, 4, 23, 3], **kwargs)
+      def xresnet152(**kwargs): return XResNet.create(4, [3, 8, 36, 3], **kwargs)
+    #+END_SRC
+
+
+    
 
 
 * NLP course
