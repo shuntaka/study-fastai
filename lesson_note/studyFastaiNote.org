@@ -20,7 +20,7 @@
     - note that without the dampening, the sum of the coefficients
       becomes just a sum of a proportional sequence (等比数列)
 
-*** (most of the time) statistics for a parameter are tensors, not a scalar
+*** statistics for a parameter are tensors, NOT a scalar
     - for example, AverageGrad
 
 *** essential fastai codes
@@ -35,8 +35,11 @@
       - lsuv (weight initialization)
       - BatchNorm (activation normalization)
 
-    - techniques to update parameters
+    - techniques to manage hyper parameters
+      - annealing
       - parameter scheduling
+
+    - techniques to update parameters
       - ADAM
       - LAMB
 
@@ -54,16 +57,30 @@
 * things to understand
 ** CNN
 *** CNN
-
 *** right kernel size for CNN
 
 *** meaning of filters & channels
     - are they used interchangably?
 
+*** what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
+    
 ** initialization & normalization
+*** why initialization matters
 *** why BatchNorm works
 
 ** optimization
+*** TODO how to calculate gradient w.r.t weights for a linear layer
+    https://forums.fast.ai/t/understanding-linear-layer-gradient/63491
+    http://cs231n.stanford.edu/handouts/linear-backprop.pdf
+    https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
+    
+*** TODO how autograd in pytorch works
+    https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
+    https://pytorch.org/docs/stable/autograd.html
+
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+
+*** weight decay
 *** debiasing exponentially weighted moving average
     https://www.youtube.com/watch?v=lWzo8CajF5s
 
@@ -85,26 +102,34 @@
     - how we can make use of all the input we have
     - how we can take advantage of computations we are doing
 
-
 ** pyotrch
-*** pytorch > tensor broadcasting
+*** auto grad
+    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+
+*** tensor broadcasting
     https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
 
-*** pytorch > tensor related operation (stack, squeeze)
+*** tensor related operation (stack, squeeze)
 
-*** pytorch > tensor mean, std
+*** tensor mean, std
 
 ** pyhton
 *** python > if not
 
 *** python > return value of `and`, `or`
 
-*** pytorch > auto grad
-    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
-    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+*** function annotation
 
 ** handling images
 *** can we flip, resize while a image is still a byte (before byte tensor, float tensor)
+
+** BERT
+*** BERT with fastai 
+    https://mlexplained.com/2019/05/13/a-tutorial-to-fine-tuning-bert-with-fast-ai/
+    https://medium.com/@abhikjha/fastai-integration-with-bert-a0a66b1cecbe
+    https://towardsdatascience.com/fastai-with-transformers-bert-roberta-xlnet-xlm-distilbert-4f41ee18ecb2
+
 
 
 * lesson8
@@ -208,15 +233,29 @@
       !cp /content/exp/nb_01.py /content/exp.nb_01.py
     #+END_SRC
 
+*** get_data, normalize
+
+    #+BEGIN_SRC python
+      #export
+      from exp.nb_01 import *
+
+      def get_data():
+          path = datasets.download_data(MNIST_URL, ext='.gz')
+          with gzip.open(path, 'rb') as f:
+              ((x_train, y_train), (x_valid, y_valid), _) = pickle.load(f, encoding='latin-1')
+          return map(tensor, (x_train,y_train,x_valid,y_valid))
+
+      def normalize(x, m, s): return (x-m)/s
+    #+END_SRC
 
 *** mean & standard deviation of a TENSOR
     # mean
     https://pytorch.org/docs/stable/torch.html#torch.mean
-    - Returns the mean value of all elements in the input tensor.
+    - Returns the mean value of all the elements in the input tensor.
 
     # std
     https://pytorch.org/docs/master/generated/torch.std.html
-    - Returns the standard-deviation of all elements in the 
+    - Returns the standard-deviation over all the elements in the 
       input tensor.
 
       #+BEGIN_SRC python
@@ -232,7 +271,7 @@
 
 *** how to calculate mean & standard-deviation for data (e.g. x_train)
     - note that mean&std for training input are calculated 
-      across the ENTIRE elements of training input, 
+      across the batch, that is, ENTIRE elements of training input, 
       which is rank 2 tensor (shape: tnesor([10000, 784]) )
     
     #+BEGIN_SRC python
@@ -258,7 +297,7 @@
     - normalization is to subtract maen and devide by std
     - by definition, after normalization, mean & std of training set will be 0 and 1, respectively
     - validation set must be normalized using mean & std of TRAINING set
-    - [ ] mean & std of noramlized validation will be near 0 & 1
+    - [ ] why will mean & std of noramlized validation be near 0 & 1
     
     #+BEGIN_SRC python
       x_train = normalize(x_train, train_mean, train_std)
@@ -311,7 +350,6 @@
         '''
       #+END_SRC
 
-
 *** effect of initialization
     - when multiplying the normalized input with (mean, std) of (0, 1)
       with initialized weight with (mean, std) of (0, 1/sqrt(m))
@@ -335,6 +373,7 @@
 *** squeeze (batch size=3)
 
     #+BEGIN_SRC python
+      import torch
       myTensor1 = torch.tensor([[1], [2],[3]])
       myTensor2 = torch.tensor([[1], [2],[3]])
 
@@ -343,6 +382,23 @@
       (tensor([1, 2, 3]), tensor([1, 2, 3]))
       '''
     #+END_SRC
+    - `myTensor1` is of shape: (3x1), so `myTensor1.squeeze()` will be of 
+      shape (3)
+    - `myTensor2.squeeze(-1)` will do squeeze operation on the last dimension
+      since the shape of the input is (3x1), and the size for the last dimension 
+      is 1, shape will be (3)
+      
+      # torch documents
+      https://pytorch.org/docs/master/generated/torch.squeeze.html
+
+    - squeeze Returns a tensor with all the dimensions of input of size 1 removed.
+      For example, if input is of shape:(A×1×B×C×1×D) 
+      then the out tensor will be of shape: (A×B×C×D) .
+
+    - When dim is given, a squeeze operation is done only in the given dimension. 
+      If input is of shape: (A×1×B) , squeeze(input, 0) 
+      leaves the tensor unchanged, but squeeze(input, 1) 
+      will squeeze the tensor to the shape (A×B) .
 
 *** squeeze (batch size =1)
     #+BEGIN_SRC python
@@ -357,7 +413,6 @@
 
     #+END_SRC
 
-  
 *** printing inside function
     - just add 'import sys' inside cell
 
@@ -392,7 +447,6 @@
     http://cs231n.stanford.edu/handouts/linear-backprop.pdf
     https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
     
-
 *** TODO how autograd in pytorch works
     https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
     https://pytorch.org/docs/stable/autograd.html
@@ -400,9 +454,64 @@
     https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
 
 
+*** lin
+
+    #+BEGIN_SRC python
+      def lin(x, w, b): return x@w + b
+    #+END_SRC
+
+*** relu ver1
+
+    #+BEGIN_SRC python
+      def relu(x): return x.clamp_min(0.)
+    #+END_SRC
+
+*** relu ver2
+    #+BEGIN_SRC python
+      # what if...?
+      def relu(x): return x.clamp_min(0.) - 0.5
+    #+END_SRC
+
+*** model
+
+    #+BEGIN_SRC python
+      def model(xb):
+          l1 = lin(xb, w1, b1)
+          l2 = relu(l1)
+          l3 = lin(l2, w2, b2)
+          return l3
+    #+END_SRC
+
+*** mse
+
+    #+BEGIN_SRC python
+      #export
+      def mse(output, targ): return (output.squeeze(-1) - targ).pow(2).mean()
+    #+END_SRC
+
 *** forward & backward ver1
 
     #+BEGIN_SRC python
+      #w1, b1
+      # simplified kaiming init / he init
+      # w1 = torch.randn(m,nh)
+      # b1 = torch.zeros(nh)
+      # w2 = torch.randn(nh,1)
+      # b2 = torch.zeros(1)
+
+      w1 = torch.randn(m,nh)/math.sqrt(m)
+      b1 = torch.zeros(nh)
+      w2 = torch.randn(nh,1)/math.sqrt(nh)
+      b2 = torch.zeros(1)
+
+      #memo
+      w1.shape, b1.shape, w2.shape, b2.shape
+      '''
+      (torch.Size([784, 50]), torch.Size([50]), torch.Size([50, 1]), torch.Size([1]))
+      '''
+
+      # 
+
       def mse_grad(inp, targ): 
           # grad of loss with respect to output of previous layer
           inp.g = 2. * (inp.squeeze() - targ).unsqueeze(-1) / inp.shape[0]
@@ -435,8 +544,15 @@
     - illustration
 [[[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200604_141232_34024h7r.png]]]]
 
+    - `out.g` is in the form of `torch.Size([50000, 50])`
+    - `sum(0)` takes sum over the 1st axis, i.e., the batch axis
+    - hence, the size of `b.g` is `torch.Size([50])`
+
+      https://pytorch.org/docs/master/generated/torch.sum.html
+
     - by definition, the grad should be in the form such that
       grad * input will be of the same shape as output
+
     - grad for mse is rank 2 tensor 
 
       #+BEGIN_SRC python
@@ -486,6 +602,10 @@
           print(out.g.shape)
           print('lin_grad out.g@w.t()')
           print(inp.g.shape)
+          print('lin_grad w.g')
+          print(w.g.shape)
+          print('lin_grad b.g')
+          print(b.g.shape)
 
       #memo
       import sys
@@ -517,36 +637,34 @@
       torch.Size([50000, 50])
       out
       torch.Size([50000, 1])
-
       mse_grad
       torch.Size([50000, 1])
-
       lin_grad, w.t()
       torch.Size([1, 50])
-
       lin_grad out.g
       torch.Size([50000, 1])
-
       lin_grad out.g@w.t()
       torch.Size([50000, 50])
-
+      lin_grad w.g
+      torch.Size([50, 1])
+      lin_grad b.g
+      torch.Size([1])
       relu_grad (inp>0).float()
       torch.Size([50000, 50])
-
       relu_grad out.g
       torch.Size([50000, 50])
-
       relu_grad (inp>0).float() * out.g
       torch.Size([50000, 50])
-
       lin_grad, w.t()
       torch.Size([50, 784])
-
       lin_grad out.g
       torch.Size([50000, 50])
-
       lin_grad out.g@w.t()
       torch.Size([50000, 784])
+      lin_grad w.g
+      torch.Size([784, 50])
+      lin_grad b.g
+      torch.Size([50])
       '''
     #+END_SRC
 
@@ -607,6 +725,8 @@
 
       model.backward()
     #+END_SRC
+
+    - `[None]` creates
 
 *** forward & backward ver3 (with Model ver2, Module)
     #+BEGIN_SRC python
@@ -2556,6 +2676,8 @@
 
       [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
 
+    - `lrs` is an history array for `lr`
+
     - there are possibly more than 1 parameter group, and 
       each group has 'lr' of different values
 
@@ -2584,11 +2706,17 @@
     - ParamScheduler sets to each parameter group a concrete value calculated by passed
       `sched_func`, in the beggining of every batch
 
-    - `param_groups` is groups of HYPER PARAMETERS in the form of
+    - `param_groups` is groups of weight&biases in the form of
 
-      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+      #+BEGIN_SRC python
+        # the 1st param group is for layer 1 to m (main body)
+        # the 2nd param group is for layer m+1 to n (last few layers)
+        [
+            [W1, B1, ..., Wm, Bm],
+            [Wm+1, Bm+1 ..., Wn, Bn]
+        ]
+      #+END_SRC
 
-      with each element corresponding to a layer group
       
 
 *** sched_lin (that does currying)
@@ -2660,11 +2788,46 @@
               return scheds[idx](actual_pos)
           return _inner
     #+END_SRC
+
+    - `torch.cumsum`
+      https://pytorch.org/docs/master/generated/torch.cumsum.html
+
+    - `pcts` is in the form of [0.3, 0.7]
+
+    - `torch.cumsum([0.3, 0.7])` will be `[0, 0.3, 1.0]`
+
+*** how to use combine_scheds 
+
+    #+BEGIN_SRC python
+      sched = combine_scheds([0.3, 0.7], [sched_cos(0.3, 0.6), sched_cos(0.6, 0.2)])
+      plt.plot(a, [sched(o) for o in p])
+
+    #+END_SRC
+
     
     - Here is an example: use 30% of the budget to go
       from 0.3 to 0.6 following a cosine, 
       then the last 70% of the budget to go from 0.6 to 0.2, 
       still following a cosine.
+
+*** sched_cos, sched_no, sched_exp, cos_1cycle_anneal
+
+    #+BEGIN_SRC python
+      #export
+      @annealer
+      def sched_cos(start, end, pos): return start + (1 + math.cos(math.pi*(1-pos))) * (end-start) / 2
+      @annealer
+      def sched_no(start, end, pos):  return start
+      @annealer
+      def sched_exp(start, end, pos): return start * (end/start) ** pos
+
+      def cos_1cycle_anneal(start, high, end):
+          return [sched_cos(start, high), sched_cos(high, end)]
+
+      #This monkey-patch is there to be able to plot tensors
+      torch.Tensor.ndim = property(lambda x: len(x.shape))
+    #+END_SRC
+
 
 * lesson10
 ** 05b_early_stopping.ipynb
@@ -2839,9 +3002,12 @@
               for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) or res
               return res
     #+END_SRC
+    - note that callack instances are registered as propeties of
+      `Runner` instance by `setattr` inside __init__
 
     - Runner ver2  makes use of Callback ver3, and
-      a callback instance can be called as `cb(cb_name)`
+      so a specific callback(e.g. begin_batch) of a callback
+      instance can be called as `cb(cb_name)`
 
       #+BEGIN_SRC python
         def __call__(self, cb_name):
@@ -2912,8 +3078,7 @@
       (defaults to the last layer [-1] )
 
     - in `begin_fit`, it creates
-      - array of "learning rate history array"
-        for each parameter group (`lrs`)
+      - `lrs`, array of "learning rate history array"
 
         (each element of `lrs` is 'learning rate history array'
         for each parameter group)
@@ -2958,7 +3123,16 @@
       (=layer group)
 
     - parameter group is in the form of 
-      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+      #+BEGIN_SRC python
+        # the 1st param group is for layer 1 to m (main body)
+        # the 2nd param group is for layer m+1 to n (last few layers)
+        [
+            [W1, B1, ..., Wm, Bm],
+            [Wm+1, Bm+1 ..., Wn, Bn]
+        ]
+      #+END_SRC      
+
+
 
 *** LR_Find ver1
 
@@ -2981,8 +3155,10 @@
               if self.loss < self.best_loss: self.best_loss = self.loss
     #+END_SRC
 
-    - in begin_batch, property `lr` of each parameter group 
-      is updated to utilize it in `Recorder`
+    - in begin_batch, a new value for `lr`, and update
+      `lr` property of each parameter group.
+    - 
+
 
 ** 06_cuda_cnn_hooks_init
 *** imports
@@ -4338,7 +4514,7 @@ class BatchNorm(nn.Module):
 
     - note that ConvLayer does not contain a BatchNorm layer
 
-*** get_batch
+*** get_batch ver1
 
     #+BEGIN_SRC python
       #export
@@ -5189,8 +5365,10 @@ class BatchNorm(nn.Module):
               for p,hyper in self.grad_params(): compose(p, self.steppers, **hyper)
     #+END_SRC
 
+
     - params refers to the weights & bias tensor for each layer.
       param groups looks like below
+
       #+BEGIN_SRC python
         # the 1st param group is for layer 1 to m (main body)
         # the 2nd param group is for layer m+1 to n (last few layers)
@@ -5374,6 +5552,20 @@ class BatchNorm(nn.Module):
               if self.loss < self.best_loss: self.best_loss = self.loss
     #+END_SRC
 
+    - with ParamScheduler ver3, hyper parameters are stored 
+      on `self.opt.hypers`, whereas with ParamScheduler ver2, 
+      we used to store hyper parameters as properties of a
+      parameter group
+
+    - self.opt.hypers is in the form of 
+
+    #+BEGIN_SRC python
+      [{'lr': 0.5, 'mom':0.1 ...}, {'lr': 0.4, 'mom':0.1...}]
+    #+END_SRC
+
+      
+
+
 *** using Optimizer ver2
 
     #+BEGIN_SRC python
@@ -5397,9 +5589,11 @@ class BatchNorm(nn.Module):
     #+END_SRC
 
 *** weight decay & l2 regularization
-    - "l2 regularization" refers to add extra wd*weight to `weight.grad` 
-      whereas "weight decay" refers to updating the weight
-      by the equation below;
+    - "l2 regularization" refers to add extra wd*weight to `weight.grad`
+      to the gradient 
+
+    - "weight decay" refers to add extra term '-lr*wd*weight' 
+      when updating weight
 
       #+BEGIN_SRC python
         # l2 regularization
@@ -5440,7 +5634,7 @@ class BatchNorm(nn.Module):
     - modifying the equation for updating gradient is done by
       adding `weight_decay` as a stepper
 
-*** l2_reg
+*** TODO l2_reg
 
     #+BEGIN_SRC python
       #export
@@ -5451,6 +5645,7 @@ class BatchNorm(nn.Module):
     #+END_SRC
 
     - `add_` adds up `p.data` after multiplying it by `wd`
+    - [ ] how to use `l2_reg`?
 
 *** maybe_update
 
@@ -6088,6 +6283,14 @@ class BatchNorm(nn.Module):
              for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) and res
              return res
    #+END_SRC
+    - note that callack instances are registered as propeties of `Runner` instance    
+      by `setattr` inside `add_cb`
+
+      #+BEGIN_SRC python
+        cb.set_runner(self)
+        setattr(self, cb.name, cb)
+        self.cbs.append(cb)
+      #+END_SRC
 
     - `Leaner` ver2 is `Runner` ver2 with 
       every property of `Learner` ver1 moved into `Runner` ver2
@@ -6104,18 +6307,25 @@ class BatchNorm(nn.Module):
     - also, in `Runner` ver2, we used to call `set_runner` in `fit`
       to set on each callback a reference to `Runner` object,
       whereas in `Learner` ver2 (=`Runner` ver3), that part is 
-      factored out as `add_cbs` and `add_cb` which are called
+      factored out as `add_cbs` & `add_cb` which are called
       in two places in `__init__` and `fit`
 
     - in `Runner` ver2, we can pass callbacks only to `__init__`,
       whereas with `Learner` ver2 (=`Runner` ver3), 
       there is a chance to pass callbacks when calling `fit`
 
-    - in `Runner` ver2, optimizer object is passed stored in `Learner`
-      object, whereas in `Learner` ver2 (=`Runner` ver3), 
-      a CONSTRUCTOR to create optimizer is passed,
+    - in `Runner` ver2, optimizer object is stored in `Learner`
+      object which is passed on calling `fit`,
+      whereas in `Learner` ver2 (=`Runner` ver3), 
+      a CONSTRUCTOR to create optimizer is passed on calling `__init__`
       and an optimizer object is created and set to `self.opt`
       on the fly in `fit`
+
+    - note that the default for `splitter` is `param_getter`
+      #+BEGIN_SRC python
+        def param_getter(m): return m.parameters()
+      #+END_SRC
+
 
 
 *** get_learner ver1
@@ -6240,7 +6450,6 @@ class BatchNorm(nn.Module):
               self.pb = progress_bar(self.dl, parent=self.mbar)
               self.mbar.update(self.epoch)
     #+END_SRC
-
 
 ** 10_augmentation.ipynb
 *** imports
@@ -6581,6 +6790,7 @@ class BatchNorm(nn.Module):
 
     - fastai v1 is not equipped with data augumentation for batch
 
+      
 * lesson12
 ** 10b_mixup_label_smoothing.ipynb
 *** imports
@@ -6809,8 +7019,6 @@ class BatchNorm(nn.Module):
       - in the end of `MixUp::loss_func`, we reduce the 
         rank1 tensor for the loss for a batch of mixedup images
         by `reduce_loss` and return.
-
-
 
 
 
@@ -7226,76 +7434,76 @@ class BatchNorm(nn.Module):
 *** imports
 
     #+BEGIN_SRC python
-      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
-      # install the python dependency necessary for the converting script
-      !pip install fire
+            # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+            # install the python dependency necessary for the converting script
+            !pip install fire
 
-      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
-      ! git clone --recursive https://github.com/NVIDIA/apex.git
+            # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+            !pip install git+https://github.com/NVIDIA/apex
 
 
-      # git clone the entire course material under /content
-      !git clone https://github.com/fastai/course-v3.git
+            # git clone the entire course material under /content
+            !git clone https://github.com/fastai/course-v3.git
 
-      # copy the ipynb2py converting python script
-      !cp course-v3/nbs/dl2/notebook2script.py /content/
+            # copy the ipynb2py converting python script
+            !cp course-v3/nbs/dl2/notebook2script.py /content/
 
-      # copy the jupyter notebooks to convert, under /content
-      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
-      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
-      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
-      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
-      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
-      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
-      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
-      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
-      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
-      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
-      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
-      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
-      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
-      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
-      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
-      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
-      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+            # copy the jupyter notebooks to convert, under /content
+            !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+            !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+            !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+            !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+            !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+            !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+            !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+            !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+            !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+            !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+            !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+            !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+            !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+            !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+            !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+            !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+            !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
 
-      # convert the jupyter notebooks into python modules
-      !python notebook2script.py 00_exports.ipynb
-      !python notebook2script.py 01_matmul.ipynb
-      !python notebook2script.py 02_fully_connected.ipynb
-      !python notebook2script.py 03_minibatch_training.ipynb
-      !python notebook2script.py 04_callbacks.ipynb
-      !python notebook2script.py 05_anneal.ipynb
-      !python notebook2script.py 05b_early_stopping.ipynb
-      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
-      !python notebook2script.py 07_batchnorm.ipynb
-      !python notebook2script.py 07a_lsuv.ipynb
-      !python notebook2script.py 08_data_block.ipynb
-      !python notebook2script.py 09_optimizers.ipynb
-      !python notebook2script.py 09b_learner.ipynb
-      !python notebook2script.py 09c_add_progress_bar.ipynb
-      !python notebook2script.py 10_augmentation.ipynb
-      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
-      !python notebook2script.py 10c_fp16.ipynb
+            # convert the jupyter notebooks into python modules
+            !python notebook2script.py 00_exports.ipynb
+            !python notebook2script.py 01_matmul.ipynb
+            !python notebook2script.py 02_fully_connected.ipynb
+            !python notebook2script.py 03_minibatch_training.ipynb
+            !python notebook2script.py 04_callbacks.ipynb
+            !python notebook2script.py 05_anneal.ipynb
+            !python notebook2script.py 05b_early_stopping.ipynb
+            !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+            !python notebook2script.py 07_batchnorm.ipynb
+            !python notebook2script.py 07a_lsuv.ipynb
+            !python notebook2script.py 08_data_block.ipynb
+            !python notebook2script.py 09_optimizers.ipynb
+            !python notebook2script.py 09b_learner.ipynb
+            !python notebook2script.py 09c_add_progress_bar.ipynb
+            !python notebook2script.py 10_augmentation.ipynb
+            !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+            !python notebook2script.py 10c_fp16.ipynb
 
-      # copy the converted python modules under /content for later use
-      !cp /content/exp/nb_00.py /content/exp.nb_00.py
-      !cp /content/exp/nb_01.py /content/exp.nb_01.py
-      !cp /content/exp/nb_02.py /content/exp.nb_02.py
-      !cp /content/exp/nb_03.py /content/exp.nb_03.py
-      !cp /content/exp/nb_04.py /content/exp.nb_04.py
-      !cp /content/exp/nb_05.py /content/exp.nb_05.py
-      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
-      !cp /content/exp/nb_06.py /content/exp.nb_06.py
-      !cp /content/exp/nb_07.py /content/exp.nb_07.py
-      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
-      !cp /content/exp/nb_08.py /content/exp.nb_08.py
-      !cp /content/exp/nb_09.py /content/exp.nb_09.py
-      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
-      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
-      !cp /content/exp/nb_10.py /content/exp.nb_10.py
-      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
-      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+            # copy the converted python modules under /content for later use
+            !cp /content/exp/nb_00.py /content/exp.nb_00.py
+            !cp /content/exp/nb_01.py /content/exp.nb_01.py
+            !cp /content/exp/nb_02.py /content/exp.nb_02.py
+            !cp /content/exp/nb_03.py /content/exp.nb_03.py
+            !cp /content/exp/nb_04.py /content/exp.nb_04.py
+            !cp /content/exp/nb_05.py /content/exp.nb_05.py
+            !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+            !cp /content/exp/nb_06.py /content/exp.nb_06.py
+            !cp /content/exp/nb_07.py /content/exp.nb_07.py
+            !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+            !cp /content/exp/nb_08.py /content/exp.nb_08.py
+            !cp /content/exp/nb_09.py /content/exp.nb_09.py
+            !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+            !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+            !cp /content/exp/nb_10.py /content/exp.nb_10.py
+            !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+            !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
     #+END_SRC
 
 *** Flatten
@@ -7376,7 +7584,12 @@ class BatchNorm(nn.Module):
         conv_layer(nh, nf, 1, zero_bn=True, act=False)
       #+END_SRC
 
-    - when `expansion==4` (nf == 4*nh, nh=ni/4)
+    - when `expansion==4`, `nf == 4*nh`, `ni == 4*ni`
+      so if the value of `ni` is same as `nh`, 
+      the ResBlock squishes by factor of 1/4 
+      and expands by factor of 4
+
+    - when `expansion==4` (nf == 4*nh, ni == 4*ni)
       - the number of channel is squished by 4 after the 1st conv layer
       - the number of channel stays same after the 2nd conv layer
       - the number channel is expanded after the 3rd layer
@@ -7523,8 +7736,6 @@ class BatchNorm(nn.Module):
       - `nh` will be 128 
       - `nf` will be 512 (4*nh)
         
-
-
 *** how to use Xres
 
     #+BEGIN_SRC python
@@ -7540,9 +7751,469 @@ class BatchNorm(nn.Module):
     
 
 
+*** get_batch ver2
+
+    #+BEGIN_SRC python
+      #export
+      def get_batch(dl, learn):
+          learn.xb,learn.yb = next(iter(dl))
+          learn.do_begin_fit(0)
+          learn('begin_batch')
+          learn('after_fit')
+          return learn.xb,learn.yb
+    #+END_SRC
+
+*** model_summary
+
+    #+BEGIN_SRC python
+      # export
+      def model_summary(model, data, find_all=False, print_mod=False):
+          xb,yb = get_batch(data.valid_dl, learn)
+          mods = find_modules(model, is_lin_layer) if find_all else model.children()
+          f = lambda hook,mod,inp,out: print(f"====\n{mod}\n" if print_mod else "", out.shape)
+          with Hooks(mods, f) as hooks: learn.model(xb)
+    #+END_SRC
+
+*** how to interpret model_summary
+
+    #+BEGIN_SRC python
+      loss_func = LabelSmoothingCrossEntropy()
+      arch = partial(xresnet18, c_out=10)
+      opt_func = adam_opt(mom=0.9, mom_sqr=0.99, eps=1e-6, wd=1e-2)
+
+      learn = Learner(arch(), data, loss_func, lr=1, cb_funcs=cbfs, opt_func=opt_func)
+      learn.model = learn.model.cuda()
+      model_summary(learn.model, data, print_mod=False)
+
+      '''
+       torch.Size([128, 32, 64, 64])
+       torch.Size([128, 64, 64, 64])
+       torch.Size([128, 64, 64, 64])
+       torch.Size([128, 64, 32, 32])
+       torch.Size([128, 64, 32, 32])
+       torch.Size([128, 128, 16, 16])
+       torch.Size([128, 256, 8, 8])
+       torch.Size([128, 512, 4, 4])
+       torch.Size([128, 512, 1, 1])
+       torch.Size([128, 512])
+       torch.Size([128, 10])
+      '''
+    #+END_SRC
+    
+    - model is xresnet34 with `c_out==10`, `expansion==1`
+    - each row of the outputs corresponds to an activation of a layer,
+      and the 2nd entry represents the number of the channel of the activation
+    - inside XresNet, conv layers a recreated based on 
+      the 1st `nfs` and the 2nd `nfs`.
+    - a conv layer is created by paring up two consequitive elements
+      for `nfs`
+    - the number of the channel of an activation of a conv layer
+      is same as the 2nd element of the pair for which the 
+      conv layer is created
+    - in XresNet, there are 
+      - 3 layers (from 1st `nfs`)
+      - 1 layer  (nn.MaxPool2d)
+      - 4 layers (from 2nd `nfs`)
+      - 1 layer  (nn.AdaptiveAvgPool2d)
+      - 1 layer  (Flatten)
+      - 1 layer  (nn.Linear)
+
+*** create_phases(phases)
+
+    #+BEGIN_SRC python
+      #export
+      def create_phases(phases):
+          phases = listify(phases)
+          return phases + [1-sum(phases)]
+
+      print(create_phases(0.3))
+      print(create_phases([0.3,0.2]))
+      '''
+      [0.3, 0.7]
+      [0.3, 0.2, 0.5]
+      '''
+    #+END_SRC
+
+
+*** cnn_learner
+
+    #+BEGIN_SRC python
+      #export
+      def cnn_learner(arch, data, loss_func, opt_func, c_in=None, c_out=None,
+                      lr=1e-2, cuda=True, norm=None, progress=True, mixup=0, xtra_cb=None, **kwargs):
+          cbfs = [partial(AvgStatsCallback,accuracy)]+listify(xtra_cb)
+          if progress: cbfs.append(ProgressCallback)
+          if cuda:     cbfs.append(CudaCallback)
+          if norm:     cbfs.append(partial(BatchTransformXCallback, norm))
+          if mixup:    cbfs.append(partial(MixUp, mixup))
+          arch_args = {}
+          if not c_in : c_in  = data.c_in
+          if not c_out: c_out = data.c_out
+          if c_in:  arch_args['c_in' ]=c_in
+          if c_out: arch_args['c_out']=c_out
+          return Learner(arch(**arch_args), data, loss_func, opt_func=opt_func, lr=lr, cb_funcs=cbfs, **kwargs)
+
+    #+END_SRC
+
+** 11a_transfer_learning.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+      !pip install git+https://github.com/NVIDIA/apex
+
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+      !cp course-v3/nbs/dl2/11_train_imagenette.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+      !python notebook2script.py 10c_fp16.ipynb
+      !python notebook2script.py 11_train_imagenette.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+      !cp /content/exp/nb_11.py /content/exp.nb_11.py
+
+    #+END_SRC
+
+*** sched_1cycle
+
+    #+BEGIN_SRC python
+      def sched_1cycle(lr, pct_start=0.3, mom_start=0.95, mom_mid=0.85, mom_end=0.95):
+          phases = create_phases(pct_start)
+          sched_lr  = combine_scheds(phases, cos_1cycle_anneal(lr/10., lr, lr/1e5))
+          sched_mom = combine_scheds(phases, cos_1cycle_anneal(mom_start, mom_mid, mom_end))
+          return [ParamScheduler('lr', sched_lr),
+                  ParamScheduler('mom', sched_mom)]
+    #+END_SRC
+
+*** random_splitter
+
+    #+BEGIN_SRC python
+      #export
+      def random_splitter(fn, p_valid): return random.random() < p_valid
+    #+END_SRC
+
+*** pet_labeler
+
+    #+BEGIN_SRC python
+      def pet_labeler(fn): return re.findall(r'^(.*)_\d+.jpg$', fn.name)[0]
+    #+END_SRC
+
+*** TODO custom head
+
+    #+BEGIN_SRC python
+      learn = cnn_learner(xresnet18, data, loss_func, opt_func, c_out=10, norm=norm_imagenette)
+
+      st = torch.load(mdl_path/'iw5')
+
+      m = learn.model
+
+      m.load_state_dict(st)
+
+      cut = next(i for i,o in enumerate(m.children()) if isinstance(o,nn.AdaptiveAvgPool2d))
+      m_cut = m[:cut]
+
+      xb,yb = get_batch(data.valid_dl, laearn)
+
+      pred = m_cut(xb)
+
+      pred.shape
+
+      ni = pred.shape[1]
+
+      #export
+      class AdaptiveConcatPool2d(nn.Module):
+          def __init__(self, sz=1):
+              super().__init__()
+              self.output_size = sz
+              self.ap = nn.AdaptiveAvgPool2d(sz)
+              self.mp = nn.AdaptiveMaxPool2d(sz)
+          def forward(self, x): return torch.cat([self.mp(x), self.ap(x)], 1)
+
+      nh = 40
+
+      m_new = nn.Sequential(
+          m_cut, AdaptiveConcatPool2d(), Flatten(),
+          nn.Linear(ni*2, data.c_out))
+
+      learn.model = m_new
+
+      learn.fit(5, cbsched)
+    #+END_SRC
+
+    - this is customizing the model for imagewoof(c_out=10)
+      into the model that can handle PET dataset(c_out=37)
+
+    - it loads the value of the weights for imagewoof model by
+
+      #+BEGIN_SRC python
+        st = torch.load(mdl_path/'iw5')
+      #+END_SRC
+
+    - [ ] why can we use `norm=norm_imagenette`
+      when `data` is for PET?
+
+*** adapt_model
+
+    #+BEGIN_SRC python
+      def adapt_model(learn, data):
+          cut = next(i for i,o in enumerate(learn.model.children())
+                     if isinstance(o,nn.AdaptiveAvgPool2d))
+          m_cut = learn.model[:cut]
+          xb,yb = get_batch(data.valid_dl, learn)
+          pred = m_cut(xb)
+          ni = pred.shape[1]
+          m_new = nn.Sequential(
+              m_cut, AdaptiveConcatPool2d(), Flatten(),
+              nn.Linear(ni*2, data.c_out))
+          learn.model = m_new
+    #+END_SRC
+
+
+    - this is just a refactoring of the codes in 'custom head'
+
+*** apply_mod, set_grad
+
+    #+BEGIN_SRC python
+      def apply_mod(m, f):
+          f(m)
+          for l in m.children(): apply_mod(l, f)
+
+      def set_grad(m, b):
+          if isinstance(m, (nn.Linear,nn.BatchNorm2d)): return
+          if hasattr(m, 'weight'):
+              for p in m.parameters(): p.requires_grad_(b)
+    #+END_SRC
+
+    - `set_grad` freeze layers which is not
+      the last layer(=nn.Linear) nor batch norm layer
+    - 
+
+*** bn_splitter
+
+    #+BEGIN_SRC python
+      def bn_splitter(m):
+          def _bn_splitter(l, g1, g2):
+              if isinstance(l, nn.BatchNorm2d): g2 += l.parameters()
+              elif hasattr(l, 'weight'): g1 += l.parameters()
+              for ll in l.children(): _bn_splitter(ll, g1, g2)
+              
+          g1,g2 = [],[]
+          _bn_splitter(m[0], g1, g2)
+          
+          g2 += m[1:].parameters()
+          return g1,g2
+    #+END_SRC
+    
+    - `bn_splitter` sets the learning rate to zero for
+      layers, which has the same effect as freezing the layers
+
+*** cb_types
+
+    #+BEGIN_SRC python
+      from types import SimpleNamespace
+      cb_types = SimpleNamespace(**{o:o for o in Learner.ALL_CBS})
+    #+END_SRC
+
+
+*** DebugCallback
+
+    #+BEGIN_SRC python
+      #export
+      class DebugCallback(Callback):
+          _order = 999
+          def __init__(self, cb_name, f=None): self.cb_name,self.f = cb_name,f
+          def __call__(self, cb_name):
+              if cb_name==self.cb_name:
+                  if self.f: self.f(self.run)
+                  else:      set_trace()
+    #+END_SRC
+
+*** sched_1cycle
+
+    #+BEGIN_SRC python
+      #export
+      def sched_1cycle(lrs, pct_start=0.3, mom_start=0.95, mom_mid=0.85, mom_end=0.95):
+          phases = create_phases(pct_start)
+          sched_lr  = [combine_scheds(phases, cos_1cycle_anneal(lr/10., lr, lr/1e5))
+                       for lr in lrs]
+          sched_mom = combine_scheds(phases, cos_1cycle_anneal(mom_start, mom_mid, mom_end))
+          return [ParamScheduler('lr', sched_lr),
+                  ParamScheduler('mom', sched_mom)]
+    #+END_SRC
+
+** 12_text.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+      !pip install git+https://github.com/NVIDIA/apex
+
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+      !cp course-v3/nbs/dl2/11_train_imagenette.ipynb /content/
+      !cp course-v3/nbs/dl2/11a_transfer_learning.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+      !python notebook2script.py 10c_fp16.ipynb
+      !python notebook2script.py 11_train_imagenette.ipynb
+      !python notebook2script.py 11a_transfer_learning.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+      !cp /content/exp/nb_11.py /content/exp.nb_11.py
+      !cp /content/exp/nb_11a.py /content/exp.nb_11a.py
+
+    #+END_SRC
+
+*** read_file, TextList
+
+    #+BEGIN_SRC python
+      #export
+      def read_file(fn): 
+          with open(fn, 'r', encoding = 'utf8') as f: return f.read()
+          
+      class TextList(ItemList):
+          @classmethod
+          def from_files(cls, path, extensions='.txt', recurse=True, include=None, **kwargs):
+              return cls(get_files(path, extensions, recurse=recurse, include=include), path, **kwargs)
+          
+          def get(self, i):
+              if isinstance(i, Path): return read_file(i)
+              return i
+    #+END_SRC
+
+
 * NLP course
   https://www.fast.ai/2019/07/08/fastai-nlp/
 
 * NLP playlist
   https://www.youtube.com/playlist?list=PLtmWHNX-gukKocXQOkQjuVxglSDYWsSh9
 
+* NLP resource
+*** list of NLP tasks
+    https://engineering.linecorp.com/ja/blog/overview-2018-language-models/#
+
+*** ULMFiT case study
+    https://ariseanalytics.com/activities/report/20190707/
+*** article about bert
+    https://xtech.nikkei.com/atcl/nxt/mag/nc/18/120400145/120400002/
