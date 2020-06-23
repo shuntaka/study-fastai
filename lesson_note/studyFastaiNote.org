@@ -1531,6 +1531,14 @@
         '''
       #+END_SRC
 
+      - note that this 'home-made' `Sampler` will be used
+        only with 'home-made' `DataLoader`
+
+      - there are difference between 'home-made' `Sampler`
+        and PyTorch version of `Sampler`.
+        - 'home-made' version returns a list of list of indexed
+        - PyTorch version returnsa a list of indexed
+
 *** DataLoader ver2, collate
 
     #+BEGIN_SRC python
@@ -1548,9 +1556,19 @@
 
 
     # DataLoader
-    - the point of DataLoader ver2 is:
-      - now it picks up data set randomly
+    - 'home-made' `DataLoader` is just for showing the 
+      idea of the implementation of PyTorch version of `DataLoader`,
+      and will not be used later in the course.
 
+    - PyTorch version of `DataLoader` is different 
+      from the 'home-made' version
+      - `sampler` should be a list of indexex, instead of 
+        a list of list of indexes
+
+      - `batch_size` must be passed to `DataLoader`
+
+    - the point of `DataLoader` ver2 is:
+      - now it picks up data set randomly
 
     - `ds` in `DataLoader::__init__` is a `DataSet` instance, 
       and so `self.ds[i]` is a tuple
@@ -1561,18 +1579,20 @@
               def __getitem__(self, i): return self.x[i],self.y[i]
       #+END_SRC
 
-    - `sampler` picks up numbers
+    - `sampler` is a list of list of indexes for picking up elements
+      from `ds` for a batch
+
 
     - `collate_fn` combines the tuples in the list
       `[self.ds[i] for i in s]` and returns
-      a tuple of 2 tensors 
+      a tuple of 2 tensors (one is for x, and the other is for y)
 
     # collate
-    - zip(*b) returns tuple
+    - zip(*b) returns a tuple of tuples
       https://www.youtube.com/watch?v=VbBozykILZ0
 
     - `b` (= [self.ds[i] for i in s) in `collate` is
-      a list of tuple which looks like `my_b` below
+      a list of tuples which looks like `my_b` below
 
     #+BEGIN_SRC python
       my_b = [train_ds[3], train_ds[1], train_ds[2]]
@@ -1584,8 +1604,9 @@
 
     - unpacking b in `zip(*b)`;
       unpacking operator(single asterisk *)
-      decompose the list b, and pass tuples to zip, 
-      so zip(*b) is equivalent to blow
+      decompose the list of tuples `b`, 
+      and pass tuples to zip,  so zip(*b) is
+      equivalent to blow
 
       #+BEGIN_SRC python
         zip(train_ds[3], train_ds[1], train_ds[2])
@@ -1593,7 +1614,8 @@
 
     - what zip does when it accepts (tuple1, tuple2, tuple3);
       stack tuples vertically and make new tuples by grouping
-      elements vertically.
+      elements vertically, then return them as yet another tuple
+
 
       | tuple1 | t1a | t1b |
       | tuple2 | t2a | t2b |
@@ -1656,8 +1678,10 @@
                   DataLoader(valid_ds, batch_size=bs*2, **kwargs))
     #+END_SRC
 
-    - get_dls is just a convinent helper for getting tuple of 
+    - `get_dls` is just a convinent helper for getting tuple of 
       (DL for train_ds, DL for valid_ds)
+
+    - `DataLoader` is from `PyTorch`, and not the 'home-made' `DataLoader`
 
     - DL for valid_ds  has bigger batch size than DL for training_ds
       because it is used with torch.no_grad(), and thus
@@ -5074,7 +5098,8 @@ class BatchNorm(nn.Module):
               def __getitem__(self, i): return self.x[i],self.y[i]
         #+END_SRC
 
-      - `DataLoader` is as below
+      - `DataLoader` is from PyTorch, whose implementation is 
+        like 'home-made' `DataLoader` as below
         #+BEGIN_SRC python
               def collate(b):
                   xs,ys = zip(*b)
@@ -5088,7 +5113,7 @@ class BatchNorm(nn.Module):
                       for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
         #+END_SRC
 
-      - `get_dls` is as below
+      - `get_dls` is as below, note that `DataLoader` is from PyTorch.
         #+BEGIN_SRC python
           def get_dls(train_ds, valid_ds, bs, **kwargs):
               return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
@@ -8526,9 +8551,18 @@ class BatchNorm(nn.Module):
       in a completely different way from that for
       language modeling
 
-    - in concrete, each batch contains a group of documents
-      whereas a batch contains a list of numericalized words
+    - in concrete, for classification, each batch
+      contains a group of documents whereas a batch
+      contains a list of numericalized words
       for language modeling.
+
+    - for text classification, batches has different 'width'.
+
+    - each batch is constructed so that it contains 
+      documents of about the same length.
+
+    - the first batch contains the longest documents
+      and the last batch conntains the shortest documents
 
 *** SortSampler
 
@@ -8543,8 +8577,27 @@ class BatchNorm(nn.Module):
               return iter(sorted(list(range(len(self.data_source))), key=self.key, reverse=True))
     #+END_SRC
 
-    - 
-    - 
+    - NOTE that `Sampler` is from PyTorch, and not 'home-made' `Sampler`
+
+    - `SortSampler` will be used with PyTorch version of `DataLoader`,
+      so it should returns a list of indexed
+
+    - `SortSampler` is for validation set
+
+    - `range(len(self.data_source))` returns a list containing
+      the indexes of `data_source`
+
+    - `key` is a function which extracts a key for sorting from
+      each element of `list(range(len(self.data_source))`
+
+    - for example, `key` is as below, which returns the length
+      of a document at index `t` of `data_source`
+
+      #+BEGIN_SRC python
+        `key=lambda t: len(valid_ds.x[t]))`
+      #+END_SRC
+
+    - `sorted` 
 
 *** SortishSampler
 
@@ -8582,7 +8635,24 @@ class BatchNorm(nn.Module):
           return res, tensor([s[1] for s in samples])
     #+END_SRC
 
-*** creating DataLoader
+    - `samples` is a list of tuples for creating a batch, 
+      each of which is a pair of (document, label),
+
+    - `res` is a rectangular shaped tensor (a rank2 tensor)
+      which represents a batch
+      - 'height'(=batch size) is len(samples)
+      - 'width' is `max_len`
+      - i-th row will be later populated with the document in the
+        i-th element of `samples` & padding `pad_idx`
+
+    - `.long()` converts the elements in a tensor from float to integer
+
+    - `pad_idx` is a scalar, and `+ pad_idx` adds `pad_idx` to
+      all the elements of a tensor by broadcasting
+
+    - `tensor([s[1] for s in samples])` is a tensor for the labels
+
+*** creating DataLoader for training data
 
     #+BEGIN_SRC python
       #
@@ -8597,6 +8667,31 @@ class BatchNorm(nn.Module):
       train_dl = DataLoader(ll.train, batch_size=bs, sampler=train_sampler, collate_fn=pad_collate)
     #+END_SRC
 
+    - 
+
+*** get_clas_dls, clas_dls
+
+    #+BEGIN_SRC python
+      #export
+      def get_clas_dls(train_ds, valid_ds, bs, **kwargs):
+          train_sampler = SortishSampler(train_ds.x, key=lambda t: len(train_ds.x[t]), bs=bs)
+          valid_sampler = SortSampler(valid_ds.x, key=lambda t: len(valid_ds.x[t]))
+          return (DataLoader(train_ds, batch_size=bs, sampler=train_sampler, collate_fn=pad_collate, **kwargs),
+                  DataLoader(valid_ds, batch_size=bs*2, sampler=valid_sampler, collate_fn=pad_collate, **kwargs))
+
+      def clas_databunchify(sd, bs, **kwargs):
+          return DataBunch(*get_clas_dls(sd.train, sd.valid, bs, **kwargs))
+    #+END_SRC
+
+    - note that `DataLoader` is PyTorch version, whose imeplementation
+      is similar to 'home-made' `DataLoader` ver2,
+
+    - when we use PyTorch version of `DataLoader`, we need to
+      specify batch size
+
+    - also, in order to use PyTorch version of `DataLoader`, 
+      samplers are implemented inheritting PyTorch version 
+      of `Sampler`, and should return a list of indexed
 
 
 * NLP course
