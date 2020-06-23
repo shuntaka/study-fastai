@@ -28,6 +28,8 @@
     - Optimizer ver2
     - StatefulOptimizer
     - Learner ver2
+    - ParamScheduler
+    - BatchNorm
 
 *** components of deep learning
     - techniques to initialize parameters & normalize activations in order to keep activations nice
@@ -80,7 +82,7 @@
 
     https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
 
-*** weight decay
+*** L2 regularlization & weight decay
 *** debiasing exponentially weighted moving average
     https://www.youtube.com/watch?v=lWzo8CajF5s
 
@@ -106,11 +108,18 @@
 *** auto grad
     https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
     https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+    https://towardsdatascience.com/understanding-pytorch-with-an-example-a-step-by-step-tutorial-81fc5f8c4e8e
+
+*** with torch.no_grad
+*** why we zero out gradient (1:14:58)
+*** zero_grad()
+*** .grad.zero_()
 
 *** tensor broadcasting
     https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
 
 *** tensor related operation (stack, squeeze)
+    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
 
 *** tensor mean, std
 
@@ -726,7 +735,9 @@
       model.backward()
     #+END_SRC
 
-    - `[None]` creates
+    - `[None]*4` creates a list [None, None, None, None], 
+      and assign each element to `w1.g`, `b1.g`, `w2.g`, `b2.g`
+      respectively
 
 *** forward & backward ver3 (with Model ver2, Module)
     #+BEGIN_SRC python
@@ -808,6 +819,7 @@
               for l in self.layers: x = l(x)
               return self.loss(x.squeeze(), targ)
 
+      # how to use
       model = Model(m, nh, 1)
 
       loss = model(x_train, y_train)
@@ -830,7 +842,8 @@
 * lesson9
 ** 02b_initializing.ipynb
 *** get_data
-          #+BEGIN_SRC python
+
+    #+BEGIN_SRC python
 
         from exp.nb_01 import *
 
@@ -895,7 +908,7 @@
       !cp /content/exp/nb_02.py /content/exp.nb_02.py
     #+END_SRC
 
-*** Model(nn.Module) lesson9 ver1
+*** Model(nn.Module) ver3
       #+BEGIN_SRC python
         class Model(nn.Module):
             def __init__(self, n_in, nh, n_out):
@@ -907,11 +920,11 @@
                 return x
       #+END_SRC
 
-    - different from Model(nn.Module) implemented in lesson8,
-      Model(nn.Module) in lesson9 does not have self.loss.
+    - different from `Model(nn.Module)` ver2 implemented in lesson8,
+      `Model(nn.Module)` ver3 does not have `self.loss`.
 
     - instead, the result of forward path is retured through
-      Model(nn.Module)::__call__ , and it will be later passed
+      `Model(nn.Module)::__call__` , and it will be later passed
       to a loss function
 
     - then we call backward on the retuned value of loss function
@@ -944,14 +957,14 @@
       large probaility for all the events;
       some probaility must be small, and some probaility must be large
 
-*** log_softmax
+*** log_softmax ver1
 
     #+BEGIN_SRC python
-      def log_softmax(x): return x - x.exp().sum(-1,keepdim=True).log()
+      def log_softmax(x): return (x.exp()/(x.exp().sum(-1,keepdim=True))).log()
     #+END_SRC
 
-    - x is prediction for ENTIRE training set, and so
-      of torch.Size([50000,10])
+    - x is prediction for ENTIRE training set, and the shape is 
+      `torch.Size([50000,10])`
       - where 50000 is number of images
       - 10 corresonds to the number of labels (0,1,...,9)
       - each row contains values corresponding 10 labels
@@ -960,17 +973,19 @@
       and result is also torch.Size([50000,10]) 
 
     - `x.exp().sum(-1, keepdim=True)` takes sum along the last axis,
-      which is along each row (50000 rows),
+      ,which is along each row (50000 rows),
 
-    - with keepdim=True, after summing up along each row,
-      the sum will be torch.Size([1]) instead of torch.Size(1), a scalar, 
-      and so resulting tensor is of torch.Size([50000,1]) 
+    - with `keepdim=True`, for each row, after the summation,
+      the sum will be a tensor with size `torch.Size([1])` instead of a scalar
+      and so the size of the resulting tensor is `torch.Size([50000,1])`
       which is helpful when broadcasting later
 
-    - x.exp() / (x.exp().sum(-1, keepdim=True)) is done element-wise
-      using broadcasting, and result is of torch.Size([50000,10])
-      - x.exp() => torch.Size([50000,10])
-      - x.exp().sum(...) => torch.Size([50000,1])
+    - x.exp() => torch.Size([50000,10])
+
+    - x.exp().sum(...) => torch.Size([50000,1])
+
+    - `x.exp() / (x.exp().sum(-1, keepdim=True))` is done element-wise
+      using broadcasting, and the size of the result is `torch.Size([50000,10])`
 
     - `log()` happens element-wise, and now the *(-1) of value for
       each single element represents cross-entropy
@@ -979,7 +994,7 @@
     - small cross-entropy (i.e. high probability) means it is less suprizing
       when it happnes
 
-*** the output of log_softmax 
+*** the output of log_softmax ver1
 
     # my log softmax with print
     #+BEGIN_SRC python
@@ -1007,6 +1022,12 @@
 
     #+END_SRC
 
+*** log_softmax ver2
+
+    #+BEGIN_SRC python
+      def log_softmax(x): return x - x.exp().sum(-1,keepdim=True).log()
+    #+END_SRC
+
 *** integer array indexing
     - `sm_pred` is an array of arrays
 
@@ -1029,13 +1050,13 @@
 
     - nll calculates cross-entropy LOSS using cross-entropies
 
+    - target is the label
+
     - since the label is one-hot encoded, we can utilizing numpy
       integer indexing.
 
     - `input` is log_softmax of pred, and is a 2rank tensor 
-      with each row containing entropies for 
-
-    - target is the label
+      with each row containing entropies for the corresponding label
 
     - `target.shape[0]` is same as the number of data
 
@@ -1049,7 +1070,8 @@
     - the calculated vlaue is a rank1 tensor consisting of 
       cross entropy losses 
 
-    - then,  .mean() returns the sum devided by number of the data
+    - then,  .mean() returns the mean of the cross entropies
+      over the batch.
 
 *** logsumexp
     https://pytorch.org/docs/master/generated/torch.logsumexp.html
@@ -1062,12 +1084,13 @@
     #+END_SRC
 
     # notes
-    - `out` is of torch.Size([64, 10])
-    - `yb` is of torch.Size([64])
+    - the size of `out` `torch.Size([64, 10])`
+    - the size of `yb` is `torch.Size([64])`
     - torch.argmax(out, dim=1) picks up the largest probability
-      for each row and returns tensor of size torch.Size([64])
+      for each row and returns a tensor whose size is `torch.Size([64])`
 
-    - torch.argmax(out, dim=1)==yb returns tensor of
+    - torch.argmax(out, dim=1)==yb returns a tensor;
+
       #+BEGIN_SRC python
         tensor([ True,  True,  True,  True,  True,  True,  True,  True,  True,  True,
                  True,  True,  True,  True,  True,  True,  True,  True,  True,  True,
@@ -1081,14 +1104,16 @@
     - torch.argmax(out, dim=1)==yb.float() converts to 
       a tensor of 0 & 1
 
+    - [ ] 
+
       #+BEGIN_SRC python
         tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
                 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 0., 0., 1., 1., 1., 1., 1., 1.,
                 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 1., 1.,
                 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
       #+END_SRC
-
-*** basic training loop
+      
+*** TODO basic training loop (fit ver0)
 
     #+BEGIN_SRC python
       for epoch in range(epochs):
@@ -1110,13 +1135,21 @@
                           l.bias  .grad.zero_()
     #+END_SRC
 
+    - `n-1` is the last index of the input
+
+    - `for i in range((n-1//bs + 1))`
+      sweeps the integer from 0 to `(n-1)//bs`
+
+    - `//` does integer devision, 
+      whereas `/` does floating point devision
+
     - n is defined to be the size of training data
 
       #+BEGIN_SRC python
         n,m = x.train.shape
       #+END_SRC
 
-    - Model is from Model(nn.Module) lesson9 ver1 
+    - `Model` is from `Model(nn.Module)` ver3
 
       #+BEGIN_SRC python
         class Model(nn.Module):
@@ -1129,10 +1162,76 @@
                 return x
       #+END_SRC
 
-    - [ ] with torch.no_grad() is necessary since otherwise
+    - [ ] `with torch.no_grad()` is necessary since otherwise
       pytorch's auto grad mechanics would keep track of
       all the calculation weight is involved, for calculating
       gradient, which costs lot of memoris
+
+*** Model(DummyModule) (=Model ver4 preliminary)
+    
+    #+BEGIN_SRC python
+        class Model(DummyModule):
+            def __init__(self, n_in, nh, n_out):
+                super().__init__()
+                self.l1 = nn.Linear(n_in,nh)
+                self.l2 = nn.Linear(nh,n_out)
+                
+            def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+
+      class DummyModule():
+          def __init__(self, n_in, nh, n_out):
+              self._modules = {}
+              self.l1 = nn.Linear(n_in,nh)
+              self.l2 = nn.Linear(nh,n_out)
+              
+          def __setattr__(self,k,v):
+              if not k.startswith("_"): self._modules[k] = v
+              super().__setattr__(k,v)
+              
+          def __repr__(self): return f'{self._modules}'
+          
+          def parameters(self):
+              for l in self._modules.values():
+                  for p in l.parameters(): yield p
+    #+END_SRC
+
+    - `DummuModule` is for getting rid of the duplicate code
+      for updating the parameters for each layer in 
+      the 'basic training loop'
+
+      #+BEGIN_SRC python
+        for l in model.layers:
+            if hasattr(l, 'weight'):
+                l.weight -= l.weight.grad * lr
+                l.bias   -= l.bias.grad   * lr
+                l.weight.grad.zero_()
+                l.bias  .grad.zero_()
+      #+END_SRC
+    
+    - what `DummyModule` does is, when some properties such 
+      as l1, l1 is set on `self`, it will call __setattr__
+      which registers the property and its value to 
+      self._modules
+
+    - DummyModule also has a method `parameters` which returns
+      all the parameters registered to self._modules
+
+*** Model(nn.Module) ver4
+
+    #+BEGIN_SRC python
+      class Model(nn.Module):
+          def __init__(self, n_in, nh, n_out):
+              super().__init__()
+              self.l1 = nn.Linear(n_in,nh)
+              self.l2 = nn.Linear(nh,n_out)
+              
+          def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+    #+END_SRC
+
+    - luckily, the 2 features(__setattr__ , parameters)
+      of DummyModule is also implemented  on nn.Module, 
+      so instead of Model(DummyModule) ver4-preliminary,
+      we can use Model(nn.Module) ver4
 
 *** fit ver1
     #+BEGIN_SRC python
@@ -1163,64 +1262,7 @@
                 l.bias  .grad.zero_()
       #+END_SRC
 
-    - to do that, we need to be able to get all the parameters
-
-*** Model lesson9 ver2-preliminary
-      #+BEGIN_SRC python
-        class Model(DummyModule):
-            def __init__(self, n_in, nh, n_out):
-                super().__init__()
-                self.l1 = nn.Linear(n_in,nh)
-                self.l2 = nn.Linear(nh,n_out)
-                
-            def __call__(self, x): return self.l2(F.relu(self.l1(x)))
-      #+END_SRC
-
-    #+BEGIN_SRC python
-      class DummyModule():
-          def __init__(self, n_in, nh, n_out):
-              self._modules = {}
-              self.l1 = nn.Linear(n_in,nh)
-              self.l2 = nn.Linear(nh,n_out)
-              
-          def __setattr__(self,k,v):
-              if not k.startswith("_"): self._modules[k] = v
-              super().__setattr__(k,v)
-              
-          def __repr__(self): return f'{self._modules}'
-          
-          def parameters(self):
-              for l in self._modules.values():
-                  for p in l.parameters(): yield p
-    #+END_SRC
-
-    - to do that, we change the implementation of Model as below;
-    
-    - what DummyModule does is, when some properties such as l1, l1
-      is set on `self`, it will call __setattr__
-      which registers the property and its value to 
-      self._modules
-
-    - DummyModule also has a method `parameters` which returns
-      all the parameters registered to self._modules
-
-*** Model(nn.Module) lesson9 ver2
-
-    #+BEGIN_SRC python
-      class Model(nn.Module):
-          def __init__(self, n_in, nh, n_out):
-              super().__init__()
-              self.l1 = nn.Linear(n_in,nh)
-              self.l2 = nn.Linear(nh,n_out)
-              
-          def __call__(self, x): return self.l2(F.relu(self.l1(x)))
-    #+END_SRC
-
-    - luckily, the 2 features(__setattr__ , parameters)
-      of DummyModule is also implemented  on nn.Module, 
-      so instead of Model(DummyModule), we can use Model(nn.Module)
-
-*** Model(nn.Module) ver3
+*** Model(nn.Module) ver5
 
      #+BEGIN_SRC python
        class Model(nn.Module):
@@ -1240,10 +1282,9 @@
 
      - the difference is, on __init__, if calls 
        self.add_module, which is equivalent to __setattr__ of either 
-       - Model(nn.Module) lesson9 ver2,
-       - Moodel(DummyModule) lesson9 ver2-preliminary
+       `Model(nn.Module) ver4`, or `Moodel(DummyModule) ver4-preliminary`
 
-*** SequentialModel ver1 ( = Model ver4)
+*** SequentialModel ver1
 
     #+BEGIN_SRC python
       class SequentialModel(nn.Module):
@@ -1257,9 +1298,9 @@
     #+END_SRC
 
     - it is for getting rid of cranky part of __init__ 
-      of Model(nn.Model) ver3 below by using nn.ModuleList
+      of Model(nn.Model) ver4 below by using nn.ModuleList
 
-      # Model(nn.Model) ver3
+      # Model(nn.Model) ver4
       #+BEGIN_SRC python
         class Model(nn.Module):
             def __init__(self, layers):
@@ -1268,9 +1309,7 @@
                 for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
       #+END_SRC
 
-
-*** nn.Sequential
-    - nn.Sequential is equivalent of SequentialModel implemented above
+    - nn.Sequential is equivalent of `SequentialModel`
 
 *** Optimizer ver1
 
@@ -1289,36 +1328,37 @@
     - we create optimizer to make parameter update more consice
       in fit ver1
 
-*** ver ver1
-      #+BEGIN_SRC python
-        def fit():
-            for epoch in range(epochs):
-                for i in range((n-1)//bs + 1):
-                    start_i = i*bs
-                    end_i = start_i+bs
-                    xb = x_train[start_i:end_i]
-                    yb = y_train[start_i:end_i]
-                    loss = loss_func(model(xb), yb)
+# *** fit ver1
+#       #+BEGIN_SRC python
+#         def fit():
+#             for epoch in range(epochs):
+#                 for i in range((n-1)//bs + 1):
+#                     start_i = i*bs
+#                     end_i = start_i+bs
+#                     xb = x_train[start_i:end_i]
+#                     yb = y_train[start_i:end_i]
+#                     loss = loss_func(model(xb), yb)
 
-                    loss.backward()
-                    with torch.no_grad():
-                        for p in model.parameters(): p -= p.grad * lr
-                        model.zero_grad()
-      #+END_SRC
+#                     loss.backward()
+#                     with torch.no_grad():
+#                         for p in model.parameters(): p -= p.grad * lr
+#                         model.zero_grad()
+#       #+END_SRC
 
-      - params will be given by parameter() of Model class
-        inheritting from nn.Module (equivalent of parameter method
-        in DummyModule)
+#       - params will be given by parameter() of Model class
+#         inheritting from nn.Module (equivalent of parameter method
+#         in DummyModule)
 
-      - we will implement more general optimizer later in the lesson
+#       - we will implement more general optimizer later in the lesson
 
-*** training loop ver2 (cnosidered as fit "ver2"), refactored with Optimizer
+*** training loop ver2 (cnosidered as fit ver2), refactored with Optimizer
 
     #+BEGIN_SRC python
+      #
       model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
-
       opt = Optimizer(model.parameters())
 
+      #
       for epoch in range(epochs):
           for i in range((n-1)//bs + 1):
               start_i = i*bs
@@ -1386,6 +1426,12 @@
 *** training loop ver3 (fit ver3), refactored with dataset
 
     #+BEGIN_SRC python
+      #
+      model,opt = get_model()
+      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
+
+
+      #
       for epoch in range(epochs):
           for i in range((n-1)//bs + 1):
               xb,yb = train_ds[i*bs : i*bs+bs]
@@ -1605,6 +1651,7 @@
       we have more memory space (1:14:00)
 
 *** why we zero out gradient (1:14:58)
+
 
 ** 04_callbacks.ipynb
 *** imports
@@ -2519,7 +2566,6 @@
       - recall name of AvgStatsCallback will be avg_stats
         and the AvgStatsCallback instance is 
 
-
 ** statistics math
 *** standard deviation
     - 35:30
@@ -2594,8 +2640,6 @@
 *** when softmax is a good idea
     - language model
     - there is always a one word
-
-
 
 
 ** 05_anneal.ipynb
@@ -4887,9 +4931,10 @@ class BatchNorm(nn.Module):
 
     - `SplitData` is just a storage to store training & validation data
 
-    - `SplitData::split_by_func` is a factory method to create `SplitData` instance
-      - `split_by_func` is the one previously defined, which 
-        returns two lists created out of one list
+    - `SplitData::split_by_func` is a factory method to create a
+      `SplitData` instance.
+      - `split_by_func` is a global function previously defined, 
+        which returns two lists created out of one list
 
         #+BEGIN_SRC python
         def split_by_func(items, f):
@@ -4942,7 +4987,7 @@ class BatchNorm(nn.Module):
     - altogether, __call__ returns a list of number in the form of
       [1, 2, 3, 3, 1, ...]
 
-*** parent_labeler, LabeledData
+*** parent_labeler, LabeledData, label_by_func
 
     #+BEGIN_SRC python
       #export
@@ -4983,12 +5028,24 @@ class BatchNorm(nn.Module):
           return SplitData(train,valid)
     #+END_SRC
 
+    - `parent_labeler` can tell the label of a file
+      since the name of the parent directory is same as the label
+
+    - `_labe_by_func` is a facotry method to create a listy instance
+      converting the passed listy instance (e.g. list of file names)
+      by `f`
+      - ds: ['041AB.png', '042AC.png', ...]
+      - `f` is a function such as `parent_labeler`
+      - return value:
+        ['tench', 'cat', 'dog', ...]
+   
     - `LabeledData` is almost same as ItemList, and it stores the
       "processed" version of x(=input) & y(=target)
 
     - `LabeledData` is identical as `DataSet`. 
       Since it implements __getitem__, identical to that of `DataSet`, 
-      `LabeledData` instance can be passed to `DataLoader` inside `get_dls`
+      `LabeledData` instance can be passed to `ds` of 
+      `DataLoader::__init__` inside `get_dls`
 
       - when indexed,  it returns a tuple of (x[idx], y[idx]) 
         #+BEGIN_SRC python
@@ -5025,19 +5082,10 @@ class BatchNorm(nn.Module):
                       DataLoader(valid_ds, batch_size=bs*2, **kwargs))
         #+END_SRC
 
-    - `parent_labeler` tells the label of a file
-      since the name of the parent directory is same as label
-
-    - `_labe_by_func` is a facotry method to create a listy instance
-      converting by `f` the passed listy instance (e.g. list of file names)
-      - ds: ['041AB.png', '042AC.png', ...]
-      - `f` is a function such as `parent_labeler`
-      - return value:
-        ['tench', 'cat', 'dog', ...]
-   
     - `LabeledData::process` clone "processed" version of 
       the passed list item.
-      - `il is an `ItemList` instance, for example
+      - `il is an `ItemList` instance, for example.
+
         #+BEGIN_SRC python
         class ItemList(ListContainer):
             def __init__(self, items, path='.', tfms=None):
@@ -5060,31 +5108,36 @@ class BatchNorm(nn.Module):
 
       #+END_SRC
 
-      - since `ItemList` inherits `ListContainer`, it has `self.items`
-        which is guaranteed to be a list by `listify`
+      - since `ItemList` inherits `ListContainer`, 
+        it has `self.items` which is guaranteed to be 
+        a list by `listify`
         
         #+BEGIN_SRC python
-      #export
-      class ListContainer():
-      def __init__(self, items): self.items = listify(items)
-      def __getitem__(self, idx):
-      if isinstance(idx, (int,slice)): return self.items[idx]
-      if isinstance(idx[0],bool):
-      assert len(idx)==len(self) # bool mask
-      return [o for m,o in zip(idx,self.items) if m]
-      return [self.items[i] for i in idx]
-      def __len__(self): return len(self.items)
-      def __iter__(self): return iter(self.items)
-      def __setitem__(self, i, o): self.items[i] = o
-      def __delitem__(self, i): del(self.items[i])
-      def __repr__(self):
-      res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
-      if len(self)>10: res = res[:-1]+ '...]'
-      return res
+          #export
+          class ListContainer():
+          def __init__(self, items): self.items = listify(items)
+          def __getitem__(self, idx):
+          if isinstance(idx, (int,slice)): return self.items[idx]
+          if isinstance(idx[0],bool):
+          assert len(idx)==len(self) # bool mask
+          return [o for m,o in zip(idx,self.items) if m]
+          return [self.items[i] for i in idx]
+          def __len__(self): return len(self.items)
+          def __iter__(self): return iter(self.items)
+          def __setitem__(self, i, o): self.items[i] = o
+          def __delitem__(self, i): del(self.items[i])
+          def __repr__(self):
+          res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
+          if len(self)>10: res = res[:-1]+ '...]'
+          return res
       #+END_SRC
 
+    - `LabeledData::__init__` applys `proc_x` & `proc_y`
+      to `x` & `y`, respectively
+
     - LabeledData::label_by_func is a factory method to create
-      out of "x", a LabeledData instance storing "x" & "y", 
+      a LabeledData instance which stores "x" & "y", out of 
+      `x`
       - `il` will be `x`
       - `_label_by_func(il, f)` will be `y`
       
@@ -8202,6 +8255,246 @@ class BatchNorm(nn.Module):
               return i
     #+END_SRC
 
+*** replace_all_caps, deal_caps, add_eos_bos
+
+    #+BEGIN_SRC python
+      #export
+      def replace_all_caps(x):
+          "Replace tokens in ALL CAPS by their lower version and add `TK_UP` before."
+          res = []
+          for t in x:
+              if t.isupper() and len(t) > 1: res.append(TK_UP); res.append(t.lower())
+              else: res.append(t)
+          return res
+
+      def deal_caps(x):
+          "Replace all Capitalized tokens in by their lower version and add `TK_MAJ` before."
+          res = []
+          for t in x:
+              if t == '': continue
+              if t[0].isupper() and len(t) > 1 and t[1:].islower(): res.append(TK_MAJ)
+              res.append(t.lower())
+          return res
+
+      def add_eos_bos(x): return [BOS] + x + [EOS]
+
+      default_post_rules = [deal_caps, replace_all_caps, add_eos_bos]
+    #+END_SRC
+
+*** parallel
+
+    #+BEGIN_SRC python
+      #export
+      from spacy.symbols import ORTH
+      from concurrent.futures import ProcessPoolExecutor
+
+      def parallel(func, arr, max_workers=4):
+          if max_workers<2: results = list(progress_bar(map(func, enumerate(arr)), total=len(arr)))
+          else:
+              with ProcessPoolExecutor(max_workers=max_workers) as ex:
+                  return list(progress_bar(ex.map(func, enumerate(arr)), total=len(arr)))
+          if any([o is not None for o in results]): return results
+    #+END_SRC
+
+*** TokenizeProcessor
+
+#+BEGIN_SRC python
+  #export
+  class TokenizeProcessor(Processor):
+      def __init__(self, lang="en", chunksize=2000, pre_rules=None, post_rules=None, max_workers=4): 
+          self.chunksize,self.max_workers = chunksize,max_workers
+          self.tokenizer = spacy.blank(lang).tokenizer
+          for w in default_spec_tok:
+              self.tokenizer.add_special_case(w, [{ORTH: w}])
+          self.pre_rules  = default_pre_rules  if pre_rules  is None else pre_rules
+          self.post_rules = default_post_rules if post_rules is None else post_rules
+
+      def proc_chunk(self, args):
+          i,chunk = args
+          chunk = [compose(t, self.pre_rules) for t in chunk]
+          docs = [[d.text for d in doc] for doc in self.tokenizer.pipe(chunk)]
+          docs = [compose(t, self.post_rules) for t in docs]
+          return docs
+
+      def __call__(self, items): 
+          toks = []
+          if isinstance(items[0], Path): items = [read_file(i) for i in items]
+          chunks = [items[i: i+self.chunksize] for i in (range(0, len(items), self.chunksize))]
+          toks = parallel(self.proc_chunk, chunks, max_workers=self.max_workers)
+          return sum(toks, [])
+      
+      def proc1(self, item): return self.proc_chunk([item])[0]
+      
+      def deprocess(self, toks): return [self.deproc1(tok) for tok in toks]
+      def deproc1(self, tok):    return " ".join(tok)
+#+END_SRC
+
+*** NumericalizeProcessor
+#+BEGIN_SRC python
+  #export
+  import collections
+
+  class NumericalizeProcessor(Processor):
+      def __init__(self, vocab=None, max_vocab=60000, min_freq=2): 
+          self.vocab,self.max_vocab,self.min_freq = vocab,max_vocab,min_freq
+      
+      def __call__(self, items):
+          #The vocab is defined on the first use.
+          if self.vocab is None:
+              freq = Counter(p for o in items for p in o)
+              self.vocab = [o for o,c in freq.most_common(self.max_vocab) if c >= self.min_freq]
+              for o in reversed(default_spec_tok):
+                  if o in self.vocab: self.vocab.remove(o)
+                  self.vocab.insert(0, o)
+          if getattr(self, 'otoi', None) is None:
+              self.otoi = collections.defaultdict(int,{v:k for k,v in enumerate(self.vocab)}) 
+          return [self.proc1(o) for o in items]
+      def proc1(self, item):  return [self.otoi[o] for o in item]
+      
+      def deprocess(self, idxs):
+          assert self.vocab is not None
+          return [self.deproc1(idx) for idx in idxs]
+      def deproc1(self, idx): return [self.vocab[i] for i in idx]
+#+END_SRC
+
+*** how to create a batch from a document
+    - for example, batch-size=6, bptt=5
+
+    - create a grid with 
+      height = batch-size = 6, 
+      width = Math.floor(length//height)
+
+    - store the document in the grid
+
+      | xxbos | \n | xxmaj | in | this | noteook | , | we | ... |
+      | ...   |    |       |    |      |         |   |    |     |
+      |       |    |       |    |      |         |   |    |     |
+      |       |    |       |    |      |         |   |    |     |
+      |       |    |       |    |      |         |   |    |     |
+      |       |    |       |    |      |         |   |    |     |
+
+    - slice the grid into smaller grids with width=bptt(=5)
+
+    - each small grid is the batch.
+
+*** LM_PreLoader (LM_Dataset)
+
+    #+BEGIN_SRC python
+      #export
+      class LM_PreLoader():
+          def __init__(self, data, bs=64, bptt=70, shuffle=False):
+              self.data,self.bs,self.bptt,self.shuffle = data,bs,bptt,shuffle
+              total_len = sum([len(t) for t in data.x])
+              self.n_batch = total_len // bs
+              self.batchify()
+          
+          def __len__(self): return ((self.n_batch-1) // self.bptt) * self.bs
+          
+          def __getitem__(self, idx):
+              source = self.batched_data[idx % self.bs]
+              seq_idx = (idx // self.bs) * self.bptt
+              return source[seq_idx:seq_idx+self.bptt],source[seq_idx+1:seq_idx+self.bptt+1]
+          
+          def batchify(self):
+              texts = self.data.x
+              if self.shuffle: texts = texts[torch.randperm(len(texts))]
+              stream = torch.cat([tensor(t) for t in texts])
+              self.batched_data = stream[:self.n_batch * self.bs].view(self.bs, self.n_batch)
+    #+END_SRC
+
+    # an overview of LM_PreLoader
+    - `LM_PreLoader` is a data set similar to `DataSet`,
+      which will be passed to `DataLoader` later.
+
+    - to understand the behavior of `LM_PreLoader`, imagine
+      a grid with the number of its row&column equal to
+      `bs` & `total_len/bs/bptt`
+      (for simplicity, suppose `total_len/bs/bptt` is an integer)
+      
+    - each cell(a list of words) of the grid is an element
+      that `LM_PreLoader` returns, and for  some number `i`, 
+      it will determine the indexes for row & columns such 
+      that for consecuitive numbers it returns two 
+      consecuitive cells in the same column
+
+    - as the label, `LM_PreLoader` returns a list
+      of the elements that are contained in the
+      the 'cell' when it is shifted to the right by 1
+
+    # __init__
+    - `data` will be an instance of `LabeledData` instance
+      that contains a list of texts and a list of dummy labels
+
+    - `total_len` is the total length of all the texts 
+      contained in `data`
+
+    - `n_batch` is the maximum integer less than `total_len/bs`
+
+    # batchify
+    - `torch.cat` and `tensor(t)` works as below
+
+      #+BEGIN_SRC python
+        import torch
+        my_tensor1 = torch.tensor([1,2,3])
+        my_tensor2 = torch.tensor([4,5,6])
+        my_cat = torch.cat([my_tensor1, my_tensor2])
+        my_cat
+
+        '''
+        tensor([1,2,3,4,5,6])
+        '''
+      #+END_SRC
+
+    - `stream = torch.cat([tensor(t) for t in texts])` creates
+      a huge tensor made by concatnating all the individual
+      numericalized texts in `data`
+
+    - `stream[:self.n_batch * self.bs]` grabs the elements 
+      up to `self.n_batch * self.bs`, and throw away the remaining.
+
+    - `view(self.bs, self.n_batch)` reshape the huge tensor
+      into a rectangular shaped tensor whose 'height' is `self.bs`,
+      and 'width' is `n_batch`
+
+    # __getitem__
+    - recall the explanation of how `LM_PreLoader` behaves above.
+
+    - `__getitem__` chooses the indexes for 'row' & 'column'
+      of the grid, and returns the 'cell' (a list)
+
+    - the index for the row of the 'grid' is determined by
+      `ids % bs`
+
+    - the index for the column of the 'grid' is determined by
+      `idx//bs`
+
+    - now, we construct the corresponding cell (a list)
+
+    - each 'cell' is a list of length `bptt`, so for 
+      a cell whose index is (i, j), the cell contains
+      (bptt*j)-th element up-to&not including (bptt*j+bptt)-th 
+      element in `batched_data[i]`
+
+    - the label for the 'cell' will be elements contained
+      when shifting the 'cell' by 1.
+
+    - note that for the label for the cell in the right edge
+      of the grid, the number of the elements contained 
+      in the label will be 1 less than `bptt`, 
+      but python array indexing [l:l+m] works fine even when
+      the array has less than `m` elements
+
+*** get_lm_dls, lm_databunchify
+
+    #+BEGIN_SRC python
+      #export
+      def get_lm_dls(train_ds, valid_ds, bs, bptt, **kwargs):
+          return (DataLoader(LM_PreLoader(train_ds, bs, bptt, shuffle=True), batch_size=bs, **kwargs),
+                  DataLoader(LM_PreLoader(valid_ds, bs, bptt, shuffle=False), batch_size=2*bs, **kwargs))
+
+      def lm_databunchify(sd, bs, bptt, **kwargs):
+          return DataBunch(*get_lm_dls(sd.train, sd.valid, bs, bptt, **kwargs))
+    #+END_SRC
 
 * NLP course
   https://www.fast.ai/2019/07/08/fastai-nlp/
@@ -8217,3 +8510,6 @@ class BatchNorm(nn.Module):
     https://ariseanalytics.com/activities/report/20190707/
 *** article about bert
     https://xtech.nikkei.com/atcl/nxt/mag/nc/18/120400145/120400002/
+*** copus
+    https://www.jstage.jst.go.jp/article/jnlp/17/5/17_5_5_75/_pdf
+    https://pj.ninjal.ac.jp/corpus_center/csj/
