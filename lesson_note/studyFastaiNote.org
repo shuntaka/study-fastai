@@ -1531,7 +1531,7 @@
         '''
       #+END_SRC
 
-*** DataLoader ver2
+*** DataLoader ver2, collate
 
     #+BEGIN_SRC python
       def collate(b):
@@ -1547,11 +1547,13 @@
     #+END_SRC
 
 
+    # DataLoader
     - the point of DataLoader ver2 is:
       - now it picks up data set randomly
 
 
-    - self.ds[i] is a tuple
+    - `ds` in `DataLoader::__init__` is a `DataSet` instance, 
+      and so `self.ds[i]` is a tuple
       #+BEGIN_SRC python
         class Dataset():
               def __init__(self, x, y): self.x,self.y = x,y
@@ -1559,7 +1561,18 @@
               def __getitem__(self, i): return self.x[i],self.y[i]
       #+END_SRC
 
-    - b (= [self.ds[i] for i in s) is a list of tuple, and looks like `my_b` below
+    - `sampler` picks up numbers
+
+    - `collate_fn` combines the tuples in the list
+      `[self.ds[i] for i in s]` and returns
+      a tuple of 2 tensors 
+
+    # collate
+    - zip(*b) returns tuple
+      https://www.youtube.com/watch?v=VbBozykILZ0
+
+    - `b` (= [self.ds[i] for i in s) in `collate` is
+      a list of tuple which looks like `my_b` below
 
     #+BEGIN_SRC python
       my_b = [train_ds[3], train_ds[1], train_ds[2]]
@@ -1577,23 +1590,23 @@
       #+BEGIN_SRC python
         zip(train_ds[3], train_ds[1], train_ds[2])
       #+END_SRC
-      
 
     - what zip does when it accepts (tuple1, tuple2, tuple3);
       stack tuples vertically and make new tuples by grouping
-      elements vertically 
+      elements vertically.
 
-      | tuple1 | t1a | t1b | 
-      | tuple2 | t2a | t2b | 
-      | tuple3 | t3a | t3b | 
+      | tuple1 | t1a | t1b |
+      | tuple2 | t2a | t2b |
+      | tuple3 | t3a | t3b |
+      | ...    | ... | ... |
+      | tupleN | tNa | tNb |
 
       => 
       
-      (t1a, t2a, t3a), (t1b, t2b, t3b)
+      (t1a, t2a, t3a, ..., tNa), (t1b, t2b, t3b, ..., tNb)
 
-    - zip(*b) returns tuple
-
-      https://www.youtube.com/watch?v=VbBozykILZ0
+    - `torch.stack(xs)` creates a tensor out of tuple `xs`
+      by stacking them together
 
     - note that `DataLoader` itself does not do transform.
       it is `ds` passed that could do transform.
@@ -8357,14 +8370,17 @@ class BatchNorm(nn.Module):
       def deproc1(self, idx): return [self.vocab[i] for i in idx]
 #+END_SRC
 
-*** how to create a batch from a document
+*** FOR language modeling, how to create batches from documents
     - for example, batch-size=6, bptt=5
 
-    - create a grid with 
+    - FOR language modeling, we concatnage the whole documents
+      into single giant document,
+
+    - then create a grid with 
       height = batch-size = 6, 
       width = Math.floor(length//height)
-
-    - store the document in the grid
+      
+    - store the single giant document in the grid
 
       | xxbos | \n | xxmaj | in | this | noteook | , | we | ... |
       | ...   |    |       |    |      |         |   |    |     |
@@ -8411,11 +8427,13 @@ class BatchNorm(nn.Module):
       `bs` & `total_len/bs/bptt`
       (for simplicity, suppose `total_len/bs/bptt` is an integer)
       
-    - each cell(a list of words) of the grid is an element
-      that `LM_PreLoader` returns, and for  some number `i`, 
-      it will determine the indexes for row & columns such 
-      that for consecuitive numbers it returns two 
-      consecuitive cells in the same column
+    - each cell of the grid is an element that `LM_PreLoader`
+      returns, and is a list which contains `bptt` numericalized
+      words.
+
+    - for  some number `i`, it will determine the indexes for
+      row & columns such that for consecuitive numbers 
+      it returns two  consecuitive cells in the same column
 
     - as the label, `LM_PreLoader` returns a list
       of the elements that are contained in the
@@ -8495,6 +8513,91 @@ class BatchNorm(nn.Module):
       def lm_databunchify(sd, bs, bptt, **kwargs):
           return DataBunch(*get_lm_dls(sd.train, sd.valid, bs, bptt, **kwargs))
     #+END_SRC
+
+*** FOR language modeling, create data loader
+
+    #+BEGIN_SRC python
+      bs,bptt = 64,70
+      data = lm_databunchify(ll, bs, bptt)
+    #+END_SRC
+
+*** FOR classification, how to create batches
+    - note that for classification, we create batches
+      in a completely different way from that for
+      language modeling
+
+    - in concrete, each batch contains a group of documents
+      whereas a batch contains a list of numericalized words
+      for language modeling.
+
+*** SortSampler
+
+    #+BEGIN_SRC python
+      #export
+      from torch.utils.data import Sampler
+
+      class SortSampler(Sampler):
+          def __init__(self, data_source, key): self.data_source,self.key = data_source,key
+          def __len__(self): return len(self.data_source)
+          def __iter__(self):
+              return iter(sorted(list(range(len(self.data_source))), key=self.key, reverse=True))
+    #+END_SRC
+
+    - 
+    - 
+
+*** SortishSampler
+
+    #+BEGIN_SRC python
+      #export
+      class SortishSampler(Sampler):
+          def __init__(self, data_source, key, bs):
+              self.data_source,self.key,self.bs = data_source,key,bs
+
+          def __len__(self) -> int: return len(self.data_source)
+
+          def __iter__(self):
+              idxs = torch.randperm(len(self.data_source))
+              megabatches = [idxs[i:i+self.bs*50] for i in range(0, len(idxs), self.bs*50)]
+              sorted_idx = torch.cat([tensor(sorted(s, key=self.key, reverse=True)) for s in megabatches])
+              batches = [sorted_idx[i:i+self.bs] for i in range(0, len(sorted_idx), self.bs)]
+              max_idx = torch.argmax(tensor([self.key(ck[0]) for ck in batches]))  # find the chunk with the largest key,
+              batches[0],batches[max_idx] = batches[max_idx],batches[0]            # then make sure it goes first.
+              batch_idxs = torch.randperm(len(batches)-2)
+              sorted_idx = torch.cat([batches[i+1] for i in batch_idxs]) if len(batches) > 1 else LongTensor([])
+              sorted_idx = torch.cat([batches[0], sorted_idx, batches[-1]])
+              return iter(sorted_idx)
+    #+END_SRC
+
+*** pad_collate
+
+    #+BEGIN_SRC python
+      #export
+      def pad_collate(samples, pad_idx=1, pad_first=False):
+          max_len = max([len(s[0]) for s in samples])
+          res = torch.zeros(len(samples), max_len).long() + pad_idx
+          for i,s in enumerate(samples):
+              if pad_first: res[i, -len(s[0]):] = LongTensor(s[0])
+              else:         res[i, :len(s[0]) ] = LongTensor(s[0])
+          return res, tensor([s[1] for s in samples])
+    #+END_SRC
+
+*** creating DataLoader
+
+    #+BEGIN_SRC python
+      #
+      proc_cat = CategoryProcessor()
+      il = TextList.from_files(path, include=['train', 'test'])
+      sd = SplitData.split_by_func(il, partial(grandparent_splitter, valid_name='test'))
+      ll = label_by_func(sd, parent_labeler, proc_x = [proc_tok, proc_num], proc_y=proc_cat)
+
+      #
+      bs = 64
+      train_sampler = SortishSampler(ll.train.x, key=lambda t: len(ll.train[int(t)][0]), bs=bs)
+      train_dl = DataLoader(ll.train, batch_size=bs, sampler=train_sampler, collate_fn=pad_collate)
+    #+END_SRC
+
+
 
 * NLP course
   https://www.fast.ai/2019/07/08/fastai-nlp/
