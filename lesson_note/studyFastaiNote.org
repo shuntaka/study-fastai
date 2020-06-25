@@ -104,6 +104,8 @@
     - how we can make use of all the input we have
     - how we can take advantage of computations we are doing
 
+*** Dropout
+
 ** pyotrch
 *** auto grad
     https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
@@ -1539,7 +1541,7 @@
         - 'home-made' version returns a list of list of indexed
         - PyTorch version returnsa a list of indexed
 
-*** DataLoader ver2, collate
+*** home-made DataLoader ver2, collate
 
     #+BEGIN_SRC python
       def collate(b):
@@ -8577,10 +8579,11 @@ class BatchNorm(nn.Module):
               return iter(sorted(list(range(len(self.data_source))), key=self.key, reverse=True))
     #+END_SRC
 
-    - NOTE that `Sampler` is from PyTorch, and not 'home-made' `Sampler`
+    - NOTE that `Sampler` is from PyTorch, 
+      and not 'home-made' `Sampler`
 
-    - `SortSampler` will be used with PyTorch version of `DataLoader`,
-      so it should returns a list of indexed
+    - `SortSampler` is expected to  be used with PyTorch version
+      of `DataLoader`, so it should returns a list of indexes
 
     - `SortSampler` is for validation set
 
@@ -8686,12 +8689,497 @@ class BatchNorm(nn.Module):
     - note that `DataLoader` is PyTorch version, whose imeplementation
       is similar to 'home-made' `DataLoader` ver2,
 
-    - when we use PyTorch version of `DataLoader`, we need to
-      specify batch size
+    - PyTorch version of `DataLoader` is slightly different from
+      'home-made' version, and the usage is slightly different in that
+      - need to specify batch size
+      - samplers should be a function which returns a list of 
+        indexes
 
-    - also, in order to use PyTorch version of `DataLoader`, 
-      samplers are implemented inheritting PyTorch version 
-      of `Sampler`, and should return a list of indexed
+** 12a_awd_lstm.ipyn
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+      !pip install git+https://github.com/NVIDIA/apex
+
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+      !cp course-v3/nbs/dl2/11_train_imagenette.ipynb /content/
+      !cp course-v3/nbs/dl2/11a_transfer_learning.ipynb /content/
+      !cp course-v3/nbs/dl2/12_text.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+      !python notebook2script.py 10c_fp16.ipynb
+      !python notebook2script.py 11_train_imagenette.ipynb
+      !python notebook2script.py 11a_transfer_learning.ipynb
+      !python notebook2script.py 12_text.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+      !cp /content/exp/nb_11.py /content/exp.nb_11.py
+      !cp /content/exp/nb_11a.py /content/exp.nb_11a.py
+      !cp /content/exp/nb_12.py /content/exp.nb_12.py
+
+    #+END_SRC
+
+
+*** LSTMCell
+
+    #+BEGIN_SRC python
+      class LSTMCell(nn.Module):
+          def __init__(self, ni, nh):
+              super().__init__()
+              self.ih = nn.Linear(ni,4*nh)
+              self.hh = nn.Linear(nh,4*nh)
+
+          def forward(self, input, state):
+              h,c = state
+              #One big multiplication for all the gates is better than 4 smaller ones
+              gates = (self.ih(input) + self.hh(h)).chunk(4, 1)
+              ingate,forgetgate,outgate = map(torch.sigmoid, gates[:3])
+              cellgate = gates[3].tanh()
+
+              c = (forgetgate*c) + (ingate*cellgate)
+              h = outgate * c.tanh()
+              return h, (h,c)
+    #+END_SRC
+
+    - `chunk(4,1)`
+      - ref: https://pytorch.org/docs/master/generated/torch.chunk.html
+
+      - it splits an tensor into 4 chunks along the 2nd axis (along row)
+
+    - `forgetgate*c`,  `ingate*cellgate` does 
+      element-wise multiplication between tensors
+
+    - the size of each variable is as follows;
+      - the size of `h` is torch.Size([1,nh]),
+        since `self.hh(h)` (=`nn.Linear(nh,4*nh`) is applied 
+
+      - the size of `self.ih(input)` is torch.Size([1,4*nh]),
+
+      - the size of `self.hh(h)` is also torch.Size([1,4*nh])
+
+      - the size of each element of `gates` is torch.Size([1,nh])
+
+      - so the size of `ingate`, `forgetgate`, `outgate`
+        is torch.Size([1, nh])
+
+      - the size of `cellgate` is torch.Size([1,nh]),
+
+      - the size of `c` is torch.Size([1,nh]), 
+
+      - the size of `c` is same as `ingate*cellgate`
+
+    - newly calculated `h` will be the output of each cell
+
+    - `state` is a pair of (h,c)
+    
+*** TODO LSTMLayer
+
+    #+BEGIN_SRC python
+      class LSTMLayer(nn.Module):
+          def __init__(self, cell, *cell_args):
+              super().__init__()
+              self.cell = cell(*cell_args)
+
+          def forward(self, input, state):
+              inputs = input.unbind(1)
+              outputs = []
+              for i in range(len(inputs)):
+                  out, state = self.cell(inputs[i], state)
+                  outputs += [out]
+              return torch.stack(outputs, dim=1), state
+    #+END_SRC
+
+    - `input` is a single batch
+
+    - `input.unbind(1)` splits a tensor into a tuple along the 
+      2nd axis, so each element in the tuple corresponds to
+      a bundle of single embedding word vectors
+      (e.g. bundle of 64 embedding word vectors 
+            with embedding size 300)
+
+      |     | word1 | word2 | word3 | ... | word70 |
+      |-----+-------+-------+-------+-----+--------|
+      |   1 |       |       |       |     |        |
+      |-----+-------+-------+-------+-----+--------|
+      |   2 |       |       |       |     |        |
+      |-----+-------+-------+-------+-----+--------|
+      | ... |       |       |       |     |        |
+      |-----+-------+-------+-------+-----+--------|
+      |  64 |       |       |       |     |        |
+
+
+      #+BEGIN_SRC python
+        #memo
+        import torch
+        my_input = torch.randn(64, 70, 300)
+        my_input.size()
+        my_unbind = my_input.unbind(1)
+        type(my_unbind), len(my_unbind), my_unbind[0].size()
+
+        '''
+        (tuple, 70, torch.Size([64, 300]))
+        '''
+      #+END_SRC
+
+    - in the above example, 
+      64: batch size
+      70: length of the sequence in a single batch (bptt)
+      300: embedding size of each embedding word vector in a batch
+
+    - for each bundle of single embedding word vectors, 
+      `forward` calculates `out`, `state`, and record 
+      the history of `out` on `outputs`
+
+    - `outputs` is a rank2 tensor with 
+      - batch axis (vertical axis)
+      - sequence axis (horizontal axis)
+
+    - in the end, `forward` stacks the elements in the 
+      output history array, along 'sequence' axis, to 
+      make the final output, and return
+      - the final output
+      - the final state
+
+    - this way, the final output is a sequence of 
+      hidden states whose length is equal to 
+      the length of the sequence of embedding word vectors
+
+    - [ ] ? 1:51:50 why will it be slow to use home made `LSTMLayer`
+      - does GPU do special thing when executing a loop?
+
+*** nn.LSTM
+    - `nn.LSTM::init` takes arguments `ni` & `nh`
+      - `ni` specifies the 'width' of an embedding word vector
+      - `nh` specifies the 'width' of a hidden state vector
+
+*** TODO dropout_mask
+
+    #+BEGIN_SRC python
+      #export
+      def dropout_mask(x, sz, p):
+          return x.new(*sz).bernoulli_(1-p).div_(1-p)
+    #+END_SRC
+
+    - `new` creates a tensor of the same type as `x`
+      whose size is (*sz)
+      https://pytorch.org/docs/0.3.1/tensors.html?highlight=new#torch.Tensor.new
+      
+
+    - [ ] does std of an activation not change 
+      after applying the mask?
+
+*** TODO RNNDropout
+
+    #+BEGIN_SRC python
+      #export
+      class RNNDropout(nn.Module):
+          def __init__(self, p=0.5):
+              super().__init__()
+              self.p=p
+
+          def forward(self, x):
+              if not self.training or self.p == 0.: return x
+              m = dropout_mask(x.data, (x.size(0), 1, x.size(2)), self.p)
+              return x * m
+    #+END_SRC
+
+    - `RNNDropout` applys dropout to either 
+      - input: a batch of sequenceS of embedding word vectors
+      - output: a a batch of sequenceS of outputs
+
+    - so, `RNNDropout` should be applied after converting
+      a batch of sequenceS of NUMERICALIZED words
+      to a batch of sequenceS of embedding word vectors
+
+    - `forward` create `dropout_mask` instance 
+      whose dimension is `(x.size(0), 1, x.size(2))`
+      - `x.size(0)` is batch size
+      - `x.size(2)` is the embedding size 
+
+    - this way, `x * m` will be an tensor such that
+      the position of 0s within an word vector
+      is same across a row of the sigle batch)
+      (across an element of the single batch)
+
+       |     | word1      | word2      | ...        | word70     |
+       |-----+------------+------------+------------+------------|
+       |   1 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 |
+       |-----+------------+------------+------------+------------|
+       |   2 |            |            |            |            |
+       |-----+------------+------------+------------+------------|
+       | ... |            |            |            |            |
+       |-----+------------+------------+------------+------------|
+       |  64 | 1st=0      | 1st=0      | 1st=0      | 1st=0      |
+        
+    - [ ] what the point of masking part of a word vector
+      https://medium.com/@bingobee01/a-review-of-dropout-as-applied-to-rnns-72e79ecd5b7b
+
+*** WeightDropout
+
+    #+BEGIN_SRC python
+      #export
+      import warnings
+
+      WEIGHT_HH = 'weight_hh_l0'
+
+      class WeightDropout(nn.Module):
+          def __init__(self, module, weight_p=[0.], layer_names=[WEIGHT_HH]):
+              super().__init__()
+              self.module,self.weight_p,self.layer_names = module,weight_p,layer_names
+              for layer in self.layer_names:
+                  #Makes a copy of the weights of the selected layers.
+                  w = getattr(self.module, layer)
+                  self.register_parameter(f'{layer}_raw', nn.Parameter(w.data))
+                  self.module._parameters[layer] = F.dropout(w, p=self.weight_p, training=False)
+
+          def _setweights(self):
+              for layer in self.layer_names:
+                  raw_w = getattr(self, f'{layer}_raw')
+                  self.module._parameters[layer] = F.dropout(raw_w, p=self.weight_p, training=self.training)
+
+          def forward(self, *args):
+              self._setweights()
+              with warnings.catch_warnings():
+                  #To avoid the warning that comes because the weights aren't flattened.
+                  warnings.simplefilter("ignore")
+                  return self.module.forward(*args)
+    #+END_SRC
+
+    - WeightDropout applys the dropout to the weights
+      (not activations)
+
+    - `WeightDropout` receives a module, 
+      and calculates dropout-ed version of `forward` of the module
+
+*** EmbeddingDropout
+
+    #+BEGIN_SRC python
+      #export
+      class EmbeddingDropout(nn.Module):
+          "Applies dropout in the embedding layer by zeroing out some elements of the embedding vector."
+          def __init__(self, emb, embed_p):
+              super().__init__()
+              self.emb,self.embed_p = emb,embed_p
+              self.pad_idx = self.emb.padding_idx
+              if self.pad_idx is None: self.pad_idx = -1
+
+          def forward(self, words, scale=None):
+              if self.training and self.embed_p != 0:
+                  size = (self.emb.weight.size(0),1)
+                  mask = dropout_mask(self.emb.weight.data, size, self.embed_p)
+                  masked_embed = self.emb.weight * mask
+              else: masked_embed = self.emb.weight
+              if scale: masked_embed.mul_(scale)
+              return F.embedding(words, masked_embed, self.pad_idx, self.emb.max_norm,
+                                 self.emb.norm_type, self.emb.scale_grad_by_freq, self.emb.sparse)
+    #+END_SRC
+
+    - `EmbeddingDropout` applys dropout to the embedding MATRIX,
+      which converts a word to an embedding word vector
+
+    - `EmbeddingDropout` accepts an embedding matrix,
+      creates dropouted-ed version of the embedding matrix,
+      and then converts words to a stack of embedding word vectors
+
+*** to_detach
+
+    #+BEGIN_SRC python
+      #export
+      def to_detach(h):
+          "Detaches `h` from its history."
+          return h.detach() if type(h) == torch.Tensor else tuple(to_detach(v) for v in h)
+    #+END_SRC
+
+*** AWD_LSTM
+
+    #+BEGIN_SRC python
+      #export
+      class AWD_LSTM(nn.Module):
+          "AWD-LSTM inspired by https://arxiv.org/abs/1708.02182."
+          initrange=0.1
+
+          def __init__(self, vocab_sz, emb_sz, n_hid, n_layers, pad_token,
+                       hidden_p=0.2, input_p=0.6, embed_p=0.1, weight_p=0.5):
+              super().__init__()
+              self.bs,self.emb_sz,self.n_hid,self.n_layers = 1,emb_sz,n_hid,n_layers
+              self.emb = nn.Embedding(vocab_sz, emb_sz, padding_idx=pad_token)
+              self.emb_dp = EmbeddingDropout(self.emb, embed_p)
+              self.rnns = [nn.LSTM(emb_sz if l == 0 else n_hid, (n_hid if l != n_layers - 1 else emb_sz), 1,
+                                   batch_first=True) for l in range(n_layers)]
+              self.rnns = nn.ModuleList([WeightDropout(rnn, weight_p) for rnn in self.rnns])
+              self.emb.weight.data.uniform_(-self.initrange, self.initrange)
+              self.input_dp = RNNDropout(input_p)
+              self.hidden_dps = nn.ModuleList([RNNDropout(hidden_p) for l in range(n_layers)])
+
+          def forward(self, input):
+              bs,sl = input.size()
+              if bs!=self.bs:
+                  self.bs=bs
+                  self.reset()
+              raw_output = self.input_dp(self.emb_dp(input))
+              new_hidden,raw_outputs,outputs = [],[],[]
+              for l, (rnn,hid_dp) in enumerate(zip(self.rnns, self.hidden_dps)):
+                  raw_output, new_h = rnn(raw_output, self.hidden[l])
+                  new_hidden.append(new_h)
+                  raw_outputs.append(raw_output)
+                  if l != self.n_layers - 1: raw_output = hid_dp(raw_output)
+                  outputs.append(raw_output) 
+              self.hidden = to_detach(new_hidden)
+              return raw_outputs, outputs
+
+          def _one_hidden(self, l):
+              "Return one hidden state."
+              nh = self.n_hid if l != self.n_layers - 1 else self.emb_sz
+              return next(self.parameters()).new(1, self.bs, nh).zero_()
+
+          def reset(self):
+              "Reset the hidden states."
+              self.hidden = [(self._one_hidden(l), self._one_hidden(l)) for l in range(self.n_layers)]
+    #+END_SRC
+
+    # forward
+    - `input` is a batch of sequenceS of NUMERICALIZED words
+      |     | word1 | word2 | ... | word70 |
+      |-----+-------+-------+-----+--------|
+      |   1 |       |       |     |        |
+      |-----+-------+-------+-----+--------|
+      |   2 |       |       |     |        |
+      |-----+-------+-------+-----+--------|
+      | ... |       |       |     |        |
+      |-----+-------+-------+-----+--------|
+      |  64 |       |       |     |        |
+      
+    - `sl` is the length of a sequence (e.g. 70)
+
+    - in the beggining, `reset` is called, which 
+      sets the initial hidden states (H0, C0)
+
+    - input (a batch of sequenceS of NUMERICALIZED words)
+      is converted to a batch of sequences of embedding
+      word vectors using dropout-ed version of the
+      embedding matrix
+
+    - then, `input_dp` (`RNNDropout`) is applied to the input
+
+    - then, a seriese of `nn.LSTM` is applied
+      - `nn.LSTM::__call__` accepts 
+        input (a batch of sequenceS of embedding word vectors),
+        and hidden state (Ht, Ct)
+        https://pytorch.org/docs/master/generated/torch.nn.LSTM.html
+
+    - for each output of a single `nn.LSTM` layer,
+      `RNNDropout` layer (`hid_dp`) is also applied
+
+    - for each `nn.LSTM` layer, output & the droput-ed output
+      are recorded on `row_outputs` & `outputs`
+
+
+*** LinearDecoder
+
+    #+BEGIN_SRC python
+      #export
+      class LinearDecoder(nn.Module):
+          def __init__(self, n_out, n_hid, output_p, tie_encoder=None, bias=True):
+              super().__init__()
+              self.output_dp = RNNDropout(output_p)
+              self.decoder = nn.Linear(n_hid, n_out, bias=bias)
+              if bias: self.decoder.bias.data.zero_()
+              if tie_encoder: self.decoder.weight = tie_encoder.weight
+              else: init.kaiming_uniform_(self.decoder.weight)
+
+          def forward(self, input):
+              raw_outputs, outputs = input
+              output = self.output_dp(outputs[-1]).contiguous()
+              decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+              return decoded, raw_outputs, outputs
+    #+END_SRC
+
+*** SequentialRNN
+
+    #+BEGIN_SRC python
+      #export
+      class SequentialRNN(nn.Sequential):
+          "A sequential module that passes the reset call to its children."
+          def reset(self):
+              for c in self.children():
+                  if hasattr(c, 'reset'): c.reset()
+    #+END_SRC
+
+
+
+*** get_language_model
+#+BEGIN_SRC python
+  #export
+  def get_language_model(vocab_sz, emb_sz, n_hid, n_layers, pad_token, output_p=0.4, hidden_p=0.2, input_p=0.6, 
+                         embed_p=0.1, weight_p=0.5, tie_weights=True, bias=True):
+      rnn_enc = AWD_LSTM(vocab_sz, emb_sz, n_hid=n_hid, n_layers=n_layers, pad_token=pad_token,
+                         hidden_p=hidden_p, input_p=input_p, embed_p=embed_p, weight_p=weight_p)
+      enc = rnn_enc.emb if tie_weights else None
+      return SequentialRNN(rnn_enc, LinearDecoder(vocab_sz, emb_sz, output_p, tie_encoder=enc, bias=bias))
+#+END_SRC
+
 
 
 * NLP course
