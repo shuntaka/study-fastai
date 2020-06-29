@@ -1,4 +1,80 @@
 * things to keep in mind
+*** tensor sum
+    - for explanation, think of a tensor below;
+
+      #+BEGIN_SRC python
+        my_tensor = torch.tensor(
+            [[[1,2],
+              [3,4],
+              [5,6]],
+             
+            [[11,12],
+             [13,14],
+             [15,16]],
+             
+            [[21,22],
+             [23,24],
+             [25,26]]]
+        )
+      #+END_SRC
+
+    - `my_tensor.sum(dim=0)` does summation over dim0
+      and remove the axis on dim0, keeping the shape of dim1 & dim2
+
+
+    - `my_tensor.sum(dim=1)` does summation over dim1
+      and remove the axis on dim1, keeping the shape of dim0 & dim2
+
+
+    - `my_tensor.sum(dim=2)` does summation over dim2
+      and remove the axis on dim2, keeping the shape of dim0 & dim1
+
+[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200629_155156_40670bu.png]]
+
+
+    #+BEGIN_SRC python
+      #memo
+      import torch
+      my_tensor = torch.tensor([[[1,2],[3,4],[5,6]],
+                   [[11,12],[13,14],[15,16]],
+                   [[21,22],[23,24],[25,26]]])
+      my_tensor_dim0 = my_tensor.sum(dim=0)
+      my_tensor_dim1 = my_tensor.sum(dim=1)
+      my_tensor_dim2 = my_tensor.sum(dim=2)
+      my_tensor, my_tensor_dim0, my_tensor_dim1, my_tensor_dim2
+
+      '''
+      # my_tensor
+      tensor([[[ 1,  2],
+               [ 3,  4],
+               [ 5,  6]],
+
+              [[11, 12],
+               [13, 14],
+               [15, 16]],
+
+              [[21, 22],
+               [23, 24],
+               [25, 26]]])
+
+      # my_tensor_dim0
+      tensor([[33, 36],
+              [39, 42],
+              [45, 48]])
+
+      # my_tensor_dim1
+      tensor([[ 9, 12],
+              [39, 42],
+              [69, 72]])
+
+      # my_tensor_dim2
+      tensor([[ 3,  7, 11],
+              [23, 27, 31],
+              [43, 47, 51]])
+
+      '''
+    #+END_SRC    
+
 *** normalization & initialization
     - what we care is to have "good activations" during the training
     - normalization is for activations of layers ("input" is considered as first activation)
@@ -70,6 +146,10 @@
 *** why initialization matters
 *** why BatchNorm works
 
+** regularlization
+*** L2 regularlization
+*** weight decay
+
 ** optimization
 *** TODO how to calculate gradient w.r.t weights for a linear layer
     https://forums.fast.ai/t/understanding-linear-layer-gradient/63491
@@ -105,6 +185,11 @@
     - how we can take advantage of computations we are doing
 
 *** Dropout
+
+** misc
+*** average pooling
+*** maximum pooling
+*** concat pooling
 
 ** pyotrch
 *** auto grad
@@ -1606,8 +1691,8 @@
 
     - unpacking b in `zip(*b)`;
       unpacking operator(single asterisk *)
-      decompose the list of tuples `b`, 
-      and pass tuples to zip,  so zip(*b) is
+      decompose the list (of tuples) `b`
+      and pass the elements(tuples) to zip,  so zip(*b) is
       equivalent to blow
 
       #+BEGIN_SRC python
@@ -1615,7 +1700,7 @@
       #+END_SRC
 
     - what zip does when it accepts (tuple1, tuple2, tuple3);
-      stack tuples vertically and make new tuples by grouping
+      it stacks tuples vertically and make new tuples by grouping
       elements vertically, then return them as yet another tuple
 
 
@@ -2911,7 +2996,6 @@
       torch.Tensor.ndim = property(lambda x: len(x.shape))
     #+END_SRC
 
-
 * lesson10
 ** 05b_early_stopping.ipynb
 *** imports
@@ -4050,6 +4134,7 @@
 
     - `x.mean((0,2,3), keepdim=True)` takes mean over
       (batch, width, height).
+
     - To do understand this, imagine a number of cubes alinged along batch axis
     - first, we take mean over batch axis, which corresponds to (0)
     - then, we have one 3 x <width> x <height> cubes 
@@ -6883,7 +6968,6 @@ class BatchNorm(nn.Module):
 
     - fastai v1 is not equipped with data augumentation for batch
 
-      
 * lesson12
 ** 10b_mixup_label_smoothing.ipynb
 *** imports
@@ -8397,10 +8481,17 @@ class BatchNorm(nn.Module):
       def deproc1(self, idx): return [self.vocab[i] for i in idx]
 #+END_SRC
 
+*** using TokenizeProcessor & NumericalizeProcessor creating LabeledData
+
+    #+BEGIN_SRC python
+      %time ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
+    #+END_SRC
+
+
 *** FOR language modeling, how to create batches from documents
     - for example, batch-size=6, bptt=5
 
-    - FOR language modeling, we concatnage the whole documents
+    - FOR language modeling, we concatnate the whole documents
       into single giant document,
 
     - then create a grid with 
@@ -8419,6 +8510,7 @@ class BatchNorm(nn.Module):
     - slice the grid into smaller grids with width=bptt(=5)
 
     - each small grid is the batch.
+
 
 *** LM_PreLoader (LM_Dataset)
 
@@ -8460,7 +8552,7 @@ class BatchNorm(nn.Module):
 
     - for  some number `i`, it will determine the indexes for
       row & columns such that for consecuitive numbers 
-      it returns two  consecuitive cells in the same column
+      it returns two consecuitive cells in the same column
 
     - as the label, `LM_PreLoader` returns a list
       of the elements that are contained in the
@@ -8554,9 +8646,9 @@ class BatchNorm(nn.Module):
       language modeling
 
     - in concrete, for classification, each batch
-      contains a group of documents whereas a batch
-      contains a list of numericalized words
-      for language modeling.
+      contains a group of documents whereas 
+      for language modeling, a batch contains
+      a list of numericalized words
 
     - for text classification, batches has different 'width'.
 
@@ -8692,10 +8784,9 @@ class BatchNorm(nn.Module):
     - PyTorch version of `DataLoader` is slightly different from
       'home-made' version, and the usage is slightly different in that
       - need to specify batch size
-      - samplers should be a function which returns a list of 
-        indexes
+      - samplers should be a function which returns a list of indexes
 
-** 12a_awd_lstm.ipyn
+** 12a_awd_lstm.ipynb
 *** imports
 
     #+BEGIN_SRC python
@@ -8781,7 +8872,6 @@ class BatchNorm(nn.Module):
 
     #+END_SRC
 
-
 *** LSTMCell
 
     #+BEGIN_SRC python
@@ -8803,6 +8893,19 @@ class BatchNorm(nn.Module):
               return h, (h,c)
     #+END_SRC
 
+    - each single `LSTMCell` accepts
+      - `input`
+      - `state` which is a comination of 
+        'hidden state' and 'cell state'
+
+      and calculates 
+      - h: new hidden state
+      - c: new cell state
+
+      and returns
+      - h
+      - (h,c)
+
     - `chunk(4,1)`
       - ref: https://pytorch.org/docs/master/generated/torch.chunk.html
 
@@ -8812,21 +8915,34 @@ class BatchNorm(nn.Module):
       element-wise multiplication between tensors
 
     - the size of each variable is as follows;
-      - the size of `h` is torch.Size([1,nh]),
-        since `self.hh(h)` (=`nn.Linear(nh,4*nh`) is applied 
+      - the size of `input` is torch.Size([bs, ni]), 
+        where `bs` is batch size, and `ni` is the 
+        embedding size
 
-      - the size of `self.ih(input)` is torch.Size([1,4*nh]),
+        |     | word1 vec         |
+        |-----+-------------------|
+        |   1 | (S1, S2,...,S300) |
+        |-----+-------------------|
+        |   2 |                   |
+        |-----+-------------------|
+        | ... |                   |
+        |-----+-------------------|
+        |  64 |                   |
 
-      - the size of `self.hh(h)` is also torch.Size([1,4*nh])
+      - the size of `h` is torch.Size([bs,nh]),
 
-      - the size of each element of `gates` is torch.Size([1,nh])
+      - the size of `self.ih(input)` is torch.Size([bs,4*nh]),
+
+      - the size of `self.hh(h)` is also torch.Size([bs,4*nh])
+
+      - the size of each element of `gates` is torch.Size([bs,nh])
 
       - so the size of `ingate`, `forgetgate`, `outgate`
         is torch.Size([1, nh])
 
-      - the size of `cellgate` is torch.Size([1,nh]),
+      - the size of `cellgate` is torch.Size([bs,nh]),
 
-      - the size of `c` is torch.Size([1,nh]), 
+      - the size of `c` is torch.Size([bs,nh]), 
 
       - the size of `c` is same as `ingate*cellgate`
 
@@ -8851,27 +8967,44 @@ class BatchNorm(nn.Module):
               return torch.stack(outputs, dim=1), state
     #+END_SRC
 
-    - `input` is a single batch
+    # overview
+    - `LSTMLayer` does below;
+      - records the history of hidden state(`out`) 
+        which is returned by each `cell`, and stack 
+        them together in the end.
 
-    - `input.unbind(1)` splits a tensor into a tuple along the 
-      2nd axis, so each element in the tuple corresponds to
-      a bundle of single embedding word vectors
-      (e.g. bundle of 64 embedding word vectors 
-            with embedding size 300)
+      - keeps track of the latest state which is a combination of
+        hidden state & cell state and updated by every `cell` 
 
-      |     | word1 | word2 | word3 | ... | word70 |
-      |-----+-------+-------+-------+-----+--------|
-      |   1 |       |       |       |     |        |
-      |-----+-------+-------+-------+-----+--------|
-      |   2 |       |       |       |     |        |
-      |-----+-------+-------+-------+-----+--------|
-      | ... |       |       |       |     |        |
-      |-----+-------+-------+-------+-----+--------|
-      |  64 |       |       |       |     |        |
+    - `input` is a batch of sequences of embedding word vectors
 
+      |     | word1 vec | word2 vec | ... | word70 vec |
+      |-----+-----------+-----------+-----+------------|
+      |   1 |           |           |     |            |
+      |-----+-----------+-----------+-----+------------|
+      |   2 |           |           |     |            |
+      |-----+-----------+-----------+-----+------------|
+      | ... |           |           |     |            |
+      |-----+-----------+-----------+-----+------------|
+      |  64 |           |           |     |            |
+
+    - the shape of `outputs` is similar to `input`, and looks like
+      torch.Size([64, 70, 300]) where
+      - 64: batch size
+      - 70: the length of sequence
+      - 300: the 'width' of hidden state 
+
+    - the shape of `outputs` will be same when embedding size
+      is same as the 'width' of hidden state
+
+    # pytorch 
+    - `unbind`
 
       #+BEGIN_SRC python
-        #memo
+        # 64: batch size
+        # 70: length of the sequences in a single batch ()
+        # 300: embedding size of each embedding word vector in a batch
+
         import torch
         my_input = torch.randn(64, 70, 300)
         my_input.size()
@@ -8883,28 +9016,123 @@ class BatchNorm(nn.Module):
         '''
       #+END_SRC
 
-    - in the above example, 
-      64: batch size
-      70: length of the sequence in a single batch (bptt)
-      300: embedding size of each embedding word vector in a batch
 
-    - for each bundle of single embedding word vectors, 
+    # forward
+    - `input` is a single batch of sequences of 
+      embedding word vectors
+
+    #+BEGIN_SRC python
+      # 64: batch size
+      # 70: the length of a sequence
+      # 300: width of embedding
+
+
+      [
+          # 1st element of the single batch
+          [S1_1_1, S1_1_2, ..., S1_1_300],
+          [S1_2_1, S1_2_2, ..., S1_2_300],
+          ...,
+          [S1_70_1, S1_70_2, ..., S1_70_300],
+
+          # 2nd element of the single batch
+          [S2_1_1, S2_1_2, ..., S2_1_300],
+          [S2_2_1, S2_2_2, ..., S2_2_300],
+          ...,
+          [S2_70_1, S2_70_2, ..., S2_70_300],
+
+          ...,
+
+          # 64th element of the single batch    
+          [S64_1_1, S64_1_2, ..., S64_1_300],
+          [S64_2_1, S64_2_2, ..., S64_2_300],
+          ...,
+          [S64_70_1, S64_70_2, ..., S64_70_300],
+
+      ]
+    #+END_SRC
+
+    - `input.unbind(1)` splits a tensor into a tuple along the 
+      dim=1 (2nd axis), so each element in the tuple corresponds to
+      a bundle of embedding word vectors
+      (e.g. bundle of 64 embedding word vectors with embedding
+      size 300)
+
+      |     | word1 vec | word2 vec | word3 vec | ... | word70 vec |
+      |-----+-----------+-----------+-----------+-----+------------|
+      |   1 |           |           |           |     |            |
+      |-----+-----------+-----------+-----------+-----+------------|
+      |   2 |           |           |           |     |            |
+      |-----+-----------+-----------+-----------+-----+------------|
+      | ... |           |           |           |     |            |
+      |-----+-----------+-----------+-----------+-----+------------|
+      |  64 |           |           |           |     |            |
+
+
+    - the resulting TUPLE of `input.unbind(1)`
+    #+BEGIN_SRC python
+      (
+          # 1st words of the sequence
+          [S1_1_1, S1_1_2, ..., S1_1_300],
+          [S2_1_1, S2_1_2, ..., S2_1_300],
+          ...,
+          [S64_1_1, S64_1_2, ..., S64_1_300],
+
+          # 2nd words of the sequence
+          [S1_2_1, S1_2_2, ..., S1_2_300],
+          [S2_2_1, S2_2_2, ..., S2_2_300],
+          ...,
+          [S64_2_1, S64_2_2, ..., S64_2_300],
+
+          ...,
+
+          # 64th words of the sequence
+          [S1_70_1, S1_70_2, ..., S1_70_300],
+          [S2_70_1, S2_70_2, ..., S2_70_300],
+          ...,
+          [S64_70_1, S64_70_2, ..., S64_70_300],    
+      )
+    #+END_SRC
+
+    - for each element of the tuples,
       `forward` calculates `out`, `state`, and record 
       the history of `out` on `outputs`
 
-    - `outputs` is a rank2 tensor with 
-      - batch axis (vertical axis)
-      - sequence axis (horizontal axis)
+    - `outputs` is an array of rank2 tensors with
+      the size of each tensor torch.Size([bs, nh])
+
 
     - in the end, `forward` stacks the elements in the 
       output history array, along 'sequence' axis, to 
       make the final output, and return
       - the final output
       - the final state
+        
+      #+BEGIN_SRC python
+        #memo
+        import torch
+        my_input = torch.randn(3, 4, 5)
+        my_input.size()
+        my_unbind = my_input.unbind(1)
+        type(my_unbind), len(my_unbind), my_unbind[0].size()
+        '''
+        (tuple, 4, torch.Size([3, 5]))
+        '''
 
-    - this way, the final output is a sequence of 
-      hidden states whose length is equal to 
-      the length of the sequence of embedding word vectors
+        my_unbind_list = [my_unbind[0], my_unbind[1], my_unbind[2], my_unbind[3]]
+        my_stacked = torch.stack(my_unbind_list, dim=1)
+        my_stacked.size()
+
+        '''
+        torch.Size([3, 4, 5])
+        '''
+
+      #+END_SRC
+
+
+    - this way, the final output is a batch of sequences of 
+      hidden states where the length of a sequence is equal to 
+      the length of a sequence of embedding word vectors 
+      in input
 
     - [ ] ? 1:51:50 why will it be slow to use home made `LSTMLayer`
       - does GPU do special thing when executing a loop?
@@ -8946,12 +9174,12 @@ class BatchNorm(nn.Module):
     #+END_SRC
 
     - `RNNDropout` applys dropout to either 
-      - input: a batch of sequenceS of embedding word vectors
-      - output: a a batch of sequenceS of outputs
+      - input: a batch of sequences of embedding word vectors
+      - output: a a batch of sequences of outputs
 
     - so, `RNNDropout` should be applied after converting
-      a batch of sequenceS of NUMERICALIZED words
-      to a batch of sequenceS of embedding word vectors
+      a batch of sequences of NUMERICALIZED words
+      to a batch of sequences of embedding word vectors
 
     - `forward` create `dropout_mask` instance 
       whose dimension is `(x.size(0), 1, x.size(2))`
@@ -9041,7 +9269,14 @@ class BatchNorm(nn.Module):
 
     - `EmbeddingDropout` accepts an embedding matrix,
       creates dropouted-ed version of the embedding matrix,
-      and then converts words to a stack of embedding word vectors
+      and then converts numericalized words to a stack of
+      embedding word vectors
+
+    - `F.embedding` is just a look up which looks up
+      the corresponding embedding word vector from
+      an embedding matrix based on an word index.
+      
+      https://pytorch.org/docs/stable/nn.functional.html
 
 *** to_detach
 
@@ -9098,9 +9333,13 @@ class BatchNorm(nn.Module):
               "Reset the hidden states."
               self.hidden = [(self._one_hidden(l), self._one_hidden(l)) for l in range(self.n_layers)]
     #+END_SRC
+    
+    # init
+    - `n_layers` specifies the number of `nn.LSTM` layers
+
 
     # forward
-    - `input` is a batch of sequenceS of NUMERICALIZED words
+    - `input` is a batch of sequences of NUMERICALIZED words
       |     | word1 | word2 | ... | word70 |
       |-----+-------+-------+-----+--------|
       |   1 |       |       |     |        |
@@ -9111,30 +9350,64 @@ class BatchNorm(nn.Module):
       |-----+-------+-------+-----+--------|
       |  64 |       |       |     |        |
       
-    - `sl` is the length of a sequence (e.g. 70)
+    - `sl` is the length of a sequence (e.g. 70) in a batch
+      - when `AWD-LSTM` is called for laungage modeling,
+        `sl` is same as `bptt`
+      - when `AWD-LSTM` is called for classification,
+        `sl` may be different from `bptt`
 
     - in the beggining, `reset` is called, which 
-      sets the initial hidden states (H0, C0)
+      sets the initial state (H0, C0)
 
-    - input (a batch of sequenceS of NUMERICALIZED words)
+    - input (a batch of sequences of NUMERICALIZED words)
       is converted to a batch of sequences of embedding
       word vectors using dropout-ed version of the
       embedding matrix
 
-    - then, `input_dp` (`RNNDropout`) is applied to the input
+    - then, `input_dp` (`RNNDropout`) is applied 
 
     - then, a seriese of `nn.LSTM` is applied
       - `nn.LSTM::__call__` accepts 
-        input (a batch of sequenceS of embedding word vectors),
-        and hidden state (Ht, Ct)
+        input (a batch of sequences of embedding word vectors),
+        and state (Ht, Ct)
         https://pytorch.org/docs/master/generated/torch.nn.LSTM.html
 
     - for each output of a single `nn.LSTM` layer,
-      `RNNDropout` layer (`hid_dp`) is also applied
+      `RNNDropout` layer (`hid_dp`) with dropout probaility
+      `hidden_p` is also applied except for the last
+      `nn.LSTM` layer.
+      - for the output for the last `nn.LSTM` layer, 
+        dropout with different dropout probaility `output_p`
+        will be later applied by `LinearDecoder` layer which
+        accepts the output for the last `nn.LSTM` layer.
 
     - for each `nn.LSTM` layer, output & the droput-ed output
-      are recorded on `row_outputs` & `outputs`
+      is recorded separately on list `row_outputs` & list `outputs`
+      which contains output & the droput-ed output for
+      all the `nn.LSTM` layers.
 
+    - for each `nn.LSTM` layer, newly calculated state is
+      also recorded separately on list `new_hidden` which contains
+      states for all the `nn.LSTM` layers
+
+    - `new_h` is truly a pair of (hidden state, cell state)
+
+    - in the end, `new_hidden is stored on `self.hidden` 
+      so that it will provide the initial hidden state 
+      for each of `nn.LSTM` layer for the next batch.
+
+    - the output will be like below;
+
+      |     | prob dist1 | prob dist2 | ... | prob dist70 |
+      |-----+------------+------------+-----+-------------|
+      |   1 |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+      |   2 |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+      | ... |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+      |  64 |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
 
 *** LinearDecoder
 
@@ -9156,6 +9429,53 @@ class BatchNorm(nn.Module):
               return decoded, raw_outputs, outputs
     #+END_SRC
 
+    # overview
+    - `LinearDecoder` picks up the output for the last
+      `nn.LSTM` layer in `AWD_LSTM` layer,
+      applys dropout and converts it to a batch of
+      sequences of numericalized words
+
+    # init
+    - note that `nn.Linear` creates a weight matrix 
+      in the opposite way to what we expect, and
+      the weight matrix for `nn.Linear(n_hid, n_out, bias=bias)` 
+      is torch.Size([n_out, n_hid]) which is exactly the
+      same as the size of the embedding matrix,
+      so it is reasonale to do 
+      `self.decoder.weight = tie_encoder.weight`
+
+      (see lesson8, 1:41:30)
+
+    # forward
+    - `forward` accepts `raw_outputs` & `outputs` which 
+      are returned by `AWD_LSTM` layer
+
+    - then picks up the last element of `outputs`, which is
+      the output of the last `nn.LSTM` layer in `AWD_LSTM`
+
+    - then applies `output_dp` and makes a copy by `contiguous`
+      https://pytorch.org/docs/stable/tensors.html#torch.Tensor.contiguous
+
+    - the size of `output` looks like;
+      torch.Size([64, 70, 300])
+      - 64: batch size
+      - 70: the length of the sequences
+      - 300: the 'width' of hidden state
+
+    - `output.view(output.size(0)*output.size(1), output.size(2))`
+      reshapes `output` so that all the elements in a batch
+      are aligned in one column
+
+    - `decoder` is applied to reshaped `output`
+
+    - `decoder` converts each element in the reshaped `output`
+      to probatilities for words
+
+    - `forward` returns 3 things;
+      - `decoded`: a batch of sequence of numericalized words
+      - raw_outputs: a list of raw outputs by `nn.LSTM` layers
+      - outputs: a list of outputs by `nn.LSTM` layers
+
 *** SequentialRNN
 
     #+BEGIN_SRC python
@@ -9167,19 +9487,710 @@ class BatchNorm(nn.Module):
                   if hasattr(c, 'reset'): c.reset()
     #+END_SRC
 
-
+    - `SequentialRNN` is inheritting from `nn.Sequential`,
+      so creates a sequence of layers
 
 *** get_language_model
-#+BEGIN_SRC python
-  #export
-  def get_language_model(vocab_sz, emb_sz, n_hid, n_layers, pad_token, output_p=0.4, hidden_p=0.2, input_p=0.6, 
-                         embed_p=0.1, weight_p=0.5, tie_weights=True, bias=True):
-      rnn_enc = AWD_LSTM(vocab_sz, emb_sz, n_hid=n_hid, n_layers=n_layers, pad_token=pad_token,
-                         hidden_p=hidden_p, input_p=input_p, embed_p=embed_p, weight_p=weight_p)
-      enc = rnn_enc.emb if tie_weights else None
-      return SequentialRNN(rnn_enc, LinearDecoder(vocab_sz, emb_sz, output_p, tie_encoder=enc, bias=bias))
-#+END_SRC
+    #+BEGIN_SRC python
+      #export
+      def get_language_model(vocab_sz, emb_sz, n_hid, n_layers, pad_token, output_p=0.4, hidden_p=0.2, input_p=0.6, 
+                             embed_p=0.1, weight_p=0.5, tie_weights=True, bias=True):
+          rnn_enc = AWD_LSTM(vocab_sz, emb_sz, n_hid=n_hid, n_layers=n_layers, pad_token=pad_token,
+                             hidden_p=hidden_p, input_p=input_p, embed_p=embed_p, weight_p=weight_p)
+          enc = rnn_enc.emb if tie_weights else None
+          return SequentialRNN(rnn_enc, LinearDecoder(vocab_sz, emb_sz, output_p, tie_encoder=enc, bias=bias))
+    #+END_SRC
 
+    - note that `get_language_model` is not dependent of 
+      `bptt` which specifies the length of the sequence in a batch
+      for language modeling
+
+*** GradientClipping
+
+    #+BEGIN_SRC python
+      #export
+      class GradientClipping(Callback):
+          def __init__(self, clip=None): self.clip = clip
+          def after_backward(self):
+              if self.clip:  nn.utils.clip_grad_norm_(self.run.model.parameters(), self.clip)
+    #+END_SRC
+
+*** RNNTrainer
+
+    #+BEGIN_SRC python
+      #export
+      class RNNTrainer(Callback):
+          def __init__(self, α, β): self.α,self.β = α,β
+          
+          def after_pred(self):
+              #Save the extra outputs for later and only returns the true output.
+              self.raw_out,self.out = self.pred[1],self.pred[2]
+              self.run.pred = self.pred[0]
+          
+          def after_loss(self):
+              #AR and TAR
+              if self.α != 0.:  self.run.loss += self.α * self.out[-1].float().pow(2).mean()
+              if self.β != 0.:
+                  h = self.raw_out[-1]
+                  if h.size(1)>1: self.run.loss += self.β * (h[:,1:] - h[:,:-1]).float().pow(2).mean()
+                      
+          def begin_epoch(self):
+              #Shuffle the texts at the beginning of the epoch
+              if hasattr(self.dl.dataset, "batchify"): self.dl.dataset.batchify()
+    #+END_SRC
+
+    - `self.pred` refers `self.runner.pred` thanks to
+      `__getattr__` defined on `Callback` ver3
+
+      #+BEGIN_SRC python
+        def __getattr__(self, k): return getattr(self.run, k)
+      #+END_SRC
+
+    - `self.runner.pred` is the returned value of the last layer
+      of the laugnage model, which is a `LinearDecoder` layer,
+      and consists of 3 elements;
+      - pred[0]: `decoded`
+      - pred[1]: `row_outputs`
+      - pred[2]: `outputs`
+        
+          #+BEGIN_SRC python
+      #export
+      class LinearDecoder(nn.Module):
+          def __init__(self, n_out, n_hid, output_p, tie_encoder=None, bias=True):
+              super().__init__()
+              self.output_dp = RNNDropout(output_p)
+              self.decoder = nn.Linear(n_hid, n_out, bias=bias)
+              if bias: self.decoder.bias.data.zero_()
+              if tie_encoder: self.decoder.weight = tie_encoder.weight
+              else: init.kaiming_uniform_(self.decoder.weight)
+
+          def forward(self, input):
+              raw_outputs, outputs = input
+              output = self.output_dp(outputs[-1]).contiguous()
+              decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+              return decoded, raw_outputs, outputs
+    #+END_SRC
+
+    # after_pred
+    - `self.out` (==self.pred[2] == `outputs` of `nn.LinearDecoder`)
+      contains the outputs for all the `nn.LSTM` layer,
+      so `self.out[-1]` is the output for the last `nn.LSTM` layer,
+      which looks like torch.Size([64, 70, 300]) where
+      - 64: batch size
+      - 70: the length of sequence
+      - 300: the 'width' of hidden state 
+
+    # after_loss
+    - `after_loss` penalizes the activation by the last `nn.LSTM` layer
+      in `AWD_LSTM` layer of the language model
+
+*** cross_entropy_flat, accuracy_flat
+
+    #+BEGIN_SRC python
+      #export
+      def cross_entropy_flat(input, target):
+          bs,sl = target.size()
+          return F.cross_entropy(input.view(bs * sl, -1), target.view(bs * sl))
+
+      def accuracy_flat(input, target):
+          bs,sl = target.size()
+          return accuracy(input.view(bs * sl, -1), target.view(bs * sl))
+    #+END_SRC
+
+    - `input` is a batch of sequence of probabilities which looks like
+
+      |     | prob dist1 | prob dist2 | ... | prob dist70 |
+      |-----+------------+------------+-----+-------------|
+      |   1 |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+      |   2 |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+      | ... |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+      |  64 |            |            |     |             |
+      |-----+------------+------------+-----+-------------|
+
+      where
+      - 64: batch size
+      - 70: the length of sequence
+      - the size of 'prob dist' is torch.Size([1, vocab_size])
+
+** 12b_lm_pretrain.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+      !pip install git+https://github.com/NVIDIA/apex
+
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+      !cp course-v3/nbs/dl2/11_train_imagenette.ipynb /content/
+      !cp course-v3/nbs/dl2/11a_transfer_learning.ipynb /content/
+      !cp course-v3/nbs/dl2/12_text.ipynb /content/
+      !cp course-v3/nbs/dl2/12a_awd_lstm.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+      !python notebook2script.py 10c_fp16.ipynb
+      !python notebook2script.py 11_train_imagenette.ipynb
+      !python notebook2script.py 11a_transfer_learning.ipynb
+      !python notebook2script.py 12_text.ipynb
+      !python notebook2script.py 12a_awd_lstm.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+      !cp /content/exp/nb_11.py /content/exp.nb_11.py
+      !cp /content/exp/nb_11a.py /content/exp.nb_11a.py
+      !cp /content/exp/nb_12.py /content/exp.nb_12.py
+      !cp /content/exp/nb_12a.py /content/exp.nb_12a.py
+
+    #+END_SRC
+
+*** istitle
+
+    #+BEGIN_SRC python
+      def istitle(line):
+          return len(re.findall(r'^ = [^=]* = $', line)) != 0
+    #+END_SRC
+
+*** read_wiki
+
+    #+BEGIN_SRC python
+      def read_wiki(filename):
+          articles = []
+          with open(filename, encoding='utf8') as f:
+              lines = f.readlines()
+          current_article = ''
+          for i,line in enumerate(lines):
+              current_article += line
+              if i < len(lines)-2 and lines[i+1] == ' \n' and istitle(lines[i+2]):
+                  current_article = current_article.replace('<unk>', UNK)
+                  articles.append(current_article)
+                  current_article = ''
+          current_article = current_article.replace('<unk>', UNK)
+          articles.append(current_article)
+          return articles
+    #+END_SRC
+
+
+** 12c_ulmfit.ipynb
+*** imports
+
+    #+BEGIN_SRC python
+      # importing nb00, nb_01, nb02, nb03, nb04, nb05, nb05b, nb06
+      # install the python dependency necessary for the converting script
+      !pip install fire
+
+      # https://forums.fast.ai/t/couldnt-import-apex-fp16-utils-in-10c-fp16-ipynb/69621
+      !pip install git+https://github.com/NVIDIA/apex
+
+
+      # git clone the entire course material under /content
+      !git clone https://github.com/fastai/course-v3.git
+
+      # copy the ipynb2py converting python script
+      !cp course-v3/nbs/dl2/notebook2script.py /content/
+
+      # copy the jupyter notebooks to convert, under /content
+      !cp course-v3/nbs/dl2/00_exports.ipynb /content/
+      !cp course-v3/nbs/dl2/01_matmul.ipynb /content/
+      !cp course-v3/nbs/dl2/02_fully_connected.ipynb /content/
+      !cp course-v3/nbs/dl2/03_minibatch_training.ipynb /content/
+      !cp course-v3/nbs/dl2/04_callbacks.ipynb /content/
+      !cp course-v3/nbs/dl2/05_anneal.ipynb /content/
+      !cp course-v3/nbs/dl2/05b_early_stopping.ipynb /content/
+      !cp course-v3/nbs/dl2/06_cuda_cnn_hooks_init.ipynb /content/
+      !cp course-v3/nbs/dl2/07_batchnorm.ipynb /content/
+      !cp course-v3/nbs/dl2/07a_lsuv.ipynb /content/
+      !cp course-v3/nbs/dl2/08_data_block.ipynb /content/
+      !cp course-v3/nbs/dl2/09_optimizers.ipynb /content/
+      !cp course-v3/nbs/dl2/09b_learner.ipynb /content/
+      !cp course-v3/nbs/dl2/09c_add_progress_bar.ipynb /content/
+      !cp course-v3/nbs/dl2/10_augmentation.ipynb /content/
+      !cp course-v3/nbs/dl2/10b_mixup_label_smoothing.ipynb /content/
+      !cp course-v3/nbs/dl2/10c_fp16.ipynb /content/
+      !cp course-v3/nbs/dl2/11_train_imagenette.ipynb /content/
+      !cp course-v3/nbs/dl2/11a_transfer_learning.ipynb /content/
+      !cp course-v3/nbs/dl2/12_text.ipynb /content/
+      !cp course-v3/nbs/dl2/12a_awd_lstm.ipynb /content/
+      !cp course-v3/nbs/dl2/12b_lm_pretrain.ipynb /content/
+
+      # convert the jupyter notebooks into python modules
+      !python notebook2script.py 00_exports.ipynb
+      !python notebook2script.py 01_matmul.ipynb
+      !python notebook2script.py 02_fully_connected.ipynb
+      !python notebook2script.py 03_minibatch_training.ipynb
+      !python notebook2script.py 04_callbacks.ipynb
+      !python notebook2script.py 05_anneal.ipynb
+      !python notebook2script.py 05b_early_stopping.ipynb
+      !python notebook2script.py 06_cuda_cnn_hooks_init.ipynb
+      !python notebook2script.py 07_batchnorm.ipynb
+      !python notebook2script.py 07a_lsuv.ipynb
+      !python notebook2script.py 08_data_block.ipynb
+      !python notebook2script.py 09_optimizers.ipynb
+      !python notebook2script.py 09b_learner.ipynb
+      !python notebook2script.py 09c_add_progress_bar.ipynb
+      !python notebook2script.py 10_augmentation.ipynb
+      !python notebook2script.py 10b_mixup_label_smoothing.ipynb
+      !python notebook2script.py 10c_fp16.ipynb
+      !python notebook2script.py 11_train_imagenette.ipynb
+      !python notebook2script.py 11a_transfer_learning.ipynb
+      !python notebook2script.py 12_text.ipynb
+      !python notebook2script.py 12a_awd_lstm.ipynb
+      !python notebook2script.py 12b_lm_pretrain.ipynb
+
+      # copy the converted python modules under /content for later use
+      !cp /content/exp/nb_00.py /content/exp.nb_00.py
+      !cp /content/exp/nb_01.py /content/exp.nb_01.py
+      !cp /content/exp/nb_02.py /content/exp.nb_02.py
+      !cp /content/exp/nb_03.py /content/exp.nb_03.py
+      !cp /content/exp/nb_04.py /content/exp.nb_04.py
+      !cp /content/exp/nb_05.py /content/exp.nb_05.py
+      !cp /content/exp/nb_05b.py /content/exp.nb_05b.py
+      !cp /content/exp/nb_06.py /content/exp.nb_06.py
+      !cp /content/exp/nb_07.py /content/exp.nb_07.py
+      !cp /content/exp/nb_07a.py /content/exp.nb_07a.py
+      !cp /content/exp/nb_08.py /content/exp.nb_08.py
+      !cp /content/exp/nb_09.py /content/exp.nb_09.py
+      !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
+      !cp /content/exp/nb_09c.py /content/exp.nb_09c.py
+      !cp /content/exp/nb_10.py /content/exp.nb_10.py
+      !cp /content/exp/nb_10b.py /content/exp.nb_10b.py
+      !cp /content/exp/nb_10c.py /content/exp.nb_10c.py
+      !cp /content/exp/nb_11.py /content/exp.nb_11.py
+      !cp /content/exp/nb_11a.py /content/exp.nb_11a.py
+      !cp /content/exp/nb_12.py /content/exp.nb_12.py
+      !cp /content/exp/nb_12a.py /content/exp.nb_12a.py
+      !cp /content/exp/nb_12b.py /content/exp.nb_12b.py
+
+    #+END_SRC
+
+*** match_embeds
+
+    #+BEGIN_SRC python
+      def match_embeds(old_wgts, old_vocab, new_vocab):
+          wgts = old_wgts['0.emb.weight']
+          bias = old_wgts['1.decoder.bias']
+          wgts_m,bias_m = wgts.mean(dim=0),bias.mean()
+          new_wgts = wgts.new_zeros(len(new_vocab), wgts.size(1))
+          new_bias = bias.new_zeros(len(new_vocab))
+          otoi = {v:k for k,v in enumerate(old_vocab)}
+          for i,w in enumerate(new_vocab): 
+              if w in otoi:
+                  idx = otoi[w]
+                  new_wgts[i],new_bias[i] = wgts[idx],bias[idx]
+              else: new_wgts[i],new_bias[i] = wgts_m,bias_m
+          old_wgts['0.emb.weight']    = new_wgts
+          old_wgts['0.emb_dp.emb.weight'] = new_wgts
+          old_wgts['1.decoder.weight']    = new_wgts
+          old_wgts['1.decoder.bias']      = new_bias
+          return old_wgts
+    #+END_SRC
+
+*** lm_splitter
+
+    #+BEGIN_SRC python
+      def lm_splitter(m):
+          groups = []
+          for i in range(len(m[0].rnns)): groups.append(nn.Sequential(m[0].rnns[i], m[0].hidden_dps[i]))
+          groups += [nn.Sequential(m[0].emb, m[0].emb_dp, m[0].input_dp, m[1])]
+          return [list(o.parameters()) for o in groups]
+    #+END_SRC
+
+*** TODO pack_padded_sequence
+    - [ ] what does it do?
+
+*** AWD_LSTM1
+
+    #+BEGIN_SRC python
+      #export
+      class AWD_LSTM1(nn.Module):
+          "AWD-LSTM inspired by https://arxiv.org/abs/1708.02182."
+          initrange=0.1
+
+          def __init__(self, vocab_sz, emb_sz, n_hid, n_layers, pad_token,
+                       hidden_p=0.2, input_p=0.6, embed_p=0.1, weight_p=0.5):
+              super().__init__()
+              self.bs,self.emb_sz,self.n_hid,self.n_layers,self.pad_token = 1,emb_sz,n_hid,n_layers,pad_token
+              self.emb = nn.Embedding(vocab_sz, emb_sz, padding_idx=pad_token)
+              self.emb_dp = EmbeddingDropout(self.emb, embed_p)
+              self.rnns = [nn.LSTM(emb_sz if l == 0 else n_hid, (n_hid if l != n_layers - 1 else emb_sz), 1,
+                                   batch_first=True) for l in range(n_layers)]
+              self.rnns = nn.ModuleList([WeightDropout(rnn, weight_p) for rnn in self.rnns])
+              self.emb.weight.data.uniform_(-self.initrange, self.initrange)
+              self.input_dp = RNNDropout(input_p)
+              self.hidden_dps = nn.ModuleList([RNNDropout(hidden_p) for l in range(n_layers)])
+
+          def forward(self, input):
+              bs,sl = input.size()
+              mask = (input == self.pad_token)
+              lengths = sl - mask.long().sum(1)
+              n_empty = (lengths == 0).sum()
+              if n_empty > 0:
+                  input = input[:-n_empty]
+                  lengths = lengths[:-n_empty]
+                  self.hidden = [(h[0][:,:input.size(0)], h[1][:,:input.size(0)]) for h in self.hidden]
+              raw_output = self.input_dp(self.emb_dp(input))
+              new_hidden,raw_outputs,outputs = [],[],[]
+              for l, (rnn,hid_dp) in enumerate(zip(self.rnns, self.hidden_dps)):
+                  raw_output = pack_padded_sequence(raw_output, lengths, batch_first=True)
+                  raw_output, new_h = rnn(raw_output, self.hidden[l])
+                  raw_output = pad_packed_sequence(raw_output, batch_first=True)[0]
+                  raw_outputs.append(raw_output)
+                  if l != self.n_layers - 1: raw_output = hid_dp(raw_output)
+                  outputs.append(raw_output)
+                  new_hidden.append(new_h)
+              self.hidden = to_detach(new_hidden)
+              return raw_outputs, outputs, mask
+
+          def _one_hidden(self, l):
+              "Return one hidden state."
+              nh = self.n_hid if l != self.n_layers - 1 else self.emb_sz
+              return next(self.parameters()).new(1, self.bs, nh).zero_()
+
+          def reset(self):
+              "Reset the hidden states."
+              self.hidden = [(self._one_hidden(l), self._one_hidden(l)) for l in range(self.n_layers)]
+    #+END_SRC
+
+*** Pooling
+
+    #+BEGIN_SRC python
+      class Pooling(nn.Module):
+          def forward(self, input):
+              raw_outputs,outputs,mask = input
+              output = outputs[-1]
+              lengths = output.size(1) - mask.long().sum(dim=1)
+              avg_pool = output.masked_fill(mask[:,:,None], 0).sum(dim=1)
+              avg_pool.div_(lengths.type(avg_pool.dtype)[:,None])
+              max_pool = output.masked_fill(mask[:,:,None], -float('inf')).max(dim=1)[0]
+              x = torch.cat([output[torch.arange(0, output.size(0)),lengths-1], max_pool, avg_pool], 1) #Concat pooling.
+              return output,x
+    #+END_SRC
+
+    - `output` is the output of the last `nn.LSTM` layer
+
+    - `output` is originally the output for language modeling
+      for predicting next words so we do not directly use it
+      for classification.
+
+    - for classification, we use 3 things out of `output`
+      - the last element of the sequence
+      - average in the sequence
+      - maximum element of the sequence
+
+    - `output.masked_fill` fill elements of `output` with 0
+      where `mask` is true.
+      https://pytorch.org/docs/stable/tensors.html
+
+    - `my_tensor[:,:,None]` does unsqueeze, and
+      it inserts an unit axis to the last dimension.
+
+      #+BEGIN_SRC python
+        #memo
+        import torch
+        my_tensor = torch.tensor([[[1,2],[3,4],[5,6]],
+                     [[11,12],[13,14],[15,16]],
+                     [[21,22],[23,24],[25,26]]])
+        my_tensor2 = my_tensor[:,:,None]
+        my_tensor2
+
+        '''
+        tensor([[[[ 1,  2]],
+
+                 [[ 3,  4]],
+
+                 [[ 5,  6]]],
+
+
+                [[[11, 12]],
+
+                 [[13, 14]],
+
+                 [[15, 16]]],
+
+
+                [[[21, 22]],
+
+                 [[23, 24]],
+
+                 [[25, 26]]]])
+        '''
+      #+END_SRC
+      
+    - `my_tensor.sum(dim=1) 
+
+    #+BEGIN_SRC python
+      #memo
+      import torch
+      my_tensor = torch.tensor([[[1,2],[3,4],[5,6]],
+                   [[11,12],[13,14],[15,16]],
+                   [[21,22],[23,24],[25,26]]])
+      my_tensor_dim0 = my_tensor.sum(dim=0)
+      my_tensor_dim1 = my_tensor.sum(dim=1)
+      my_tensor_dim2 = my_tensor.sum(dim=2)
+      my_tensor, my_tensor_dim0, my_tensor_dim1, my_tensor_dim2
+
+      '''
+      # my_tensor
+      tensor([[[ 1,  2],
+               [ 3,  4],
+               [ 5,  6]],
+
+              [[11, 12],
+               [13, 14],
+               [15, 16]],
+
+              [[21, 22],
+               [23, 24],
+               [25, 26]]])
+
+      # my_tensor_dim0
+      tensor([[33, 36],
+              [39, 42],
+              [45, 48]])
+
+      # my_tensor_dim1
+      tensor([[ 9, 12],
+              [39, 42],
+              [69, 72]])
+
+      # my_tensor_dim2
+      tensor([[ 3,  7, 11],
+              [23, 27, 31],
+              [43, 47, 51]])
+
+      '''
+    #+END_SRC
+
+    - `output` is 
+
+*** bn_drop_lin
+
+    #+BEGIN_SRC python
+      def bn_drop_lin(n_in, n_out, bn=True, p=0., actn=None):
+          layers = [nn.BatchNorm1d(n_in)] if bn else []
+          if p != 0: layers.append(nn.Dropout(p))
+          layers.append(nn.Linear(n_in, n_out))
+          if actn is not None: layers.append(actn)
+          return layers
+    #+END_SRC
+
+    - `bn_drop_lin` creates a list of layers consists of
+      - a batch norm layer
+      - a dropout layer
+      - a linear layer
+      - an relu layer
+
+    - note `actn` can be None
+
+*** PoolingLinearClassifier
+
+    #+BEGIN_SRC python
+      class PoolingLinearClassifier(nn.Module):
+          "Create a linear classifier with pooling."
+
+          def __init__(self, layers, drops):
+              super().__init__()
+              mod_layers = []
+              activs = [nn.ReLU(inplace=True)] * (len(layers) - 2) + [None]
+              for n_in, n_out, p, actn in zip(layers[:-1], layers[1:], drops, activs):
+                  mod_layers += bn_drop_lin(n_in, n_out, p=p, actn=actn)
+              self.layers = nn.Sequential(*mod_layers)
+
+          def forward(self, input):
+              raw_outputs,outputs,mask = input
+              output = outputs[-1]
+              lengths = output.size(1) - mask.long().sum(dim=1)
+              avg_pool = output.masked_fill(mask[:,:,None], 0).sum(dim=1)
+              avg_pool.div_(lengths.type(avg_pool.dtype)[:,None])
+              max_pool = output.masked_fill(mask[:,:,None], -float('inf')).max(dim=1)[0]
+              x = torch.cat([output[torch.arange(0, output.size(0)),lengths-1], max_pool, avg_pool], 1) #Concat pooling.
+              x = self.layers(x)
+              return x
+    #+END_SRC
+    
+    # __init__
+    - `layers` specifies the 'width' of activations after
+      each linear layer
+
+    - the last element of `activs` is `None`,
+      - `len(layers) - 2` is equal to number of 
+        `mod_layers` miunus 1
+      - `activs` consists of `ReLU` layers and
+        one `None` layer
+
+
+    # __forward__
+    - `PoolingLinearClassifier::forward` does
+      what `Pooling::forward` does plus
+      applying `layers` which is a seriese of
+      (batch norm, dropout, linear, relu)
+
+*** pad_tensor
+
+    #+BEGIN_SRC python
+      def pad_tensor(t, bs, val=0.):
+          if t.size(0) < bs:
+              return torch.cat([t, val + t.new_zeros(bs-t.size(0), *t.shape[1:])])
+          return t
+    #+END_SRC
+
+*** SentenceEncoder
+
+    #+BEGIN_SRC python
+      class SentenceEncoder(nn.Module):
+          def __init__(self, module, bptt, pad_idx=1):
+              super().__init__()
+              self.bptt,self.module,self.pad_idx = bptt,module,pad_idx
+
+          def concat(self, arrs, bs):
+              return [torch.cat([pad_tensor(l[si],bs) for l in arrs], dim=1) for si in range(len(arrs[0]))]
+          
+          def forward(self, input):
+              bs,sl = input.size()
+              self.module.bs = bs
+              self.module.reset()
+              raw_outputs,outputs,masks = [],[],[]
+              for i in range(0, sl, self.bptt):
+                  r,o,m = self.module(input[:,i: min(i+self.bptt, sl)])
+                  masks.append(pad_tensor(m, bs, 1))
+                  raw_outputs.append(r)
+                  outputs.append(o)
+              return self.concat(raw_outputs, bs),self.concat(outputs, bs),torch.cat(masks,dim=1)
+    #+END_SRC
+
+    # __init__
+    - `module` is an `AWD-LSTM1` layer
+
+    - `bptt` is the length of the sequence of words for 
+      language modeling
+    
+
+    # forward
+    - `sl` is the length of the sequence of words for 
+      classification, and varies from a batch to a batch
+
+    - since `sl` is the length of a single document,
+      it is usually much larger than `bptt`
+
+    - for a single batch, `SentenceEncoder::forward` 
+      splits the batch to smaller pieces of size `bptt`
+      and then apply `forward` of `module` (`AWD-LSTM1`)
+      to avoid out of memory error
+      - `sl` is usually too large for `AWD-LSTM1` layer
+        to perform computation at once
+
+      - since `bptt` is used when running `AWD-LSTM1`
+        for language modeling, it should work
+
+      - in the end, it concatnates the resulting list
+        getting the equivalent result as applying
+        `AWD-LSTM1` layer to the batch at one go.
+
+    - `range(0, sl, self.bptt)` sweep from 0 to sl
+      with step of self.bptt
+      - ref
+        https://www.geeksforgeeks.org/python-range-function/
+
+      - for example, `range(0, 1000, 70)` sweeps from 0 to 1000
+        with a step of 70, so it goes
+        0, 70, 140, 210, ..., 910, 980
+
+    - after sweeping through the small chunks created from a 
+      single batch, `forward` concats `row_outputs`
+      
+      https://pytorch.org/docs/stable/torch.html
+
+
+
+
+
+
+*** get_text_classifier
+
+    #+BEGIN_SRC python
+      def get_text_classifier(vocab_sz, emb_sz, n_hid, n_layers, n_out, pad_token, bptt, output_p=0.4, hidden_p=0.2, 
+                              input_p=0.6, embed_p=0.1, weight_p=0.5, layers=None, drops=None):
+          "To create a full AWD-LSTM"
+          rnn_enc = AWD_LSTM1(vocab_sz, emb_sz, n_hid=n_hid, n_layers=n_layers, pad_token=pad_token,
+                              hidden_p=hidden_p, input_p=input_p, embed_p=embed_p, weight_p=weight_p)
+          enc = SentenceEncoder(rnn_enc, bptt)
+          if layers is None: layers = [50]
+          if drops is None:  drops = [0.1] * len(layers)
+          layers = [3 * emb_sz] + layers + [n_out] 
+          drops = [output_p] + drops
+          return SequentialRNN(enc, PoolingLinearClassifier(layers, drops))
+    #+END_SRC
+
+    - `bptt` is the length of the sequence of words for 
+      language modeling
+
+    - the created text classifier consists of
+      - encoder by `AWD_LSTM1` layer　& SentenceEncoder
+
+      - the dropout layer for the output of `AWD_LSTM1` layer,
+        and the seriese of (linear layer, dropout layer)
+        which is created by `PoolingLinearClassifier`
+        
 
 
 * NLP course
