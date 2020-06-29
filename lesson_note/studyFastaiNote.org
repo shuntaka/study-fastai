@@ -206,6 +206,7 @@
     https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
 
 *** tensor related operation (stack, squeeze)
+    https://deeplizard.com/learn/video/kF2AlpykJGY
     https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
 
 *** tensor mean, std
@@ -9856,9 +9857,16 @@ class BatchNorm(nn.Module):
     #+END_SRC
 
 *** TODO pack_padded_sequence
+    https://pytorch.org/docs/master/generated/torch.nn.utils.rnn.pack_padded_sequence.html
+    https://suzyahyah.github.io/pytorch/2019/07/01/DataLoader-Pad-Pack-Sequence.html
+    https://stackoverflow.com/questions/51030782/why-do-we-pack-the-sequences-in-pytorch
+    https://www.programcreek.com/python/example/91300/torch.nn.utils.rnn.pack_padded_sequence
+
     - [ ] what does it do?
 
-*** AWD_LSTM1
+      
+
+*** TODO AWD_LSTM1
 
     #+BEGIN_SRC python
       #export
@@ -10118,6 +10126,11 @@ class BatchNorm(nn.Module):
               return self.concat(raw_outputs, bs),self.concat(outputs, bs),torch.cat(masks,dim=1)
     #+END_SRC
 
+    # overview
+    - `SentenceEncoder` is a wrapper module to apply
+      `AWD-LSTM1` layer to a batch chunk by chunk 
+      to avoid out of memory error
+
     # __init__
     - `module` is an `AWD-LSTM1` layer
 
@@ -10164,7 +10177,6 @@ class BatchNorm(nn.Module):
 
 
 
-
 *** get_text_classifier
 
     #+BEGIN_SRC python
@@ -10185,11 +10197,16 @@ class BatchNorm(nn.Module):
       language modeling
 
     - the created text classifier consists of
-      - encoder by `AWD_LSTM1` layer　& SentenceEncoder
+      - encoder by `AWD_LSTM1` layer wrapped by SentenceEncoder
 
       - the dropout layer for the output of `AWD_LSTM1` layer,
-        and the seriese of (linear layer, dropout layer)
+        and the seriese of (batch norm, dropout, linear, ReLU)
         which is created by `PoolingLinearClassifier`
+
+      - `layers` specifies the 'width' of the output of
+        each linear layer in `PoolingLinearClassifier`,
+        and looks like;
+        [900, 50, 2]
         
 
 
