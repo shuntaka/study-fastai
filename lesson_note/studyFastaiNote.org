@@ -5054,8 +5054,10 @@ class BatchNorm(nn.Module):
           def __repr__(self): return f'{self.__class__.__name__}\nTrain: {self.train}\nValid: {self.valid}\n'
     #+END_SRC
 
+    # overview
     - `SplitData` is just a storage to store training & validation data
 
+    # split_by_func
     - `SplitData::split_by_func` is a factory method to create a
       `SplitData` instance.
       - `split_by_func` is a global function previously defined, 
@@ -8488,7 +8490,6 @@ class BatchNorm(nn.Module):
       %time ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
     #+END_SRC
 
-
 *** FOR language modeling, how to create batches from documents
     - for example, batch-size=6, bptt=5
 
@@ -8511,7 +8512,6 @@ class BatchNorm(nn.Module):
     - slice the grid into smaller grids with width=bptt(=5)
 
     - each small grid is the batch.
-
 
 *** LM_PreLoader (LM_Dataset)
 
@@ -8651,7 +8651,9 @@ class BatchNorm(nn.Module):
       for language modeling, a batch contains
       a list of numericalized words
 
-    - for text classification, batches has different 'width'.
+    - for text classification, batches has different 'width'
+      where 'width' is the length of the longest document
+      in the batch
 
     - each batch is constructed so that it contains 
       documents of about the same length.
@@ -8746,9 +8748,11 @@ class BatchNorm(nn.Module):
     - `pad_idx` is a scalar, and `+ pad_idx` adds `pad_idx` to
       all the elements of a tensor by broadcasting
 
+    - `res` is first filled with 0s and padding
+
     - `tensor([s[1] for s in samples])` is a tensor for the labels
 
-*** creating DataLoader for training data
+*** creating DataLoader for training data for lauguage classification
 
     #+BEGIN_SRC python
       #
@@ -9174,6 +9178,7 @@ class BatchNorm(nn.Module):
               return x * m
     #+END_SRC
 
+    # forward
     - `RNNDropout` applys dropout to either 
       - input: a batch of sequences of embedding word vectors
       - output: a a batch of sequences of outputs
@@ -9410,6 +9415,12 @@ class BatchNorm(nn.Module):
       |  64 |            |            |     |             |
       |-----+------------+------------+-----+-------------|
 
+    - note that dropout is not applied to the very last output
+      of `AWD-LSTM`, because dropout will be applied by
+      the successing layer
+      - for language modeling, dropout happens at `LinearDecoder` layer
+      - for language classification, dropout happens at `PoolingLinearClassifier` layer
+
 *** LinearDecoder
 
     #+BEGIN_SRC python
@@ -9433,8 +9444,7 @@ class BatchNorm(nn.Module):
     # overview
     - `LinearDecoder` picks up the output for the last
       `nn.LSTM` layer in `AWD_LSTM` layer,
-      applys dropout and converts it to a batch of
-      sequences of numericalized words
+      applys RNN dropout.
 
     # init
     - note that `nn.Linear` creates a weight matrix 
@@ -9539,6 +9549,9 @@ class BatchNorm(nn.Module):
               #Shuffle the texts at the beginning of the epoch
               if hasattr(self.dl.dataset, "batchify"): self.dl.dataset.batchify()
     #+END_SRC
+
+    - `RNNTrainer` is for regularlization using the activation
+      by the LSTM layer
 
     - `self.pred` refers `self.runner.pred` thanks to
       `__getattr__` defined on `Callback` ver3
@@ -9731,6 +9744,81 @@ class BatchNorm(nn.Module):
           return articles
     #+END_SRC
 
+*** [language modeling] create a data for pre-training a language model from wiki text
+
+    #+BEGIN_SRC python
+      # read wiki text
+      path = datasets.Config().data_path()/'wikitext-103'
+
+      # split wiki text into training & validation set 
+      train = TextList(read_wiki(path/'train.txt'), path=path) #+read_file(path/'test.txt')
+      valid = TextList(read_wiki(path/'valid.txt'), path=path)
+
+      # store training & validation set
+      sd = SplitData(train, valid)
+
+      # tokenize & numericalize the texts, and give fake labels for language modeling
+      proc_tok,proc_num = TokenizeProcessor(),NumericalizeProcessor()
+      ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
+
+      # save and reload `ll` for later use
+      pickle.dump(ll, open(path/'ld.pkl', 'wb'))
+      ll = pickle.load( open(path/'ld.pkl', 'rb'))
+
+      # create Databunch for language modeling 
+      bs,bptt = 128,70
+      data = lm_databunchify(ll, bs, bptt)
+
+
+    #+END_SRC
+
+*** [language modeling] create & pre-train & save a language model
+
+    #+BEGIN_SRC python
+            #
+            dps = np.array([0.1, 0.15, 0.25, 0.02, 0.2]) * 0.2
+            tok_pad = vocab.index(PAD)
+
+            #
+            emb_sz, nh, nl = 300, 300, 2
+            model = get_language_model(len(vocab), emb_sz, nh, nl, tok_pad, *dps)
+
+            #
+            cbs = [partial(AvgStatsCallback,accuracy_flat),
+                   CudaCallback, Recorder,
+                   partial(GradientClipping, clip=0.1),
+                   partial(RNNTrainer, α=2., β=1.),
+                   ProgressCallback]
+
+            #
+            learn = Learner(model, data, cross_entropy_flat, lr=5e-3, cb_funcs=cbs, opt_func=adam_opt())
+
+            #
+            lr = 5e-3
+            sched_lr  = combine_scheds([0.3,0.7], cos_1cycle_anneal(lr/10., lr, lr/1e5))
+            sched_mom = combine_scheds([0.3,0.7], cos_1cycle_anneal(0.8, 0.7, 0.8))
+            cbsched = [ParamScheduler('lr', sched_lr), ParamScheduler('mom', sched_mom)]
+
+            # train the model
+            learn.fit(10, cbs=cbsched)
+
+            # save weights 
+            torch.save(learn.model.state_dict(), path/'pretrained.pth')
+
+            # save vocabs as a pickle
+            pickle.dump(vocab, open(path/'vocab.pkl', 'wb'))
+    #+END_SRC
+
+    - torch.save
+      `torch.save` saves an object to a file
+      https://pytorch.org/docs/master/generated/torch.save.html
+
+    - .pth
+      https://realpython.com/lessons/module-search-path/
+
+    - which of `torch.save` & `pickle.dump` to use
+      https://forums.fast.ai/t/which-format-is-better-for-pytorch-saved-model/5018/3
+      https://stackoverflow.com/questions/42703500/best-way-to-save-a-trained-model-in-pytorch
 
 ** 12c_ulmfit.ipynb
 *** imports
@@ -9824,6 +9912,29 @@ class BatchNorm(nn.Module):
 
     #+END_SRC
 
+*** [language modeling] create a Databunch & vocabs from domain specific texts (IMDB)
+
+    #+BEGIN_SRC python
+      # untar IMDB data
+      path = datasets.untar_data(datasets.URLs.IMDB)
+
+      # ll_lm.pkl does not exist, so we create `ll` manually
+      # ll = pickle.load(open(path/'ll_lm.pkl', 'rb'))
+
+      il = TextList.from_files(path, include=['train', 'test', 'unsup'])
+      sd = SplitData.split_by_func(il, partial(random_splitter, p_valid=0.1))
+      proc_tok,proc_num = TokenizeProcessor(max_workers=8),NumericalizeProcessor()
+      ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
+
+      #
+      bs,bptt = 128,70
+      data = lm_databunchify(ll, bs, bptt)
+
+      #
+      vocab = ll.train.proc_x[1].vocab
+
+    #+END_SRC
+
 *** match_embeds
 
     #+BEGIN_SRC python
@@ -9846,6 +9957,65 @@ class BatchNorm(nn.Module):
           return old_wgts
     #+END_SRC
 
+    - `match_embeds` is for updating the embedding matrix
+      and the weight of the `LinearDecoder`
+      of a language model
+
+*** [language modeling] update embedding matrix & vocas of the pretrained model
+
+    #+BEGIN_SRC python
+      # 
+      dps = tensor([0.1, 0.15, 0.25, 0.02, 0.2]) * 0.5
+      tok_pad = vocab.index(PAD)
+
+      #
+      emb_sz, nh, nl = 300, 300, 2
+      model = get_language_model(len(vocab), emb_sz, nh, nl, tok_pad, *dps)
+
+      # read weights for the pretrained model
+      old_wgts  = torch.load(path/'pretrained'/'pretrained.pth')
+
+      # read vocabs for the pretrained model
+      old_vocab = pickle.load(open(path/'pretrained'/'vocab.pkl', 'rb'))
+
+      # update the embedding matrix & vocabs
+      wgts = match_embeds(old_wgts, old_vocab, vocab)
+
+      # load the new weights & new vocabs
+      model.load_state_dict(wgts)
+
+      # model summary
+      '''
+      SequentialRNN(
+        (0): AWD_LSTM(
+          (emb): Embedding(60003, 300, padding_idx=2)
+          (emb_dp): EmbeddingDropout(
+            (emb): Embedding(60003, 300, padding_idx=2)
+          )
+          (rnns): ModuleList(
+            (0): WeightDropout(
+              (module): LSTM(300, 300, batch_first=True)
+            )
+            (1): WeightDropout(
+              (module): LSTM(300, 300, batch_first=True)
+            )
+          )
+          (input_dp): RNNDropout()
+          (hidden_dps): ModuleList(
+            (0): RNNDropout()
+            (1): RNNDropout()
+          )
+        )
+        (1): LinearDecoder(
+          (output_dp): RNNDropout()
+          (decoder): Linear(in_features=300, out_features=60003, bias=True)
+        )
+      )
+      '''
+
+
+    #+END_SRC
+
 *** lm_splitter
 
     #+BEGIN_SRC python
@@ -9856,15 +10026,194 @@ class BatchNorm(nn.Module):
           return [list(o.parameters()) for o in groups]
     #+END_SRC
 
+    - `lm_splitter` is for creating layer groups for discriminative learning rate
+
+    - the 1st group cotains
+      - m[0].rnns[i]
+      - m[0].hidden_dps[i]
+
+    - the 2nd group contains 
+      # AWD_LSTM embedding, 
+      - m[0].emb
+      - m[0].emb_dp
+      - m[0].input_dp
+
+      # LinearDecoder
+      - m[1]
+
+
+
+*** [language modeling] train the pretrained language modeling with domain specific text data
+
+    #+BEGIN_SRC python
+      # model summary
+      '''
+      SequentialRNN(
+        (0): AWD_LSTM(
+          (emb): Embedding(60003, 300, padding_idx=2)
+          (emb_dp): EmbeddingDropout(
+            (emb): Embedding(60003, 300, padding_idx=2)
+          )
+          (rnns): ModuleList(
+            (0): WeightDropout(
+              (module): LSTM(300, 300, batch_first=True)
+            )
+            (1): WeightDropout(
+              (module): LSTM(300, 300, batch_first=True)
+            )
+          )
+          (input_dp): RNNDropout()
+          (hidden_dps): ModuleList(
+            (0): RNNDropout()
+            (1): RNNDropout()
+          )
+        )
+        (1): LinearDecoder(
+          (output_dp): RNNDropout()
+          (decoder): Linear(in_features=300, out_features=60003, bias=True)
+        )
+      )
+      '''
+
+      # freeze rnn parameters
+      for rnn in model[0].rnns:
+          for p in rnn.parameters(): p.requires_grad_(False)
+
+      #
+      cbs = [partial(AvgStatsCallback,accuracy_flat),
+             CudaCallback, Recorder,
+             partial(GradientClipping, clip=0.1),
+             partial(RNNTrainer, α=2., β=1.),
+             ProgressCallback]
+
+      # create a `Learner` with discriminative learning rate
+      learn = Learner(model, data, cross_entropy_flat, opt_func=adam_opt(),
+                      cb_funcs=cbs, splitter=lm_splitter)
+
+      #
+      lr = 2e-2
+      cbsched = sched_1cycle([lr], pct_start=0.5, mom_start=0.8, mom_mid=0.7, mom_end=0.8)
+
+      # train layers excluding `model[0].rnns`
+      learn.fit(1, cbs=cbsched)
+
+      # unfreeze `model[0].rnns`
+      for rnn in model[0].rnns:
+          for p in rnn.parameters(): p.requires_grad_(True)
+
+      #
+      lr = 2e-3
+      cbsched = sched_1cycle([lr/2., lr/2., lr], pct_start=0.5, mom_start=0.8, mom_mid=0.7, mom_end=0.8)
+
+      # train the entire layers
+      learn.fit(10, cbs=cbsched)
+
+      # save the encoding part of the finetuned language model
+      torch.save(learn.model[0].state_dict(), path/'finetuned_enc.pth')
+
+      # save the new vocabs
+      pickle.dump(vocab, open(path/'vocab_lm.pkl', 'wb'))
+
+      # save the entire finetuned language modeling
+      torch.save(learn.model.state_dict(), path/'finetuned.pth')
+
+    #+END_SRC
+    
+    - note that for classification, we do not neet `LearnerDecoder`
+      part so we do not really have to save that part
+
+*** [classification] create a Databunch for classification
+
+    #+BEGIN_SRC python
+      #
+      vocab = pickle.load(open(path/'vocab_lm.pkl', 'rb'))
+      proc_tok,proc_num,proc_cat = TokenizeProcessor(),NumericalizeProcessor(vocab=vocab),CategoryProcessor()
+
+      # load training & validation data for classification
+      il = TextList.from_files(path, include=['train', 'test'])
+      sd = SplitData.split_by_func(il, partial(grandparent_splitter, valid_name='test'))
+      ll = label_by_func(sd, parent_labeler, proc_x = [proc_tok, proc_num], proc_y=proc_cat)
+
+      # save & load `ll` for classification
+      pickle.dump(ll, open(path/'ll_clas.pkl', 'wb'))
+      ll = pickle.load(open(path/'ll_clas.pkl', 'rb'))
+
+      # create a dabatunch for classification
+      bs,bptt = 64,70
+      data = clas_databunchify(ll, bs)
+    #+END_SRC
+
 *** TODO pack_padded_sequence
-    https://pytorch.org/docs/master/generated/torch.nn.utils.rnn.pack_padded_sequence.html
     https://suzyahyah.github.io/pytorch/2019/07/01/DataLoader-Pad-Pack-Sequence.html
-    https://stackoverflow.com/questions/51030782/why-do-we-pack-the-sequences-in-pytorch
     https://www.programcreek.com/python/example/91300/torch.nn.utils.rnn.pack_padded_sequence
 
-    - [ ] what does it do?
+    https://pytorch.org/docs/master/generated/torch.nn.utils.rnn.pack_padded_sequence.html
+    https://stackoverflow.com/questions/51030782/why-do-we-pack-the-sequences-in-pytorch
 
-      
+    - [ ] 
+
+*** check pack_padded_sequence works as expected
+
+    #+BEGIN_SRC python
+      #export
+      from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
+      #
+      x,y = next(iter(data.train_dl))
+
+      #
+      x.size()
+
+      #
+      lengths = x.size(1) - (x == 1).sum(1)
+      lengths[:5]
+
+      #
+      tst_emb = nn.Embedding(len(vocab), 300)
+
+      #
+      packed = pack_padded_sequence(tst_emb(x), lengths, batch_first=True)
+
+      #
+      tst = nn.LSTM(300, 300, 2)
+      y,h = tst(packed)
+      unpack = pad_packed_sequence(y, batch_first=True)
+      unpack[0].shape
+
+      unpack[1]
+
+      #
+      emb_sz, nh, nl = 300, 300, 2
+      tok_pad = vocab.index(PAD)
+
+      #
+      enc = AWD_LSTM1(len(vocab), emb_sz, n_hid=nh, n_layers=nl, pad_token=tok_pad)
+      pool = Pooling()
+      enc.bs = bs
+      enc.reset()
+
+      #
+      x,y = next(iter(data.train_dl))
+      output,c = pool(enc(x))
+    #+END_SRC
+
+    - `x` looks like
+
+      |   1 | 433 |  432 | ... |   1 |   1 |
+      | ... | ... |      |     | ... | ... |
+      |  64 | 436 | 4378 | ... | 987 |   1 |
+
+    - so `(x == 1)
+
+      |   1 | false | false | ... | true  | true |
+      | ... | ...   |       |     | ...   | ...  |
+      |  64 | false | false | ... | false | true |
+
+    - `(x == 1).sum(1)` looks 
+
+      |   1 |   3 |
+      | ... | ... |
+      |  64 |   1 |
 
 *** TODO AWD_LSTM1
 
@@ -9918,6 +10267,19 @@ class BatchNorm(nn.Module):
               "Reset the hidden states."
               self.hidden = [(self._one_hidden(l), self._one_hidden(l)) for l in range(self.n_layers)]
     #+END_SRC
+
+    # forward
+    - `mask` is a tensor which looks like
+
+      |   1 | false | false | ... | true  | true |
+      | ... | ...   |       |     | ...   | ...  |
+      |  64 | false | false | ... | false | true |
+
+
+    - `forward` is modified so that it removes padding from an input so that rnn (`nn.LSTM` instance)
+      does not have to perform calculation for padding part
+
+    - note that rnn (`nn.LSTM` instance) works fine regardless of the length of input sentence
 
 *** Pooling
 
@@ -10042,6 +10404,7 @@ class BatchNorm(nn.Module):
           return layers
     #+END_SRC
 
+    # overview
     - `bn_drop_lin` creates a list of layers consists of
       - a batch norm layer
       - a dropout layer
@@ -10050,7 +10413,7 @@ class BatchNorm(nn.Module):
 
     - note `actn` can be None
 
-*** PoolingLinearClassifier
+*** TODO PoolingLinearClassifier
 
     #+BEGIN_SRC python
       class PoolingLinearClassifier(nn.Module):
@@ -10075,6 +10438,11 @@ class BatchNorm(nn.Module):
               x = self.layers(x)
               return x
     #+END_SRC
+
+    # overview
+    - `PoolingLinearClassifier` is a layer which recieves
+      the output of `nn.AWD-LSTM` layer and ouputs a
+      tensor for language classification
     
     # __init__
     - `layers` specifies the 'width' of activations after
@@ -10092,6 +10460,8 @@ class BatchNorm(nn.Module):
       what `Pooling::forward` does plus
       applying `layers` which is a seriese of
       (batch norm, dropout, linear, relu)
+
+    - [ ] the last layer is `None` instead of `ReLU` layer
 
 *** pad_tensor
 
@@ -10173,10 +10543,6 @@ class BatchNorm(nn.Module):
       
       https://pytorch.org/docs/stable/torch.html
 
-
-
-
-
 *** get_text_classifier
 
     #+BEGIN_SRC python
@@ -10199,15 +10565,87 @@ class BatchNorm(nn.Module):
     - the created text classifier consists of
       - encoder by `AWD_LSTM1` layer wrapped by SentenceEncoder
 
-      - the dropout layer for the output of `AWD_LSTM1` layer,
-        and the seriese of (batch norm, dropout, linear, ReLU)
+      - a seriese of (batch norm, dropout, linear, ReLU)
         which is created by `PoolingLinearClassifier`
+
+      - the first dropout 
 
       - `layers` specifies the 'width' of the output of
         each linear layer in `PoolingLinearClassifier`,
         and looks like;
         [900, 50, 2]
-        
+
+*** class_splitter
+
+    #+BEGIN_SRC python
+      def class_splitter(m):
+          enc = m[0].module
+          groups = [nn.Sequential(enc.emb, enc.emb_dp, enc.input_dp)]
+          for i in range(len(enc.rnns)): groups.append(nn.Sequential(enc.rnns[i], enc.hidden_dps[i]))
+          groups.append(m[1])
+          return [list(o.parameters()) for o in groups]
+    #+END_SRC
+
+*** [classification] create a model for classification
+
+    #+BEGIN_SRC python
+      #export
+      from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
+      # create a model for classification
+      emb_sz, nh, nl = 300, 300, 2
+      dps = tensor([0.4, 0.3, 0.4, 0.05, 0.5]) * 0.25
+      model = get_text_classifier(len(vocab), emb_sz, nh, nl, 2, 1, bptt, *dps)
+
+    #+END_SRC
+
+*** [classification] train the model for classification
+
+    #+BEGIN_SRC python
+
+      # freeze all the layers(emb, emb_dp, rnns, input_dp, hidden_dps) of the encoder 
+      for p in model[0].parameters(): p.requires_grad_(False)
+
+      #
+      cbs = [partial(AvgStatsCallback,accuracy),
+             CudaCallback, Recorder,
+             partial(GradientClipping, clip=0.1),
+             ProgressCallback]
+
+      # for encoder part, load the weight of the pretrained language model
+      model[0].module.load_state_dict(torch.load(path/'finetuned_enc.pth'))
+
+      #
+      learn = Learner(model, data, F.cross_entropy, opt_func=adam_opt(), cb_funcs=cbs, splitter=class_splitter)
+
+      #
+      lr = 1e-2
+      cbsched = sched_1cycle([lr], mom_start=0.8, mom_mid=0.7, mom_end=0.8)
+
+      # train the `PoolingLinearClassifier` layer
+      learn.fit(1, cbs=cbsched)
+
+      # unfreeze the last rnn layer
+      for p in model[0].module.rnns[-1].parameters(): p.requires_grad_(True)
+
+      #
+      lr = 5e-3
+      cbsched = sched_1cycle([lr/2., lr/2., lr/2., lr], mom_start=0.8, mom_mid=0.7, mom_end=0.8)
+
+      # train the last rnn layer
+      learn.fit(1, cbs=cbsched)
+
+      # unfreeze all the layer of the encoder
+      for p in model[0].parameters(): p.requires_grad_(True)
+
+      #
+      lr = 1e-3
+      cbsched = sched_1cycle([lr/8., lr/4., lr/2., lr], mom_start=0.8, mom_mid=0.7, mom_end=0.8)
+
+      # train the entire layers
+      learn.fit(2, cbs=cbsched)
+
+    #+END_SRC
 
 
 * NLP course
