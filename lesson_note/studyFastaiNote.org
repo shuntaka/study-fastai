@@ -9343,6 +9343,8 @@ class BatchNorm(nn.Module):
     # init
     - `n_layers` specifies the number of `nn.LSTM` layers
 
+    # reset, _one_hidden
+    - `reset` initialize `self.hidden` by calling `_one_hidden`
 
     # forward
     - `input` is a batch of sequences of NUMERICALIZED words
@@ -10296,7 +10298,12 @@ class BatchNorm(nn.Module):
               return output,x
     #+END_SRC
 
-    - `output` is the output of the last `nn.LSTM` layer
+    - `output` is the output of the last `nn.LSTM` layer, 
+      so it is a rank3 tensor which looks like
+
+      |   1 | (...) | (...) | ... | (...) | (...) |
+      | ... | ...   |       |     | ...   | ...   |
+      |  64 | (...) | (...) | ... | (...) | (...) |
 
     - `output` is originally the output for language modeling
       for predicting next words so we do not directly use it
@@ -10307,11 +10314,48 @@ class BatchNorm(nn.Module):
       - average in the sequence
       - maximum element of the sequence
 
+    - `outpu.size(1)` is a scalar
+
+    - `mask` is a tensor which looks like
+      |   1 | false | false | ... | true  | true |
+      | ... | ...   |       |     | ...   | ...  |
+      |  64 | false | false | ... | false | true |
+
+    - `mask.long().sum(dim=1) looks like
+      |   1 |   3 |
+      | ... | ... |
+      |  64 |   1 |
+
+    - `output.size(1) - mask.long().sum(dim=1)`
+      is (scalar) - (tensor), so broadcasting happens
+
+      #+BEGIN_SRC python
+        # memo
+        import torch
+        my_output = tensor([[1,2,3],[4,5,6],[7,8,9]])
+        my_mask = tensor([[False, False, True], [False, False, False], [False,True, True]])
+        my_sum = my_mask.long().sum(dim=1)
+        my_output.size(1) - my_sum
+
+        '''
+        tensor([2, 3, 1])
+        '''
+      #+END_SRC
+
+    - as a result, `lengths` is a tensor which looks like
+      |   1 | 4327 |
+      | ... |  ... |
+      |  64 | 4328 |
+
     - `output.masked_fill` fill elements of `output` with 0
       where `mask` is true.
       https://pytorch.org/docs/stable/tensors.html
 
-    - `my_tensor[:,:,None]` does unsqueeze, and
+    - since `output` is a rank3 tensor whereas `mask` is
+      a rank2 tensor, we need to unsqueeze `mask`
+      so that the ranks will match
+
+    - `mask[:,:,None]` does unsqueeze, and
       it inserts an unit axis to the last dimension.
 
       #+BEGIN_SRC python
@@ -10345,8 +10389,17 @@ class BatchNorm(nn.Module):
                  [[25, 26]]]])
         '''
       #+END_SRC
+
+    - the result of `output.masked_fill(mask[:,:,None], 0)` 
+      looks like
+
+      |   1 | (...) | (...) | ... | (0,0,...,0) | (0,0,...,0) |
+      | ... | ...   |       |     | ...         | ...         |
+      |  64 | (...) | (...) | ... | (...)       | (0,0,...,0) |
       
-    - `my_tensor.sum(dim=1) 
+      
+    - `output.masked_fill(mask[:,:,None], 0).sum(dim=1) 
+      perform summation along 'sequence' axis
 
     #+BEGIN_SRC python
       #memo
