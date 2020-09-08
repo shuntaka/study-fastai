@@ -1080,7 +1080,6 @@
       of an event to occur;
       [-log(P1), -log(P2), -log(P3), ..., -log(Pn)]
 
-
 *** cross entropy loss
     - cross entropy loss can be considered as
       'amount of money' that neural net must ACTUALLY pay
@@ -1090,7 +1089,6 @@
       one-hot-encoded vector representing the event that ACTUALLY occured
       and a cross entropy tensor;
       [-log(P1), -log(P2), -log(P3), ..., -log(Pn)] * [0, 0, ..., 1, ..., 0]
-
 
     - in order to minimize the amount of money to pay,
       neural net does its best to predict large probability
@@ -1105,16 +1103,33 @@
       large probaility for all the events;
       some probaility must be small, and some probaility must be large
 
-
-    - cross entropy LOSS is 
-
 *** log_softmax ver1
 
     #+BEGIN_SRC python
       def log_softmax(x): return (x.exp()/(x.exp().sum(-1,keepdim=True))).log()
     #+END_SRC
 
-    - x is prediction for ENTIRE training set, and the shape is 
+    # overview
+    - `log_softmax` calculates (-1)*cross-entropy 
+      for prediction `x` 
+    
+    # detail
+    - `x` is a batch of arrays of probatilities
+      [[P11, P12, ..., P1m],
+       [P21, P22, ..., P2m],
+       ...,
+       [Pn1, Pn2, ..., Pnm]]
+
+    - `log_softmax(x)` represents (-1)*cross-entropy for `x`
+      and is in the form of
+
+      [[log(P11), log(P12), ..., log(P1m)],
+       [log(P21), log(P22), ..., log(P2m)],
+       ...,
+       [log(Pn1), log(Pn2), ..., log(Pnm)]]
+
+    - in the context of 'lesson9_03_minibatch_training.ipynb',
+      `x` is prediction for ENTIRE training set, and the shape is 
       `torch.Size([50000,10])`
       - where 50000 is number of images
       - 10 corresonds to the number of labels (0,1,...,9)
@@ -1173,12 +1188,6 @@
 
     #+END_SRC
 
-*** log_softmax ver2
-
-    #+BEGIN_SRC python
-      def log_softmax(x): return x - x.exp().sum(-1,keepdim=True).log()
-    #+END_SRC
-
 *** integer array indexing
     - `sm_pred` is an array of arrays
 
@@ -1199,33 +1208,85 @@
       def nll(input, target): return -input[range(target.shape[0]), target].mean()
     #+END_SRC
 
-    - nll calculates cross-entropy LOSS using cross-entropies
+    # overview
+    - `nll` calculates cross-entropy LOSS from (-1)*cross-entropy
+      for a batch of prediction 
 
-    - target is the label
+    # details
 
-    - since the label is one-hot encoded, we can utilizing numpy
-      integer indexing.
+    - `input` is (-1)*cross-entropy for a batch of prediction
+      and is in the form of
 
-    - `input` is log_softmax of pred, and is a 2rank tensor 
-      with each row containing entropies for the corresponding label
+       [[log(P11), log(P12), ..., log(P1m)],
+       [log(P21), log(P22), ..., log(P2m)],
+       ...,
+       [log(Pn1), log(Pn2), ..., log(Pnm)]]
+
+    - `target` is the label which is in the form of
+      [0, 0, ..., 1, ..., 0] 
+
+    - since `target` (the label) is one-hot encoded, 
+      we can utilize numpy integer indexing.
 
     - `target.shape[0]` is same as the number of data
 
-    - with 'integer array indexing', nll returns
-      
+    - `range(target.shape[0])` returns an array
+      [0, 1, 2, ..., n]
+      where `n` is the number of data
+
     - using integer array indexing, 
-      `-input[range(target.shape[0]), target]` returns
+      `-input[range(target.shape[0]), target]` extracts
+      the part of cross entropy which corresponds to the
+      labels for the batch
 
-      (-1) x log softmax of a predicted probability for the label
+      [
+       -log(P1i),
+       -log(P2j),
+       -log(P3k),
+       ...
+      ]
 
-    - the calculated vlaue is a rank1 tensor consisting of 
-      cross entropy losses 
+    - then,  `.mean()` returns the mean over the batch.
 
-    - then,  .mean() returns the mean of the cross entropies
-      over the batch.
+*** log_softmax ver2
 
-*** logsumexp
+    #+BEGIN_SRC python
+      def log_softmax(x): return x - x.exp().sum(-1,keepdim=True).log()
+    #+END_SRC
+
+*** logsumexp (home-made)
+    #+BEGIN_SRC python
+      def logsumexp(x):
+          m = x.max(-1)[0]
+          return m + (x-m[:,None]).exp().sum(-1).log()
+    #+END_SRC
+
+    - `x` is a batch of prediction and is in the form of
+       [[(P11), (P12), ..., (P1m)],
+       [(P21), (P22), ..., (P2m)],
+       ...,
+       [(Pn1), (Pn2), ..., (Pnm)]]      
+
+    - `x.max(-1) 
+
+      # definiton of `max` from pytorch doc
+      https://pytorch.org/docs/stable/generated/torch.max.html
+
+      - returns a namedtuple (values, indices) where values
+      is the maximum value of each row of the input tensor 
+      in the given dimension dim. And indices is the index 
+      location of each maximum value found (argmax).
+
+*** logsumexp (PyTorch)
     https://pytorch.org/docs/master/generated/torch.logsumexp.html
+
+*** log_softmax ver3 (with PyTorch's logsumexp)
+
+    #+BEGIN_SRC python
+      def log_softmax(x): return x - x.logsumexp(-1,keepdim=True)
+    #+END_SRC
+
+*** log_softmax ver4 (PyTorch)
 
 *** accuracy
     # code
