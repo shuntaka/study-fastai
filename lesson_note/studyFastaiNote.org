@@ -1,3 +1,6 @@
+* part2 new URL
+  https://course19.fast.ai/part2
+
 * things to keep in mind
 *** tensor sum
     - for explanation, think of a tensor below;
@@ -231,7 +234,6 @@
     https://mlexplained.com/2019/05/13/a-tutorial-to-fine-tuning-bert-with-fast-ai/
     https://medium.com/@abhikjha/fastai-integration-with-bert-a0a66b1cecbe
     https://towardsdatascience.com/fastai-with-transformers-bert-roberta-xlnet-xlm-distilbert-4f41ee18ecb2
-
 
 
 * lesson8
@@ -605,6 +607,12 @@
       #export
       def mse(output, targ): return (output.squeeze(-1) - targ).pow(2).mean()
     #+END_SRC
+
+    # detail
+    - `output` is in the form of torch.Size([50000, 1])
+    - `target` is in the form of torch.Size([50000])
+    - `output.squeeze(-1)` is necessary to 
+
 
 *** forward & backward ver1
 
@@ -1213,7 +1221,6 @@
       for a batch of prediction 
 
     # details
-
     - `input` is (-1)*cross-entropy for a batch of prediction
       and is in the form of
 
@@ -1288,6 +1295,10 @@
 
 *** log_softmax ver4 (PyTorch)
 
+*** cross_entropy loss (PyTorch)
+    https://pytorch.org/cppdocs/api/function_namespacetorch_1_1nn_1_1functional_1a29daa086ce1ac3cd9f80676f81701944.html
+    https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+
 *** accuracy
     # code
     #+BEGIN_SRC python
@@ -1296,10 +1307,18 @@
     #+END_SRC
 
     # notes
-    - the size of `out` `torch.Size([64, 10])`
+    - the size of `out` is `torch.Size([64, 10])`
     - the size of `yb` is `torch.Size([64])`
-    - torch.argmax(out, dim=1) picks up the largest probability
-      for each row and returns a tensor whose size is `torch.Size([64])`
+    - torch.argmax(out, dim=1) picks up the index of the 
+      largest element for each row and returns a tensor
+      whose size is `torch.Size([64])`
+
+    #+BEGIN_SRC python
+      tensor([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8,
+               8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8,
+               8, 8, 1, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 4],
+              grad_fn=<NotImplemented>)
+    #+END_SRC
 
     - torch.argmax(out, dim=1)==yb returns a tensor;
 
@@ -1347,19 +1366,87 @@
                           l.bias  .grad.zero_()
     #+END_SRC
 
-    - `n-1` is the last index of the input
+    - `n` is the size of the training data
 
-    - `for i in range((n-1//bs + 1))`
-      sweeps the integer from 0 to `(n-1)//bs`
+    - `(n-1)//bs` is to be read as
+      "the data size minus one devided by the batch size"
+      which calculates how many sets of batches can be
+      created from the training data
 
-    - `//` does integer devision, 
-      whereas `/` does floating point devision
+      n-1
+      bs
 
-    - n is defined to be the size of training data
+      |---+---+---+---+---+---+---+---+---+---+---+---|
+      |   |   |   |   |   |   |   |   |   |   |   |   |
+      |---+---+---+---+---+---+---+---+---+---+---+---|
+      |   |   |   | 
+      |---+---+---+
+
+
+    - `n-1` is used instead of `n` 
+      so that `start_i` won't exceed `n` when `n` is 
+      a multiple of `bs`
+
+      e.g. n=12, bs=3
+
+    - `(n-1)//bs` returns the largest integer less than `(n-1)/bs`
+      - `//` does integer devision, 
+        whereas `/` does floating point devision
+
+    - `for i in range((n-1)//bs +1)` sweeps integers 
+      from 0 to (n-1)//bs
+
+      #+BEGIN_SRC python
+        import sys
+        my_n=10
+        my_bs=3
+        print((my_n-1)//my_bs)
+
+        for i in range((my_n-1)//my_bs + 1):
+          print(i)
+
+        '''
+        3
+        0
+        1
+        2
+        3
+
+        '''
+      #+END_SRC
 
       #+BEGIN_SRC python
         n,m = x.train.shape
       #+END_SRC
+
+    - `xb = x_train[start_i:end_i]` returns the elements of `x_train`
+      from index `start_i` up to `end_i-1`
+
+      #+BEGIN_SRC python
+        #memo
+        my_array1 = [0,1,2,3]
+        my_array1[0:2]
+
+        '''
+        [0, 1]
+        '''
+      #+END_SRC
+
+    - unless `n` is a multiple of `bs`, the last batch
+      will be smaller than other batches.
+
+    - `x_train[start_i:end_i]` works fine even when `end_i`
+      exceeds the size of `x_train`
+      
+    #+BEGIN_SRC python
+      #memo
+      my_array1 = [0,1,2,3]
+      my_array1[0:10]
+
+      '''
+      [0, 1, 2, 3]
+      '''
+    #+END_SRC
 
     - `Model` is from `Model(nn.Module)` ver3
 
@@ -1379,7 +1466,7 @@
       all the calculation weight is involved, for calculating
       gradient, which costs lot of memoris
 
-*** Model(DummyModule) (=Model ver4 preliminary)
+*** Model(DummyModule) (=Model(nn.Module) ver4 preliminary)
     
     #+BEGIN_SRC python
         class Model(DummyModule):
@@ -1407,26 +1494,47 @@
                   for p in l.parameters(): yield p
     #+END_SRC
 
+    # DummyModule overview
     - `DummuModule` is for getting rid of the duplicate code
       for updating the parameters for each layer in 
       the 'basic training loop'
 
+      # redundant part of 'basic training loop' (fit ver0)
       #+BEGIN_SRC python
-        for l in model.layers:
-            if hasattr(l, 'weight'):
-                l.weight -= l.weight.grad * lr
-                l.bias   -= l.bias.grad   * lr
-                l.weight.grad.zero_()
-                l.bias  .grad.zero_()
+        loss.backward()
+        with torch.no_grad():
+            for l in model.layers:
+                if hasattr(l, 'weight'):
+                    l.weight -= l.weight.grad * lr
+                    l.bias   -= l.bias.grad   * lr
+                    l.weight.grad.zero_()
+                    l.bias  .grad.zero_()
       #+END_SRC
-    
-    - what `DummyModule` does is, when some properties such 
-      as l1, l1 is set on `self`, it will call __setattr__
-      which registers the property and its value to 
-      self._modules
 
-    - DummyModule also has a method `parameters` which returns
-      all the parameters registered to self._modules
+      # instead, would like to do this:
+      #+BEGIN_SRC python
+        loss.backward()
+        with torch.no_grad():
+            for p in model.parameters(): p -= p.grad * lr
+            model.zero_grad()
+      #+END_SRC
+
+    # DummyModule detail
+    - what `DummyModule` does is, when some properties such 
+      as l1, l1 is set on `self` (`Model` instance)
+      it will call __setattr__ which registers the property 
+      and its value to self._modules.
+
+    - `super().__setattr__(k,v)` calls `__setattr__` of
+      the super class of DummyModule, which is 
+      Python Object class.
+
+    - DummyModule also implements `parameters` which returns
+      all the parameters registered to self._modules, 
+      and hence enables us to loop through the parameters.
+
+    - `l.parameters()` calls `parameters` method
+      implemented on a PyTorch layer class such as `nn.Linear`
 
 *** Model(nn.Module) ver4
 
@@ -1442,11 +1550,25 @@
 
     - luckily, the 2 features(__setattr__ , parameters)
       of DummyModule is also implemented  on nn.Module, 
-      so instead of Model(DummyModule) ver4-preliminary,
-      we can use Model(nn.Module) ver4
+      so instead of Model(DummyModule), we can use
+      Model(nn.Module) ver4
 
 *** fit ver1
     #+BEGIN_SRC python
+
+      # Model(nn.Module) ver4
+      class Model(nn.Module):
+          def __init__(self, n_in, nh, n_out):
+              super().__init__()
+              self.l1 = nn.Linear(n_in,nh)
+              self.l2 = nn.Linear(nh,n_out)
+              
+          def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+
+      # create Model instance
+      model = Model(m, nh, 10)
+
+      # fit ver1
       def fit():
           for epoch in range(epochs):
               for i in range((n-1)//bs + 1):
@@ -1465,6 +1587,7 @@
     - this refacroring is for getting rid of the duplicate code
       for updating the parameters for each layer
 
+      # the duplicate code in 'basic training loop' (fit ver0)
       #+BEGIN_SRC python
         for l in model.layers:
             if hasattr(l, 'weight'):
@@ -1475,28 +1598,52 @@
       #+END_SRC
 
 *** Model(nn.Module) ver5
-
-     #+BEGIN_SRC python
-       class Model(nn.Module):
-           def __init__(self, layers):
-               super().__init__()
-               self.layers = layers
-               for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
-               
-           def __call__(self, x):
-               for l in self.layers: x = l(x)
-               return x
+    
+    #+BEGIN_SRC python
+      class Model(nn.Module):
+          def __init__(self, layers):
+              super().__init__()
+              self.layers = layers
+              for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
+              
+          def __call__(self, x):
+              for l in self.layers: x = l(x)
+              return x
      #+END_SRC
 
-     - a version of Model so that layer can be porvided dynamically
-       on calling __init__ of Model rather than hard coding it
-       as in Moodel(nn.Module) lesson9 ver2
+    # overview
+    - a version of Model so that we can use 'layers approach'
+      as in 'Model(nn.Module) ver2' rather than 
+      providing `n_in`, `nh`, `n_out` one by one
 
-     - the difference is, on __init__, if calls 
-       self.add_module, which is equivalent to __setattr__ of either 
-       `Model(nn.Module) ver4`, or `Moodel(DummyModule) ver4-preliminary`
+      However, different from 'Moodel(nn.Module) ver2',
+      'layers' can be set dynamically on calling `__init__`
+      
+      # Model ver2    
+      #+BEGIN_SRC python
+        class Model():
+            def __init__(self):
+                self.layers = [Lin(w1,b1), Relu(), Lin(w2,b2)]
+                self.loss = Mse()
+                
+            def __call__(self, x, targ):
+                for l in self.layers: x = l(x)
+                return self.loss(x, targ)
+            
+            def backward(self):
+                self.loss.backward()
+                for l in reversed(self.layers): l.backward()
+      #+END_SRC
 
-*** SequentialModel ver1
+    - with 'layers' approach, `__setattr__` won't be called anymore,
+      so we need to somehow register each layer as a module, 
+      and `self.add_module` inheritted from nn.Module does the job;
+      `self.add_module` is called on `__init__` and it registers
+      each module in `layers` in the same way as `__setattr__`
+      so that we can loop through the paramters by 
+      `model.parameters`
+
+*** SequentialModel (=Model ver6)
 
     #+BEGIN_SRC python
       class SequentialModel(nn.Module):
@@ -1509,10 +1656,11 @@
               return x
     #+END_SRC
 
+    # overview
     - it is for getting rid of cranky part of __init__ 
-      of Model(nn.Model) ver4 below by using nn.ModuleList
+      of 'Model(nn.Model) ver5' by using nn.ModuleList
 
-      # Model(nn.Model) ver4
+      # Model(nn.Model) ver5
       #+BEGIN_SRC python
         class Model(nn.Module):
             def __init__(self, layers):
@@ -1521,7 +1669,8 @@
                 for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
       #+END_SRC
 
-    - nn.Sequential is equivalent of `SequentialModel`
+*** nn.Sequential
+    - `nn.Sequential` is PyTorch equivalent of 'SequentialModel'  
 
 *** Optimizer ver1
 
@@ -1537,31 +1686,32 @@
               for p in self.params: p.grad.data.zero_()
     #+END_SRC
 
-    - we create optimizer to make parameter update more consice
-      in fit ver1
+    # overview
+    - we create optimizer to make the parameter update in fit ver1 
+      more concise by factoring out the loop which sweeps through
+      the model parameters
 
-# *** fit ver1
-#       #+BEGIN_SRC python
-#         def fit():
-#             for epoch in range(epochs):
-#                 for i in range((n-1)//bs + 1):
-#                     start_i = i*bs
-#                     end_i = start_i+bs
-#                     xb = x_train[start_i:end_i]
-#                     yb = y_train[start_i:end_i]
-#                     loss = loss_func(model(xb), yb)
+      # fit ver1
+      #+BEGIN_SRC python
+        def fit():
+            for epoch in range(epochs):
+                for i in range((n-1)//bs + 1):
+                    start_i = i*bs
+                    end_i = start_i+bs
+                    xb = x_train[start_i:end_i]
+                    yb = y_train[start_i:end_i]
+                    loss = loss_func(model(xb), yb)
 
-#                     loss.backward()
-#                     with torch.no_grad():
-#                         for p in model.parameters(): p -= p.grad * lr
-#                         model.zero_grad()
-#       #+END_SRC
+                    loss.backward()
+                    with torch.no_grad():
+                        # `parameters` is inheritted from `nn.Module`
+                        for p in model.parameters(): p -= p.grad * lr
+                        model.zero_grad()
 
-#       - params will be given by parameter() of Model class
-#         inheritting from nn.Module (equivalent of parameter method
-#         in DummyModule)
 
-#       - we will implement more general optimizer later in the lesson
+      #+END_SRC
+
+    - we will implement more general optimizer later in the lesson
 
 *** training loop ver2 (cnosidered as fit ver2), refactored with Optimizer
 
@@ -1584,7 +1734,6 @@
               opt.step()
               opt.zero_grad()
     #+END_SRC
-
 
 *** optim
     - optim is the pytorch equivalent of Optimizer implement above
@@ -1610,9 +1759,14 @@
           def __getitem__(self, i): return self.x[i],self.y[i]
     #+END_SRC
 
-    - Data set is for removing clunky part of fit ver2
-      for grabbing batch xb, yb
+    # overview
+    - `Dataset` pairs up two independent lists x and y
+      so that ds[i] returns a tuple (x[i], y[i])
 
+    - `Dataset` is for removing clunky part of fit ver2
+      for grabbing batch xb, yb
+      
+      # fit ver2
       #+BEGIN_SRC python
         for epoch in range(epochs):
             for i in range((n-1)//bs + 1):
@@ -1628,20 +1782,23 @@
                 opt.zero_grad()
       #+END_SRC
 
-    - __getitem__ returns a tuple
+    # detail
+    - __getitem__ returns a tuple (self.x[i], self.y[i])
 
-    - when range of index is passed like `train_ds[i*bs : i*bs+bs]`,
-      to __getitem__, it passes along that range of index, 
-      to return
-      self.x[i*bs : i*bs+bs], self.y[i*bs : i*bs+bs]
+    - when range of index, like `[i*bs : i*bs+bs]` as in train_ds[i*bs : i*bs+bs], 
+      is passed to `__getitem__`, it passes along that range of
+      index, and returns a tuple of part of arrays
+      (self.x[i*bs : i*bs+bs], self.y[i*bs : i*bs+bs])
 
 *** training loop ver3 (fit ver3), refactored with dataset
 
     #+BEGIN_SRC python
       #
+      loss_func = F.cross_entropy
+
+      #
       model,opt = get_model()
       train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
-
 
       #
       for epoch in range(epochs):
@@ -1655,7 +1812,9 @@
               opt.zero_grad()
     #+END_SRC
 
-*** DataLoader ver1
+    # detail
+
+*** home-made DataLoader ver1
 
     #+BEGIN_SRC python
       class DataLoader():
@@ -1664,7 +1823,13 @@
               for i in range(0, len(self.ds), self.bs): yield self.ds[i:i+self.bs]
     #+END_SRC
 
-    - DataLoader is for removing for loop in fit ver3
+    # overview
+    - `DataLoader` gives a part of `Dataset` instance
+
+    - `DataLoader` is for removing for-loop in fit ver3 by
+      returning a part of `DataSet` instance on calling `__iter__`
+
+      # fit ver3
       #+BEGIN_SRC python
         for epoch in range(epochs):
             for i in range((n-1)//bs + 1):
@@ -1677,7 +1842,7 @@
                 opt.zero_grad()
       #+END_SRC
 
-    - DataLoader accept an instance of DataSet implemented above,
+    - DataLoader accepts an instance of DataSet implemented above,
       and it will return xb & yb by 
 
       #+BEGIN_SRC python
@@ -1687,7 +1852,11 @@
 
       #+END_SRC
 
-*** fit ver4, refactored with DataLoader
+    # detail
+    `for i in range(0, len(self.ds), self.bs)` is equivalent to
+    `for i in range((n-1)//bs + 1)`
+
+*** fit ver4, refactored with home-made DataLoader ver1
 
     #+BEGIN_SRC python
       model,opt = get_model()
@@ -1702,7 +1871,16 @@
                   opt.zero_grad()
     #+END_SRC
 
-*** Sampler
+    # detail
+    - `get_model` is implemented above
+
+      #+BEGIN_SRC python
+        def get_model():
+            model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
+            return model, optim.SGD(model.parameters(), lr=lr)
+      #+END_SRC
+
+*** home-made Sampler
 
     #+BEGIN_SRC python
       class Sampler():
@@ -1712,9 +1890,43 @@
           def __iter__(self):
               self.idxs = torch.randperm(self.n) if self.shuffle else torch.arange(self.n)
               for i in range(0, self.n, self.bs): yield self.idxs[i:i+self.bs]
+
+      # how to use
+      x_train,y_train,x_valid,y_valid = get_data()
+      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
+
+      small_ds = Dataset(*train_ds[:10])
+      s = Sampler(small_ds,3,False)
+      [o for o in s]
+
+      ''''
+      [tensor([0, 1, 2]), tensor([3, 4, 5]), tensor([6, 7, 8]), tensor([9])]
+      ''''
     #+END_SRC
 
-    - torch.randperm generate array of integers from an integers
+
+    # overview
+    - `Sampler` is for factoring out & generalizing the logic
+      in `DataLoader` to specify indexes for slicing a `DataSet` instance
+      
+      # logic for creating indexes in fit ver3
+      #+BEGIN_SRC python
+        for i in range((n-1)//bs + 1):
+            xb,yb = train_ds[i*bs : i*bs+bs]
+      #+END_SRC
+
+    - `Sampler` retunrs an array of indexes on calling `__iter__`
+
+    - note that this 'home-made Sampler' will be used
+      only with 'home-made DataLoader'
+
+    # - there are difference between 'home-made Sampler'
+    #   and PyTorch version of `Sampler`.
+    #   - 'home-made' version returns a list of list of indexes
+    #   - PyTorch version returnsa a list of indexed
+
+    # detail
+    - torch.randperm generates an array of integers from an integers
 
       #+BEGIN_SRC python
         my_n = 10000
@@ -1726,31 +1938,15 @@
         '''
       #+END_SRC
 
-    - Sampler slice 'mini array' out of torch.randperm,
-      and the size of 'mini array' is equal to batch size
+    - `for i in range(0, self.n, self.bs)` is equivalent to
+      `for i in range((n-1)//bs + 1)`
 
-      #+BEGIN_SRC python
-        my_randperm = torch.randperm(len(small_ds))
-        '''
-        tensor([0, 9, 7, 6, 3, 5, 4, 8, 1, 2])
-        '''
 
-        s = Sampler(small_ds,3,False)
-        [o for o in s]
+    - `train_ds[:10]` returns a tuple (x[0:10], y[0:10])
 
-        '''
-        [tensor([0, 1, 2]), tensor([3, 4, 5]), tensor([6, 7, 8]), tensor([9])]
-        '''
-      #+END_SRC
-
-      - note that this 'home-made' `Sampler` will be used
-        only with 'home-made' `DataLoader`
-
-      - there are difference between 'home-made' `Sampler`
-        and PyTorch version of `Sampler`.
-        - 'home-made' version returns a list of list of indexed
-        - PyTorch version returnsa a list of indexed
-
+    - `*train_ds[:10]` unpacks the tuple above and pass it
+      to `Dataset`
+      
 *** home-made DataLoader ver2, collate
 
     #+BEGIN_SRC python
@@ -1766,24 +1962,29 @@
               for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
     #+END_SRC
 
+    # home-made DataLoader ver2 overview
+    - `home-made DataLoader` ver2 picks up a part of data set
+      randomly making use of `Sampler` instance whereas
+      `home-made DataLoader ver1` picks up a part of data set
+      in order
 
-    # DataLoader
-    - 'home-made' `DataLoader` is just for showing the 
+    - 'home-made DataLoader ver2' is just for showing the 
       idea of the implementation of PyTorch version of `DataLoader`,
       and will not be used later in the course.
 
     - PyTorch version of `DataLoader` is different 
-      from the 'home-made' version
-      - `sampler` should be a list of indexex, instead of 
-        a list of list of indexes
+      from the 'home-made DataLoader ver2 in that
+      # - `sampler` should be a list of indexes, instead of 
+      #   a list of list of indexes
 
       - `batch_size` must be passed to `DataLoader`
 
-    - the point of `DataLoader` ver2 is:
-      - now it picks up data set randomly
 
-    - `ds` in `DataLoader::__init__` is a `DataSet` instance, 
+    # home-made DataLoader ver2 detail
+    - `ds` in `DataLoader::__init__` is a `Dataset` instance, 
       and so `self.ds[i]` is a tuple
+      
+      # Dataset
       #+BEGIN_SRC python
         class Dataset():
               def __init__(self, x, y): self.x,self.y = x,y
@@ -1791,61 +1992,88 @@
               def __getitem__(self, i): return self.x[i],self.y[i]
       #+END_SRC
 
-    - `sampler` is a list of list of indexes for picking up elements
-      from `ds` for a batch
+    - `sampler` is a `Sampler` instance which returns
+      an array of indexes on callint `__iter__`
 
-
-    - `collate_fn` combines the tuples in the list
+    - `collate_fn` is a function like `collate` implmented above,
+      and it combines the tuples in the list
       `[self.ds[i] for i in s]` and returns
       a tuple of 2 tensors (one is for x, and the other is for y)
-
-    # collate
-    - zip(*b) returns a tuple of tuples
-      https://www.youtube.com/watch?v=VbBozykILZ0
-
-    - `b` (= [self.ds[i] for i in s) in `collate` is
-      a list of tuples which looks like `my_b` below
-
-    #+BEGIN_SRC python
-      my_b = [train_ds[3], train_ds[1], train_ds[2]]
-      type(my_b), type(train_ds[0])
-      '''
-      (list, tuple)
-      '''
-    #+END_SRC
-
-    - unpacking b in `zip(*b)`;
-      unpacking operator(single asterisk *)
-      decompose the list (of tuples) `b`
-      and pass the elements(tuples) to zip,  so zip(*b) is
-      equivalent to below
-
-      #+BEGIN_SRC python
-        zip(train_ds[3], train_ds[1], train_ds[2])
-      #+END_SRC
-
-    - what zip does when it accepts (tuple1, tuple2, tuple3);
-      it stacks tuples vertically and make new tuples by grouping
-      elements vertically, then return them as yet another tuple
-
-
-      | tuple1 | t1a | t1b |
-      | tuple2 | t2a | t2b |
-      | tuple3 | t3a | t3b |
-      | ...    | ... | ... |
-      | tupleN | tNa | tNb |
-
-      => 
-      
-      (t1a, t2a, t3a, ..., tNa), (t1b, t2b, t3b, ..., tNb)
-
-    - `torch.stack(xs)` creates a tensor out of tuple `xs`
-      by stacking them together
 
     - note that `DataLoader` itself does not do transform.
       it is `ds` passed that could do transform.
       especially, `ItemList`, `ImageItemList` does transform, 
       and `DataSet` does NOT do transform
+
+    # collate overview
+    - `collate` 'batch-ify' a list of tuples;
+      it creates a batch of x and corresponding y 
+      out of a list of tuples of xi and yi like
+      [(x1,y1), (x2,y2), ...]
+
+    - the batch consists of a tensor for xs and a tensor for ys;
+
+    # collate detail
+    - `b` is a list of tuples which looks like `my_b` below
+
+      #+BEGIN_SRC python
+        my_b = [train_ds[3], train_ds[1], train_ds[2]]
+        type(my_b), type(my_b[0])
+
+        '''
+        (list, tuple)
+        '''
+      #+END_SRC
+
+    - each tuple in list `b` is a pair of xi and yi
+      (input and its label)
+
+      #+BEGIN_SRC python
+        my_b[0][0].size(), my_b[0][1]
+
+        '''
+        torch.Size([784]), tensor(1)
+        '''
+      #+END_SRC
+
+    - `*` as in `zip(*b)`:
+      the single asterisk * is called 'unpacking operator', 
+      and it 'argument-ify' a list;
+      it passes the elements in a list to a function 
+      as its argument.
+
+      For example, 
+      #+BEGIN_SRC python
+        my_b = [train_ds[3], train_ds[1], train_ds[2]]
+
+        # below two are equivalent
+        zip(*my_b) 
+        zip(train_ds[3], train_ds[1], train_ds[2])
+      #+END_SRC
+
+    - zip as in `zip(*b)`:
+      https://www.youtube.com/watch?v=VbBozykILZ0
+
+      `zip` accepts a list of tupples, and collects the 
+      elements in 'x-axis', 'y-axis', 'z-axis', so on
+      as tuples
+
+      For example, when `zip` is passed (tuple1, tuple2, tuple3),
+      it stacks tuples vertically and make new tuples by grouping
+      elements vertically, then return them as yet another tuple
+
+      | tuple1: | t1x | t1y |
+      | tuple2: | t2x | t2y |
+      | tuple3: | t3x | t3y |
+      | ...     | ... | ... |
+      | tupleN: | tNx | tNy |
+
+      => 
+      
+      (t1x, t2x, t3x, ..., tNx), (t1y, t2y, t3y, ..., tNy)
+
+    - `torch.stack(xs)` creates a tensor out of tuple `xs`
+      by stacking them together
 
 *** validation loss
 
@@ -1882,6 +2110,28 @@
       and nn.Dropout to ensure appropriate behaviour 
       for these different phases.
 
+*** fit ver5 (factor out arguments from fit ver4)
+    #+BEGIN_SRC python
+      def get_model():
+          model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
+          return model, optim.SGD(model.parameters(), lr=lr)
+
+      model,opt = get_model()
+
+      def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
+          for epoch in range(epochs):
+              for xb,yb in train_dl:
+                  pred = model(xb)
+                  loss = loss_func(pred, yb)
+                  loss.backward()
+                  opt.step()
+                  opt.zero_grad()
+    #+END_SRC
+
+    # overview
+    - factor out all the things necessary inside fit ver4
+      as arguments of `fit`
+
 *** get_dls ver1
 
     #+BEGIN_SRC python
@@ -1890,7 +2140,7 @@
                   DataLoader(valid_ds, batch_size=bs*2, **kwargs))
     #+END_SRC
 
-    - `get_dls` is just a convinent helper for getting tuple of 
+    - `get_dls` is just a convinent helper for getting a tuple of 
       (DL for train_ds, DL for valid_ds)
 
     - `DataLoader` is from `PyTorch`, and not the 'home-made' `DataLoader`
@@ -1934,9 +2184,6 @@
       !cp /content/exp/nb_03.py /content/exp.nb_03.py
     #+END_SRC
 
-    
-
-
 *** getting data
 
     #+BEGIN_SRC python
@@ -1963,28 +2210,6 @@
 
       #+END_SRC
 
-
-*** fit ver5 (factor out arguments from  fit ver4)
-    #+BEGIN_SRC python
-      def get_model():
-          model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,10))
-          return model, optim.SGD(model.parameters(), lr=lr)
-
-      model,opt = get_model()
-
-      def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
-          for epoch in range(epochs):
-              for xb,yb in train_dl:
-                  pred = model(xb)
-                  loss = loss_func(pred, yb)
-                  loss.backward()
-                  opt.step()
-                  opt.zero_grad()
-    #+END_SRC
-
-    - fit ver5 can be better by packaging up the arguments together
-      using factory method rather than asking user to 
-      prepair things necessary by themselves
 
 *** DataBunch
     #+BEGIN_SRC python
@@ -2072,6 +2297,11 @@
           return tot_loss/nv, tot_acc/nv
     #+END_SRC
 
+    # overview
+    - with fit ver6, the things necessary
+      (model, loss_func, opt, train_dl, valid_dl) are
+      packaged up as `learner`
+
     - since now Learner object contains all of
       (model, opt, loss_func, data),
       now the signature of fit is;
@@ -2092,7 +2322,7 @@
               for b in train_dl: one_batch(*b)
     #+END_SRC
 
-    - with fit ver7, training logic of fit ver6 is factored out
+    - with fit ver7, training logic of fit ver4 is factored out
       as `one_batch`
 
 *** fit ver8
@@ -2123,8 +2353,11 @@
           cb.after_fit()
     #+END_SRC
 
-    - with fit ver8, `for b in train_dl: one_batch(*b)` in fit ver7
-      is factored out as all batch
+    # overview
+    - as fit ver7, we factor out the training logic of fit ver6 
+
+    - with fit ver8, training logic of fit ver6
+      is factored out as `all_batches` and `one_batch`
 
     - also, following callbacks are called
       - cb.begin_fit(learn)    (beggining of fit)
@@ -2134,7 +2367,6 @@
 
     - if ..or not ... : break
       
-
 *** Callback class ver1
 
     #+BEGIN_SRC python
@@ -2311,7 +2543,6 @@
     - TestCallback is registered to the "callback oject group"
       of CallbackHandler just by initializing CallbackHandler instance
       with TestCallback
-
 
 *** listify
 
@@ -2551,8 +2782,6 @@
 
     #+END_SRC
 
-        
-
 *** Callback ver2
       #+BEGIN_SRC python
         # Callback ver2
@@ -2650,7 +2879,6 @@
         '''
       #+END_SRC
 
-
 *** TrainEvalCallback
 
     #+BEGIN_SRC python
@@ -2684,7 +2912,6 @@
 
     - self.in_train of the Runner instance will be refered 
       inside AvgStatsCallback
-
 
 *** AvgStats & AvgStatsCallback ver1
 
@@ -3008,8 +3235,6 @@
         ]
       #+END_SRC
 
-      
-
 *** sched_lin (that does currying)
 
     #+BEGIN_SRC python
@@ -3159,7 +3384,6 @@
       !cp /content/exp/nb_05.py /content/exp.nb_05.py
     #+END_SRC
     
-
 *** Callback ver3
 
     #+BEGIN_SRC python
@@ -3313,7 +3537,6 @@
         except CancelTrainException: self('after_cancel_train')
       #+END_SRC
 
-
 *** _AvgStatsCallback ver2 (same as ver1?)
 
     #+BEGIN_SRC python
@@ -3421,7 +3644,6 @@
             [Wm+1, Bm+1 ..., Wn, Bn]
         ]
       #+END_SRC      
-
 
 
 *** LR_Find ver1
@@ -3726,7 +3948,6 @@
           def begin_batch(self): self.run.xb,self.run.yb = self.xb.cuda(),self.yb.cuda()
     #+END_SRC
 
-
 *** conv2d
 
     #+BEGIN_SRC python
@@ -3761,7 +3982,6 @@
       learn,run = get_runner(model, data, lr=0.4, cbs=cbfs)
 
     #+END_SRC
-
 
 *** get_cnn_layers ver1 & get_cnn_model ver2
 
@@ -3836,7 +4056,6 @@
           learn = Learner(model, opt, loss_func, data)
           return learn, Runner(cb_funcs=listify(cbs))
     #+END_SRC
-
 
 
 *** SequentialModel ver2
@@ -3972,7 +4191,6 @@
       #+END_SRC
 
 
-
 *** Hooks
 
     #+BEGIN_SRC python
@@ -4015,7 +4233,6 @@
 
     - using `with`, the Hooks instance will be destroyed
       after the code is exceuted.
-
 
 *** how to interpret mean & std historys for layers with initialization
     # mean history
@@ -4071,7 +4288,6 @@
     - so, l[0] is a single nn.Conv2d instance
 
       
-
 *** TODO creating histogram
 
     #+BEGIN_SRC python
@@ -4117,7 +4333,6 @@
       the history of the proportion of the occurences of 
       the fitst bin to the sum of the occurences of all the bins.
 
-
 *** GeneralRelu, get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1
 
     #+BEGIN_SRC python
@@ -4162,7 +4377,6 @@
 
     - with GeneralRelu, we can improve the ratio of non-zero
       activation elements in an activation tensor
-
 
 
 *** TODO leaky relu
@@ -4393,7 +4607,6 @@ class BatchNorm(nn.Module):
         return x*self.mults + self.adds
 ```
 
-
 *** conv_layer ver2
 
     #+BEGIN_SRC python
@@ -4470,7 +4683,6 @@ class BatchNorm(nn.Module):
 
       #+END_SRC
 
-
 *** conv_layer ver3
 
     #+BEGIN_SRC python
@@ -4515,7 +4727,6 @@ class BatchNorm(nn.Module):
           return nn.Sequential(*layers)
     #+END_SRC
 
-    
 *** InstanceNorm
 
     #+BEGIN_SRC python
@@ -4596,7 +4807,6 @@ class BatchNorm(nn.Module):
           if bn: layers.append(RunningBatchNorm(nf))
           return nn.Sequential(*layers)
     #+END_SRC
-
 
 *** TODO RunningBatchNorm by Joseph
     https://forums.fast.ai/t/questions-about-runningbatchnorm-in-lesson-10/56331
@@ -4969,7 +5179,6 @@ class BatchNorm(nn.Module):
             return [o]
       #+END_SRC
 
-
 *** _get_files
 
     #+BEGIN_SRC python
@@ -5112,7 +5321,6 @@ class BatchNorm(nn.Module):
                 return self._get(res)
       #+END_SRC
     
-
 *** grandparent_splitter, split_by_func
 
     #+BEGIN_SRC python
@@ -5860,7 +6068,6 @@ class BatchNorm(nn.Module):
 
       
 
-
 *** using Optimizer ver2
 
     #+BEGIN_SRC python
@@ -6014,7 +6221,6 @@ class BatchNorm(nn.Module):
       sgd_opt = partial(Optimizer, steppers=[weight_decay, sgd_step])
     #+END_SRC
 
-
 *** Stat
     #+BEGIN_SRC python
       #export
@@ -6136,7 +6342,6 @@ class BatchNorm(nn.Module):
                         stats=AverageGrad(), wd=0.01)
     #+END_SRC
 
-    
 *** TODO L2 Regularrization vs BatchNorm
     - Suppose we set a very large weight decay of 1e6.
       Now doing following gives us the same activation, making the weight penalty term negligible
@@ -6148,7 +6353,6 @@ class BatchNorm(nn.Module):
       https://vitalab.github.io/article/2020/01/24/L2-reg-vs-BN.html
       https://blog.janestreet.com/l2-regularization-and-batch-norm/
       https://www.semion.io/doc/l2-regularization-versus-batch-and-weight-normalization
-
 
 *** plot_mom
 
@@ -6622,7 +6826,6 @@ class BatchNorm(nn.Module):
       #+END_SRC
 
 
-
 *** get_learner ver1
 
     #+BEGIN_SRC python
@@ -6982,7 +7185,6 @@ class BatchNorm(nn.Module):
               return ((w-size[0])//2, (h-size[1])//2, (w+size[0])//2, (h+size[1])//2)
     #+END_SRC
 
-
 *** apply RandomResizedCrop for NLP
     - 2:07:10
 
@@ -7056,7 +7258,6 @@ class BatchNorm(nn.Module):
               src_corners = tuple([(int(o[0].item()), int(o[1].item())) for o in src_corners])
               return warp(x, self.size, src_corners, resample=self.resample)
     #+END_SRC
-
 
 
 *** faster conversion to float_tensor
@@ -7313,7 +7514,6 @@ class BatchNorm(nn.Module):
       - in the end of `MixUp::loss_func`, we reduce the 
         rank1 tensor for the loss for a batch of mixedup images
         by `reduce_loss` and return.
-
 
 *** get_learner ver2
 
@@ -7591,7 +7791,6 @@ class BatchNorm(nn.Module):
                   for param in pg: param.requires_grad_(True)
           return model_pgs, master_pgs
     #+END_SRC
-
 
 
 *** to_master_grads ver2
@@ -8048,7 +8247,6 @@ class BatchNorm(nn.Module):
 
     
 
-
 *** get_batch ver2
 
     #+BEGIN_SRC python
@@ -8131,7 +8329,6 @@ class BatchNorm(nn.Module):
       [0.3, 0.2, 0.5]
       '''
     #+END_SRC
-
 
 *** cnn_learner
 
@@ -9561,7 +9758,6 @@ class BatchNorm(nn.Module):
     - `next(self.parameters()).new(1, self.bs, nh).zero_()`
       creates a tensor filled by '1' with the size
       torch.Size([self.bs, nh])
-
 
 *** LinearDecoder
 
