@@ -2227,7 +2227,7 @@
 
     - DataBunch bundle together training DL & validation DL
 
-*** get_model ver2
+*** get_model ver2, Learner
 
     #+BEGIN_SRC python
       # get_dls ver1
@@ -2257,14 +2257,7 @@
       number of input, and the size of the final output
       for creating model
 
-*** Learner
-
-    #+BEGIN_SRC python
-      class Learner():
-          def __init__(self, model, opt, loss_func, data):
-              self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
-    #+END_SRC
-
+    # Learner overview
     - Learner is just a storage containing (model, opt, loss_func, data)
       to be passed to fit ver5, as is mentioned above
 
@@ -2300,11 +2293,10 @@
     # overview
     - with fit ver6, the things necessary
       (model, loss_func, opt, train_dl, valid_dl) are
-      packaged up as `learner`
+      packaged up as `learn`
 
-    - since now Learner object contains all of
-      (model, opt, loss_func, data),
-      now the signature of fit is;
+    - since now `learn` contains all of
+      (model, opt, loss_func, data),now the signature of fit is;
       `fit(epochs, learn)`
       
 *** fit ver7
@@ -2322,8 +2314,13 @@
               for b in train_dl: one_batch(*b)
     #+END_SRC
 
+    # overview
     - with fit ver7, training logic of fit ver4 is factored out
       as `one_batch`
+
+    - fit ver7 is just for illustrating how to factor out 
+      training logic, and omitting features in fit ver6. 
+      These features will be included again in fit ver8
 
 *** fit ver8
 
@@ -2359,13 +2356,16 @@
     - with fit ver8, training logic of fit ver6
       is factored out as `all_batches` and `one_batch`
 
-    - also, following callbacks are called
+    - with fit ver8, several callbacks are called additionally
       - cb.begin_fit(learn)    (beggining of fit)
       - cb.begin_epoch(epoch)  (beggining of epoch)
       - cb.begin_validate()    (beggining of validate)
       - cb.after_fit()         (end of fit)
 
     - if ..or not ... : break
+
+    # detail
+    - `cb` is an instance of `Callback` which will be defined later.
       
 *** Callback class ver1
 
@@ -2390,18 +2390,18 @@
           def after_step(self): return True
     #+END_SRC
 
-    - `Callback` class implements the callbacks called
-      inside fit ver8
+    # overview
+    - `Callback` class defines the callback methods called
+      inside fit ver8 (begin_fit, after_fit, etc)
 
-    - callbacks(begin_fit, begin_batch, etc) defined 
-      inside `Callback` class just does minimum things;
-      - initialize property such as `learn`, `epoch`
+    - callback methods(begin_fit, begin_epoch, etc) 
+      of `Callback` class does minimum things such as
+      initializing properties such as `learn`, `epoch`,
+      and more concrete logics will be implemented inside 
+      callback methods of a subclass inheritting `Callback` class.
 
-    - also ,each callback return a boolean value to signal
+    - also ,each callback returns a boolean value to signal
       either or not to stop;
-
-    - more logics are implemented inside a concrete
-      callback class inheritting `Callback` class 
 
 *** CallbackHandler
 
@@ -2466,14 +2466,18 @@
               finally: self.learn.stop = False
     #+END_SRC
 
-    - CallbackHandler bundles callbacks into a "callback instance group", 
-      and for each of callback method (begin_fit, begin_batch, etc)
-      it sweeps through and call the corresponding method of
-      all the Callback object registered to the "callback instance group"
+    # overview
+    - `CallbackHandler` bundles `Callback` subclass instances
+      into `cbs` ("callback instance group"), and for each of 
+      callback methods (begin_fit, begin_batch, etc),
+      it sweeps through all the `Callback` subclass instances
+      registered to the "callback instance group", and call
+      the corresponding method.
 
-    - return value of a callback method (begin_fit, begin_batch, etc)
+    - the return value of a callback method (begin_fit, begin_batch, etc)
       is updated everytime the corresonding callback method of a
-      callback object in the "callback instance group" is called,
+      `Callback` subclass instance in the "callback instance group" 
+      is called.
 
 *** putting (fit ver8, CallbackHandler, Callback) all together
 
@@ -2503,7 +2507,7 @@
               if cb.do_stop() or not cb.after_epoch(): break
           cb.after_fit()
 
-      #
+      # example of `Callback` subclass
       class TestCallback(Callback):
           def begin_fit(self,learn):
               super().begin_fit(learn)
@@ -2531,7 +2535,8 @@
       '''
     #+END_SRC
 
-    - TestCallback implements simple callbacks as follows;
+    # TestCallback overview 
+    - `TestCallback` implements simple callbacks as follows;
       - begin_fit: 
         initialize n_iter which keeps track of the index of the current step
 
@@ -2540,9 +2545,9 @@
         when the current step exceeds 10, which results in throwing away the rest of the batches
         and stop the training
 
-    - TestCallback is registered to the "callback oject group"
-      of CallbackHandler just by initializing CallbackHandler instance
-      with TestCallback
+    - `TestCallback` is registered to the "callback instance group"
+      of `CallbackHandler` just by initializing `CallbackHandler`
+      instance with `TestCallback` instance
 
 *** listify
 
@@ -2625,94 +2630,110 @@
                   if f and f(): return True
               return False
     #+END_SRC
-    - with Runner ver1 (=fit ver9), `fit` is a method defined on Runner class
+    
+    # overview
+    - with `Runner` ver1 (=fit ver9), 
+      `fit`, `all_batch`, `one_batch` are methods defined
+      on `Runner` class
 
-    - with Runner ver1 (=fit ver9), Learner instance which contains
-      (model, opt, loss_func, data) is passed dynamically 
-      to `fit` method, which is SAME AS fit ver8.
+    - with `Runner` ver1 (=fit ver9), a `learn` (a `Learner` instance)
+      which  contains (model, opt, loss_func, data) is passed 
+      dynamically to `fit` method, which is SAME AS fit ver8.
 
     - However, with Runner ver1 (fit ver9), 
-      `fit` function sets `self.learn` of the Runner instance 
-      to the Learner instance 
+      `fit` method makes the `Learner` instance as the property
+      of the `Runner` instance by `self.epochs,self.learn = epochs,learn`
 
-    - this way, (model, opt, loss_func, data) becomes accessible
-      from `one_batch`, `all_batches`, etc and `fit` itself
-      ,through special @property methods (def opt, def model, etc)
-      which delegates to property of `self.learn`
+    - With this and special @property methods (def opt, def model, etc)
+      (model, opt, loss_func, data) of `learn`
+      becomes accessible from within `one_batch`, `all_batches`
+      and `fit` itself as if it is a property of the `Runner`
+      instance; `self.model`, `self.opt`
 
-    - with fit ver9, CallbackHandler instance is NOT 
-      passed to `fit`.
+    - with fit ver9, `CallbackHandler` instance which bundles
+      `Callback` subclass instances is NOT passed to `fit`.
 
-    - Instead, callbacks are directly passed in either of
-      the 2 ways below:
-      - 1. callback CONSTRUCTORs are passed as a list
+    - Instead, `Callback` subclass instances are directly
+      passed in either of the 2 ways below:
+      - 1. `Callback` subclass CONSTRUCTORs are passed as a list
           to `cb_funcs` argument of  __init__ of Runner class
 
-      - 2. callback INSTANCEs are passed to `cbs` argument of
+      - 2. `Callback` subclass INSTANCEs are passed to `cbs` argument of
            __init__ of Runner class.
 
       (NOTE: the class of each of the callback instances 
-             is inheritting Callback ver2, not Callback ver1)
+      is inheritting Callback ver2, not Callback ver1)
 
     - with the 1st way, Inside __init__ of Runner class, an instance
-      of each callback class is created, and 2 things are done 
-      for each of the callback instance;
+      of each `Callback` subclass is created, and 2 things are done 
+      for each of the `Callback` subclass instances;
 
-      - 1. append a callback instance to `self.cbs`
-        which is later used to sweep through the callback instances
-        to call 'begin_epoch', 'begin_batch', etc of 
-        each callback instance
-        (NOTE: TrainEvalCallback is appended as a default callback)
-
-      - 2. auto-register itself as a property of the  Runner
+      - 1. auto-register itself as a property of the  Runner
         instance with key equal to `name` property of the 
-        callback instance. This is a benefit of passing
-        a callback as an CONSTRUCTOR
+        `Callback` subclass instances. 
+        This is a benefit of passing as an CONSTRUCTOR
         
         example1: learn.Recorder in real fastai 
         (`Learn` in real fastai is equivalent to `Runner`)
 
         example2: run.avg_stats
 
-    #+BEGIN_SRC python
-      def __init__(self, cbs=None, cb_funcs=None):
-      cbs = listify(cbs)
-      cbf in listify(cb_funcs)
-      cb = cbf()
-      setattr(self, cb.name, cb)
-      cbs.append(cb)
-    #+END_SRC
+      - 2. append the instance of the `Callback` subclass to `self.cbs`
+        which is later used when sweeping through 
+        the `Callback` subclass instances and call 
+        'begin_epoch', 'begin_batch' of each
+        (NOTE: TrainEvalCallback is appended as a default callback)
 
-    - now, what happens when callbacks methods such as
-      begin_epoch, begin_batch are called 
-      as self('begin_epoch), or self('begin_batch'),
-      when calling `all_batches`, `one_batch` in `fit`
+        #+BEGIN_SRC python
+          def __init__(self, cbs=None, cb_funcs=None):
+          cbs = listify(cbs)
+          cbf in listify(cb_funcs)
+          cb = cbf()
+          setattr(self, cb.name, cb)
+          cbs.append(cb)
+        #+END_SRC
 
-    - self('begin_batch') calls __call__ method of Runner class
+    - with `Callback` subclass instances being set as a property
+      of `Runner` instance, a callback such as `begin_fit`
+      of each `Callback` subclass instance is called 
+      as `self('begin_fit')` through `__call__` method
 
-    - then, inside __call__ methods, it sweeps through 
-      the callback instances stored in `self.cbs` according to 
-      its `_order` property, and for each of the callback instances
-      it grabs the callback method (begin_epoch, begin_batch, etc)
+    - when a callback is passed as a CONSTRUCTOR,
+      the callback instance created during init becomes
+      available as the property of the `Runner` instance,
+      whereas when a callback is passed as an object,
+      we need to refer to the callback object to
+      refers to statistics which the callback calculates
 
-    - And if the callback method exists, it is called
-
+      # 2 ways to pass an instance of a `Callback` subclass
       #+BEGIN_SRC python
-        # cb_name = 'begin_epoch', 'begin_batch', etc
+        # pass as an object
+        learn = Learner(*get_model(data), loss_func, data)
+        stats = AvgStatsCallback([accuracy])
+        run = Runner(cbs=stats)
+        run.fit(2, learn)
 
-        def __call__(self, cb_name):
-            for cb in sorted(self.cbs, key=lambda x: x._order):
-                f = getattr(cb, cb_name, None)
-                if f and f(): return True
-            return False
+        loss,acc = stats.valid_stats.avg_stats
+        assert acc>0.9
+        loss,acc
+
+        # pass as a constructor
+        acc_cbf = partial(AvgStatsCallback,accuracy)
+        run = Runner(cb_funcs=acc_cbf)
+        run.fit(1, learn)
+        run.avg_stats.valid_stats.avg_stats
+
       #+END_SRC
 
-    - other parts of the logic of `fit` ver9 is almost same
-      as `fit` ver8, but with `fit` ver9, it call
-      cb.set_runner(self) for each of the callback instances
-      to store the reference to the Runner instance
 
-    - `fit`, is implemented to run all_batches() unless
+        
+    # `fit` detail
+    - `cb.set_runner` store the reference to the Runner instance
+      on each `Callback` subclass instance
+
+    - `self('begin_fit')`, `self('begin_epoch')` calls `__call__` method
+
+    - `fit` is implemented to run all_batches() unless
       the return value of `self('begin_epoch')` is `true`.
       If the return value of self('begin_epoch') returns `false`
       it keeps going
@@ -2722,65 +2743,16 @@
       - if a function returns true, `fit` stops
       - if a function does not return any value, 
         or explicitly returns `false`, `fit` keeps going
+      
+    # `__call__` detail
+    - it sweeps through the `Callback` subclass instances 
+      stored in `self.cbs` according to its `_order` property,
+      and for each of the `Callback` subclass instances, 
+      it grabs the callback method (begin_epoch, begin_batch, etc)
+      If the callback method exists, it is called.
+      And if the return value of the callback method is `True`,
+      it returns `True`.
 
-      #+BEGIN_SRC python
-        def fit(self, epochs, learn):
-            self.epochs,self.learn = epochs,learn
-
-            try:
-                for cb in self.cbs: cb.set_runner(self)
-                if self('begin_fit'): return
-                for epoch in range(epochs):
-                    self.epoch = epoch
-                    if not self('begin_epoch'): self.all_batches(self.data.train_dl)
-
-                    with torch.no_grad(): 
-                        if not self('begin_validate'): self.all_batches(self.data.valid_dl)
-                    if self('after_epoch'): break
-                
-            finally:
-                self('after_fit')
-                self.learn = None
-
-      #+END_SRC
-
-    - In summary, 
-      - callacks are passed to Runner constructor
-
-      - Learn instance containing (model, opt, loss_func, data)
-        is passed to `fit` function of an Runner instance
-
-      - callbacks are registered to self.cbs, and swooped through
-        when calling self('begin_fit'), self('self_batch'), etc
-        inside `fit`, `one_batch` function
-
-      - also, when a callback is passed as a CONSTRUCTOR,
-        the callback instance created during init becomes
-        available as the property of the `Runner` instance,
-        whereas when a callback is passed as an object,
-        we need to refer to the callback object to
-        refers to statistics which the callback calculates
-
-
-    #+BEGIN_SRC python
-      # when passed as a constructor
-      learn = Learner(*get_model(data), loss_func, data)
-      stats = AvgStatsCallback([accuracy])
-      run = Runner(cbs=stats)
-      run.fit(2, learn)
-
-      loss,acc = stats.valid_stats.avg_stats
-      assert acc>0.9
-      loss,acc
-
-      # when passed as an object
-      acc_cbf = partial(AvgStatsCallback,accuracy)
-      run = Runner(cb_funcs=acc_cbf)
-      run.fit(1, learn)
-      run.avg_stats.valid_stats.avg_stats
-
-
-    #+END_SRC
 
 *** Callback ver2
       #+BEGIN_SRC python
