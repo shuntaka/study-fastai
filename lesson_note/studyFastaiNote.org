@@ -2632,6 +2632,9 @@
     #+END_SRC
     
     # overview
+    - `Runner` ver1 (=fit ver9) is for removing redundant
+      reference to `cb` in `fit` ver8
+
     - with `Runner` ver1 (=fit ver9), 
       `fit`, `all_batch`, `one_batch` are methods defined
       on `Runner` class
