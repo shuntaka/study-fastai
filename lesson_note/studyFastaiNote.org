@@ -2072,7 +2072,8 @@
       
       (t1x, t2x, t3x, ..., tNx), (t1y, t2y, t3y, ..., tNy)
 
-    - `torch.stack(xs)` creates a tensor out of tuple `xs`
+    - `torch.stack` "tensor-ify" a tuple;
+      `torch.stack(xs)` converts a tuple (`xs`) to a rank2 tensor
       by stacking them together
 
 *** validation loss
@@ -2209,7 +2210,6 @@
         def normalize(x, m, s): return (x-m)/s
 
       #+END_SRC
-
 
 *** DataBunch
     #+BEGIN_SRC python
@@ -2367,7 +2367,7 @@
     # detail
     - `cb` is an instance of `Callback` which will be defined later.
       
-*** Callback class ver1
+*** Callback ver1
 
     #+BEGIN_SRC python
       class Callback():
@@ -2633,30 +2633,34 @@
     
     # overview
     - `Runner` ver1 (=fit ver9) is for removing redundant
-      reference to `cb` in `fit` ver8
+      reference to `cb` in `fit` ver8 when calling callbacks
+      and instead call them as `self('begin_fit')`,
+      `self('begin_batch')`, etc
 
     - with `Runner` ver1 (=fit ver9), 
       `fit`, `all_batch`, `one_batch` are methods defined
       on `Runner` class
 
+    # overview > `Learner` instance
     - with `Runner` ver1 (=fit ver9), a `learn` (a `Learner` instance)
       which  contains (model, opt, loss_func, data) is passed 
       dynamically to `fit` method, which is SAME AS fit ver8.
 
-    - However, with Runner ver1 (fit ver9), 
+    - however, with Runner ver1 (fit ver9), 
       `fit` method makes the `Learner` instance as the property
       of the `Runner` instance by `self.epochs,self.learn = epochs,learn`
 
-    - With this and special @property methods (def opt, def model, etc)
+    - with this and special @property methods (def opt, def model, etc)
       (model, opt, loss_func, data) of `learn`
       becomes accessible from within `one_batch`, `all_batches`
       and `fit` itself as if it is a property of the `Runner`
       instance; `self.model`, `self.opt`
 
+    # overview > callbacks
     - with fit ver9, `CallbackHandler` instance which bundles
       `Callback` subclass instances is NOT passed to `fit`.
 
-    - Instead, `Callback` subclass instances are directly
+    - instead, instances of a `Callback` subclass are directly
       passed in either of the 2 ways below:
       - 1. `Callback` subclass CONSTRUCTORs are passed as a list
           to `cb_funcs` argument of  __init__ of Runner class
@@ -2667,7 +2671,7 @@
       (NOTE: the class of each of the callback instances 
       is inheritting Callback ver2, not Callback ver1)
 
-    - with the 1st way, Inside __init__ of Runner class, an instance
+    - with the 1st way, inside __init__ of Runner class, an instance
       of each `Callback` subclass is created, and 2 things are done 
       for each of the `Callback` subclass instances;
 
@@ -2727,12 +2731,15 @@
         run.avg_stats.valid_stats.avg_stats
 
       #+END_SRC
-
-
         
     # `fit` detail
-    - `cb.set_runner` store the reference to the Runner instance
-      on each `Callback` subclass instance
+    - `cb` is an instance of a subclass of `Callback` ver2 which will be
+      implmeneted later.
+
+    - `cb.set_runner` store the reference to the `Runner` instance 
+      on each instance of `Callback` ver2 subclass in order for
+      them to record statistics they calculate on the `Runner`
+      instance.
 
     - `self('begin_fit')`, `self('begin_epoch')` calls `__call__` method
 
@@ -2756,7 +2763,6 @@
       And if the return value of the callback method is `True`,
       it returns `True`.
 
-
 *** Callback ver2
       #+BEGIN_SRC python
         # Callback ver2
@@ -2778,6 +2784,7 @@
                 return camel2snake(name or 'callback')
       #+END_SRC
 
+    # overview
     - Callback ver2 does NOT force a callback class to implement
       callback methods (`begin_fit`, `begin_batch`, etc) any more,
       and instead, each callback class implements only those 
