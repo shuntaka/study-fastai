@@ -2785,27 +2785,28 @@
       #+END_SRC
 
     # overview
-    - Callback ver2 does NOT force a callback class to implement
-      callback methods (`begin_fit`, `begin_batch`, etc) any more,
-      and instead, each callback class implements only those 
-      necessary.
+    - Callback ver2 does NOT force a subclass of `Callback` ver2
+      to implement callback methods (`begin_fit`, `begin_batch`, etc) any more,
+      and instead, each subclass implements only those necessary.
 
-    - With Callback ver2, a callback instance
-      stores reference to Runner instance in `self.run`
+    - with Callback ver2, an instance of `Callback` subclass
+      stores reference to the `Runner instance` to which 
+      it is passed.
 
-    - When asked for some property which is not implemented
-      on the callback class ifself, it searchs the 
-      property of the same name defined on the Runner instance.
-      This pattern of delegation is often seen in fastai library
+    - this way, an instance of `Callback` subclass can record
+      statistics it calculates on the `Runner` instance.
 
-      #+BEGIN_SRC python
-        def __getattr__(self, k): return getattr(self.run, k)
-      #+END_SRC
+    # __getattr__ detail
+    - when asked for some property which is not implemented
+      on the `Callback` subclass ifself, it searchs the 
+      property of the same name defined on the `Runner` instance.
+      (this pattern of delegation can be seen frequently in fastai library)
 
-    - By this delegation, a callback instance can read AND write
-      a property of the runner instance it is refering to 
-      as if it is a property of the callback instance 
-      as `self.in_train` in `AvgStatsCallback(Callback)`
+    - by this delegation, an instance of `Callback` subclass 
+      can read AND write a property of the `Runner` instance
+      it is refering to as if it is the property of the instance
+      of `Callback` subclass;
+      `self.in_train` in `after_loss` of `AvgStatsCallback` 
 
       #+BEGIN_SRC python
         #export
@@ -2848,10 +2849,12 @@
                 print(self.train_stats)
                 print(self.valid_stats)
       #+END_SRC
-      
-      
 
-    - name property remove "Callback" strings fron the 
+    # `name` detail
+    - `name` behaves as a property of an instance of `Callback`
+      by `@property` syntax
+
+    - `name` removes "Callback" strings from the 
       name of a callback class, and turn it into snake case
 
       #+BEGIN_SRC python
@@ -2881,19 +2884,50 @@
               self.run.in_train=True
 
           def begin_validate(self):
+
               self.model.eval()
               self.run.in_train=False
     #+END_SRC
-    
-    - TrainEvalCallback is a default callback registered to
-      self.cbs of a Runner instance.
 
-    - This callback is responsible for managing if Runner is in 
-      training, or validation by switching self.in_train flag.
-      of the Runner instance inside `begin_validate` 
+    # overview
+    - `TrainEvalCallback` is a default callback registered to
+      `cbs` property of a `Runner` instance.
+      
+      # Runner __init__
+      #+BEGIN_SRC python
+        def __init__(self, cbs=None, cb_funcs=None):
+            cbs = listify(cbs)
+            for cbf in listify(cb_funcs):
+                cb = cbf()
+                setattr(self, cb.name, cb)
+                cbs.append(cb)
+            self.stop,self.cbs = False,[TrainEvalCallback()]+cbs
+      #+END_SRC
 
-    - self.in_train of the Runner instance will be refered 
-      inside AvgStatsCallback
+    - `TrainEvalCallback` is responsible for managing if the `Runner`
+      instance is in training, or validation 
+      by switching self.in_train flag of the `Runner` instance
+      inside `begin_validate`.
+
+    - self.in_train of the `Runner` instance will be refered to
+      from inside an instance of `AvgStatsCallback`
+
+    # begin_epoch 
+    - `TrainEvalCallback` inherits `Callback` ver2, 
+      and `self.run` is set to reference to an instance of `Runner`
+      inside `set_runner`
+
+    # Callback ver2
+    #+BEGIN_SRC python
+      class Callback():
+          _order=0
+          def set_runner(self, run): self.run=run
+          def __getattr__(self, k): return getattr(self.run, k)
+          @property
+          def name(self):
+              name = re.sub(r'Callback$', '', self.__class__.__name__)
+              return camel2snake(name or 'callback')
+    #+END_SRC
 
 *** AvgStats & AvgStatsCallback ver1
 
@@ -2980,8 +3014,21 @@
       '''
     #+END_SRC
 
-    - self.tot_loss will be a tensor of the form tensor(15825.9590).
-      In order to get the raw number, we need to call .item()
+    # AvgStats:: __init__ detail
+    - `metrics` is an array of functions, e.g., [accuracy]
+
+      #+BEGIN_SRC python
+        def accuracy(out, yb):
+            return (torch.argmax(out, dim=1)==yb).float().mean()
+      #+END_SRC
+
+    # AvgStats:: all_stats detail
+    - the return value will be an array of float numbers
+
+    - `self.tot_loss` records the accumulated sum ,over all the batches,
+      of the losses weighted by batch size.
+      it will be a tensor of the form tensor(15825.9590).
+      in order to get the raw number, we need to call .item()
 
       #+BEGIN_SRC python
         #memo
@@ -2998,10 +3045,28 @@
         '''
       #+END_SRC
 
+    - `self.tot_mets` is an array of float numbers
+      each element of which is the sum, over all the batches,
+      of "some_metric_function(prediction, label)" weighted by
+      the batch size
 
-    - tot_mets = [0. ] * 2 
+    #+BEGIN_SRC python
+      import sys
+      tot_mets = [0. ] * 2 
+      print(tot_mets)
+
+      '''
+      [0.0, 0.0]
+      '''
+    #+END_SRC
+
+      tot_mets = [0. ] * 2 
       will be 
       [0.0, 0.0]
+
+    # avg_stats detail
+    - it returns the average of a metrics over all the batches
+    - `self.count` is the sum of the batch size over all the batches
 
 *** passing AvgStatsCallback as a constructor
 
@@ -3016,12 +3081,32 @@
       '''
     #+END_SRC
 
+    - the instance of `AvgStatsCallback` is passed 
+      to `Runner` instance through the constructor of
+      `AvgStatsCallback`, and the instance of `AvgStatsCallback`
+      will be accessible via run.avg_stats
 
-    - this way, the AvgStatsCallback instance is accessible
-      via run.avg_stats.
+      # Runner::__init__
+      #+BEGIN_SRC python
+        def __init__(self, cbs=None, cb_funcs=None):
+            cbs = listify(cbs)
+            for cbf in listify(cb_funcs):
+                cb = cbf()
+                setattr(self, cb.name, cb)
+                cbs.append(cb)
+            self.stop,self.cbs = False,[TrainEvalCallback()]+cbs
+      #+END_SRC
 
-      - recall name of AvgStatsCallback will be avg_stats
-        and the AvgStatsCallback instance is 
+
+      # Callback ver2::name
+      #+BEGIN_SRC python
+        def name(self):
+            name = re.sub(r'Callback$', '', self.__class__.__name__)
+            return camel2snake(name or 'callback')
+
+        # e.g. `AvgStatsCallback` will be "avg_stats"
+          
+      #+END_SRC
 
 ** statistics math
 *** standard deviation
