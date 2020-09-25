@@ -2011,7 +2011,7 @@
       out of a list of tuples of xi and yi like
       [(x1,y1), (x2,y2), ...]
 
-    - the batch consists of a tensor for xs and a tensor for ys;
+    - the batch consists of a tensor for xs and a tensor for ys
 
     # collate detail
     - `b` is a list of tuples which looks like `my_b` below
@@ -2641,6 +2641,17 @@
       `fit`, `all_batch`, `one_batch` are methods defined
       on `Runner` class
 
+    - callback methods are subsequently called by the following
+      order from `one_batch` which is called from `all_batch`
+      inside `fit`.
+
+      - `begin_batch`
+      - `after_pred`
+      - `after_loss`
+      - `after_backward`
+      - `after_step`
+
+
     # overview > `Learner` instance
     - with `Runner` ver1 (=fit ver9), a `learn` (a `Learner` instance)
       which  contains (model, opt, loss_func, data) is passed 
@@ -2731,6 +2742,16 @@
         run.avg_stats.valid_stats.avg_stats
 
       #+END_SRC
+
+    - in the very beggining of `fit`, each instance of 
+      `Callback` ver2 subclass is passed an reference
+      to the instance of `Runner` by
+      `for cb in self.cbs: cb.set_runner(self)`
+
+    - this way, each instance of `Callback` ver2 subclass
+      has a reference to the runner instance, and can
+      pass the reference to an instance of a  helper class
+      which utilizes input, prediction, labels, etc
         
     # `fit` detail
     - `cb` is an instance of a subclass of `Callback` ver2 which will be
@@ -3014,6 +3035,16 @@
       '''
     #+END_SRC
 
+    # AvgStats overview
+    - it is the machinery which actually performs the
+      calculations of the averages for some metricses
+
+    - it itself does not contain the data necessary for calculating
+      the averages
+
+    - the actual data is passed through an instance of 
+      `AvgStatsCallback`, which is a subclass of `Callback` ver2
+
     # AvgStats:: __init__ detail
     - `metrics` is an array of functions, e.g., [accuracy]
 
@@ -3025,10 +3056,10 @@
     # AvgStats:: all_stats detail
     - the return value will be an array of float numbers
 
-    - `self.tot_loss` records the accumulated sum ,over all the batches,
+    - `self.tot_loss` records the accumulated sum, over all the batches,
       of the losses weighted by batch size.
-      it will be a tensor of the form tensor(15825.9590).
-      in order to get the raw number, we need to call .item()
+      it will be a tensor of the form `tensor(15825.9590)`.
+      in order to get the raw number, we need to call `.item()`
 
       #+BEGIN_SRC python
         #memo
@@ -3045,7 +3076,7 @@
         '''
       #+END_SRC
 
-    - `self.tot_mets` is an array of float numbers
+    - `self.tot_mets` is an array of tensors
       each element of which is the sum, over all the batches,
       of "some_metric_function(prediction, label)" weighted by
       the batch size
@@ -3064,11 +3095,39 @@
       will be 
       [0.0, 0.0]
 
-    # avg_stats detail
-    - it returns the average of a metrics over all the batches
+    # AvgStats::avg_stats detail
+    - it returns the weighted average of a metrics over all the batches.
+      (the batch size of each batch is used as the weight)
+
     - `self.count` is the sum of the batch size over all the batches
 
-*** passing AvgStatsCallback as a constructor
+  
+    # AvgStats::accumulate detail
+    - `accumulate` is called by an instance of `Callback` ver2
+
+    - `run` is an instance of `Runner` an instance of 
+      `Callback` ver2 subclass is refering to.
+
+    - `bn` is teh size of the curent batch
+
+    - `self.tot_loss += run.loss * bn` 
+      is a weighted sum of the loss over all the batches
+
+    - `self.tot_mets[i] += m(run.pred, run.yb) * bn`
+      is a weighted sum of a metrics over all the batches.
+
+    # AvgStatsCallback overview
+    - `AvgStatsCallback` is a subclass of `Callback` ver2
+
+    - it contains an instance of `AvgStats`
+
+    - it itself is just a 'mediator' of data, 
+      and it delegates the calculation of the statistics
+      (the average) to the instance of `AvgStats`
+      by passing the reference to an instance of `Runner`
+      at `stats.accumulate(self.run)`
+
+*** using AvgStatsCallback
 
     #+BEGIN_SRC python
       acc_cbf = partial(AvgStatsCallback,accuracy)
@@ -3081,7 +3140,7 @@
       '''
     #+END_SRC
 
-    - the instance of `AvgStatsCallback` is passed 
+    - using an instance of `AvgStatsCallback` is passed 
       to `Runner` instance through the constructor of
       `AvgStatsCallback`, and the instance of `AvgStatsCallback`
       will be accessible via run.avg_stats
@@ -3410,6 +3469,7 @@
       #This monkey-patch is there to be able to plot tensors
       torch.Tensor.ndim = property(lambda x: len(x.shape))
     #+END_SRC
+
 
 * lesson10
 ** 05b_early_stopping.ipynb
