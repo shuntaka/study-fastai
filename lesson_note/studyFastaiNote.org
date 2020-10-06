@@ -611,7 +611,7 @@
     # detail
     - `output` is in the form of torch.Size([50000, 1])
     - `target` is in the form of torch.Size([50000])
-    - `output.squeeze(-1)` is necessary to 
+    - `output.squeeze(-1)` is necessary to match the shape of `targ`
 
 
 *** forward & backward ver1
@@ -1274,15 +1274,21 @@
        ...,
        [(Pn1), (Pn2), ..., (Pnm)]]      
 
-    - `x.max(-1) 
+    - `x.max(-1)` returns a namedtuple (values, indices) where values
+      is the maximum value of each row of the input tensor 
+      in the given dimension dim. And indices is the index 
+      location of each maximum value found (argmax).
 
       # definiton of `max` from pytorch doc
       https://pytorch.org/docs/stable/generated/torch.max.html
 
-      - returns a namedtuple (values, indices) where values
-      is the maximum value of each row of the input tensor 
-      in the given dimension dim. And indices is the index 
-      location of each maximum value found (argmax).
+    - `m[:,None]` adds an axis to transform the shape of
+      `m` from `torch.Size([50000])` to `torch.Size([50000,1])`
+      so that `m` can be subtracted from `x`.
+
+      # 
+      https://numpy.org/doc/stable/reference/arrays.indexing.html#numpy.newaxis
+      https://stackoverflow.com/questions/31492699/use-of-none-in-array-indexing-in-python
 
 *** logsumexp (PyTorch)
     https://pytorch.org/docs/master/generated/torch.logsumexp.html
