@@ -1486,7 +1486,7 @@
      '''
     #+END_SRC
 
-     - `Model` is from `Model(nn.Module)` ver3
+    - `Model` is from `Model(nn.Module)` ver3
 
        #+BEGIN_SRC python
          class Model(nn.Module):
@@ -1499,10 +1499,10 @@
                  return x
        #+END_SRC
 
-     - [ ] `with torch.no_grad()` is necessary since otherwise
-       pytorch's auto grad mechanics would keep track of
-       all the calculation weight is involved, for calculating
-       gradient, which costs lot of memoris
+    - [ ] `with torch.no_grad()` is necessary since otherwise
+      pytorch's auto grad mechanics would keep track of
+      all the calculation weight is involved, for calculating
+      gradient, which costs lot of memoris
 
 *** Model(DummyModule) (=Model(nn.Module) ver4 preliminary)
     
