@@ -793,7 +793,7 @@
       '''
     #+END_SRC
 
-*** forward & backward ver2 (with layer classes, Model ver1)
+*** forward & backward ver2, Model ver1
 
     #+BEGIN_SRC python
       class Relu():
@@ -855,7 +855,7 @@
       and assign each element to `w1.g`, `b1.g`, `w2.g`, `b2.g`
       respectively
 
-*** forward & backward ver3 (with Model ver2, Module)
+*** forward & backward ver3, Model ver2, Module
     #+BEGIN_SRC python
       class Module():
           def __call__(self, *args):
@@ -1293,7 +1293,7 @@
       location of each maximum value found (argmax).
 
 
-    #+BEGIN_SRC python
+      #+BEGIN_SRC python
       a = torch.randn(4, 4)
       a
       tensor([[-1.2360, -0.2942, -0.1222,  0.8475],
@@ -1423,13 +1423,22 @@
       `bs` * `(n-1)//bs` will be smaller than `n` at least by 1
 
     - for better understanding above, think of an example below
-       n=12, bs=3
+       n=9, bs=3, last-index=8, (n-1)//bs=2, max of `start_i`=6
 
-       |---+---+---+---+---+---+---+---+---+---+---+---|
-       |   |   |   |   |   |   |   |   |   |   |   |   |
-       |---+---+---+---+---+---+---+---+---+---+---+---|
+       |---+---+---+---+---+---+---+---+---+
+       |   |   |   |   |   |   |   |   |   |
+       |---+---+---+---+---+---+---+---+---+
        |   |   |   | 
        |---+---+---+
+
+       n=8, bs=3, last-index=7, (n-1)//bs=2, max of `start_i`=6
+
+       |---+---+---+---+---+---+---+---+
+       |   |   |   |   |   |   |   |   |
+       |---+---+---+---+---+---+---+---+
+       |   |   |   | 
+       |---+---+---+
+
 
     - `for i in range((n-1)//bs +1)` sweeps integers 
       from 0 to (n-1)//bs
@@ -1501,7 +1510,7 @@
       all the calculation weight is involved, for calculating
       gradient, which costs lot of memoris
 
-*** Model(DummyModule) (=Model(nn.Module) ver4 preliminary)
+*** Model(DummyModule) (=simplified replica of Model(nn.Module) ver4)
     
     #+BEGIN_SRC python
         class Model(DummyModule):
@@ -1554,19 +1563,21 @@
             model.zero_grad()
       #+END_SRC
 
-    # DummyModule detail
+    # DummyModule overview
     - what `DummyModule` does is, when some properties such 
-      as l1, l1 is set on `self` (`Model` instance)
+      as `l1`, `l2` is set on `self` (`Model` instance),
       it will call __setattr__ which registers the property 
-      and its value to self._modules.
+      and its value to `self._modules`
 
+    # DummyModule detail
     - `super().__setattr__(k,v)` calls `__setattr__` of
       the super class of DummyModule, which is 
       Python Object class.
 
-    - DummyModule also implements `parameters` which returns
-      all the parameters registered to self._modules, 
-      and hence enables us to loop through the parameters.
+    - `DummyModule` also implements `parameters` which yields
+      all the parameters of each of all the layers registered
+      to self._modules, and hence enables us to loop through
+      the parameters.
 
     - `l.parameters()` calls `parameters` method
       implemented on a PyTorch layer class such as `nn.Linear`
@@ -1584,9 +1595,9 @@
     #+END_SRC
 
     - luckily, the 2 features(__setattr__ , parameters)
-      of DummyModule is also implemented  on nn.Module, 
-      so instead of Model(DummyModule), we can use
-      Model(nn.Module) ver4
+      of `DummyModule` is also implemented  on `nn.Module`, 
+      so instead of `Model(DummyModule)`, we can use
+      `Model(nn.Module)` ver4
 
 *** fit ver1
     #+BEGIN_SRC python
@@ -1647,36 +1658,52 @@
      #+END_SRC
 
     # overview
-    - a version of Model so that we can use 'layers approach'
-      as in 'Model(nn.Module) ver2' rather than 
-      providing `n_in`, `nh`, `n_out` one by one
-
-      However, different from 'Moodel(nn.Module) ver2',
-      'layers' can be set dynamically on calling `__init__`
+    - a version of `Model` class so that we can use 'layers approach'
+      as in `Model(nn.Module)` ver2, or `Model(nn.Module)` ver3,
+      where we can write forward path succinctly by 
+      recursively calling a layer of the models whereas
+      the forward path is hard coded with `Model(nn.Module)` ver4;
       
-      # Model ver2    
       #+BEGIN_SRC python
-        class Model():
-            def __init__(self):
-                self.layers = [Lin(w1,b1), Relu(), Lin(w2,b2)]
-                self.loss = Mse()
-                
-            def __call__(self, x, targ):
-                for l in self.layers: x = l(x)
-                return self.loss(x, targ)
-            
-            def backward(self):
-                self.loss.backward()
-                for l in reversed(self.layers): l.backward()
+        # Model(nn.Module) ver2:: __call__ 
+        def __call__(self, x):
+            for l in self.layers: x = l(x)
+            return x
       #+END_SRC
 
-    - with 'layers' approach, `__setattr__` won't be called anymore,
-      so we need to somehow register each layer as a module, 
-      and `self.add_module` inheritted from nn.Module does the job;
+
+      #+BEGIN_SRC python
+      # Model(nn.Model) ver4 :: __call__
+      def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+
+      #+END_SRC
+
+    - however, with 'layers' approach, `__setattr__` which
+      registers a layer to `self._modules` won't be
+      called anymore as was the case with `Model(nn.Module)` ver4
+      (or whose implementation is like `Model(DummyModule)`
+      and so `parameters` method which refers to `self._modules`
+      would not work.
+
+
+    #+BEGIN_SRC python
+      # Model(DummyModule)  (simplified replica of Model(nn.Model) ver4)
+      def __setattr__(self,k,v):
+          if not k.startswith("_"): self._modules[k] = v
+          super().__setattr__(k,v)
+          
+
+      def parameters(self):
+          for l in self._modules.values():
+              for p in l.parameters(): yield p
+    #+END_SRC
+
+
+    - in order to resolve this issue,  we need to somehow
+      register each layer as a module, and `self.add_module`
+      inheritted from nn.Module does the job;
       `self.add_module` is called on `__init__` and it registers
-      each module in `layers` in the same way as `__setattr__`
-      so that we can loop through the paramters by 
-      `model.parameters`
+      each layer in `layers` in the same way as `__setattr__`
 
 *** SequentialModel (=Model ver6)
 

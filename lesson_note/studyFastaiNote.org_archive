@@ -1,0 +1,76 @@
+#    -*- mode: org -*-
+
+
+Archived entries from file /Users/shun/Development/study-fastai/lesson_note/studyFastaiNote.org
+
+
+* Model(nn.Module) ver5
+  :PROPERTIES:
+  :ARCHIVE_TIME: 2020-10-08 Thu 19:31
+  :ARCHIVE_FILE: ~/Development/study-fastai/lesson_note/studyFastaiNote.org
+  :ARCHIVE_OLPATH: lesson9/03_minitabch.ipynb
+  :ARCHIVE_CATEGORY: studyFastaiNote
+  :END:
+  
+  #+BEGIN_SRC python
+    class Model(nn.Module):
+        def __init__(self, layers):
+            super().__init__()
+            self.layers = layers
+            for i,l in enumerate(self.layers): self.add_module(f'layer_{i}', l)
+            
+        def __call__(self, x):
+            for l in self.layers: x = l(x)
+            return x
+   #+END_SRC
+
+  # overview
+  - a version of `Model` class so that we can use 'layers approach'
+    as in `Model(nn.Module)` ver2, or `Model(nn.Module)` ver3,
+    where we can write forward path succinctly by 
+    recursively calling a layer of the models whereas
+    the forward path is hard coded with `Model(nn.Module)` ver4;
+    
+    #+BEGIN_SRC python
+      # Model(nn.Module) ver2:: __call__ 
+      def __call__(self, x):
+          for l in self.layers: x = l(x)
+          return x
+    #+END_SRC
+
+
+    #+BEGIN_SRC python
+    # Model(nn.Model) ver4 :: __call__
+    def __call__(self, x): return self.l2(F.relu(self.l1(x)))
+
+  #+END_SRC
+
+
+
+    However, different from `Moodel(nn.Module)` ver2,
+    'layers' can be set dynamically on calling `__init__`
+    
+    # Model ver2    
+    #+BEGIN_SRC python
+      class Model():
+          def __init__(self):
+              self.layers = [Lin(w1,b1), Relu(), Lin(w2,b2)]
+              self.loss = Mse()
+              
+          def __call__(self, x, targ):
+              for l in self.layers: x = l(x)
+              return self.loss(x, targ)
+          
+          def backward(self):
+              self.loss.backward()
+              for l in reversed(self.layers): l.backward()
+    #+END_SRC
+
+  - with 'layers' approach, `__setattr__` won't be called anymore,
+    so we need to somehow register each layer as a module, 
+    and `self.add_module` inheritted from nn.Module does the job;
+    `self.add_module` is called on `__init__` and it registers
+    each module in `layers` in the same way as `__setattr__`
+    so that we can loop through the paramters by 
+    `model.parameters`
+
