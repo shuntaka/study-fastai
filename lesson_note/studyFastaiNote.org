@@ -1431,10 +1431,10 @@
        |   |   |   | 
        |---+---+---+
 
-     - `for i in range((n-1)//bs +1)` sweeps integers 
-       from 0 to (n-1)//bs
+    - `for i in range((n-1)//bs +1)` sweeps integers 
+      from 0 to (n-1)//bs
 
-       #+BEGIN_SRC python
+      #+BEGIN_SRC python
          import sys
          my_n=10
          my_bs=3
@@ -1457,10 +1457,10 @@
          n,m = x.train.shape
        #+END_SRC
 
-     - `xb = x_train[start_i:end_i]` returns the elements of `x_train`
-       from index `start_i` up to `end_i-1`
+    - `xb = x_train[start_i:end_i]` returns the elements of `x_train`
+      from index `start_i` up to `end_i-1`
 
-       #+BEGIN_SRC python
+      #+BEGIN_SRC python
          #memo
          my_array1 = [0,1,2,3]
          my_array1[0:2]
@@ -1468,15 +1468,15 @@
          '''
          [0, 1]
          '''
-       #+END_SRC
+      #+END_SRC
 
-     - unless `n` is a multiple of `bs`, the last batch
-       will be smaller than other batches.
+    - unless `n` is a multiple of `bs`, the last batch
+      will be smaller than other batches.
 
-     - `x_train[start_i:end_i]` works fine even when `end_i`
-       exceeds the size of `x_train`
+    - `x_train[start_i:end_i]` works fine even when `end_i`
+      exceeds the size of `x_train`
       
-    #+BEGIN_SRC python
+      #+BEGIN_SRC python
      #memo
      my_array1 = [0,1,2,3]
      my_array1[0:10]
