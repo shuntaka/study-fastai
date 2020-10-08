@@ -1237,9 +1237,22 @@
 
     - `target.shape[0]` is same as the number of data
 
-    - `range(target.shape[0])` returns an array
-      [0, 1, 2, ..., n]
+    - `range(target.shape[0])` returns a "range object"
       where `n` is the number of data
+      https://thepythonguru.com/python-builtin-functions/range/#:~:text=The%20range()%20function%20is,efficient%20to%20handle%20large%20data.
+
+
+    #+BEGIN_SRC python
+      range(5)
+      range(0, 5)
+      list(range(5)) # list() call is not required in Python 2
+
+      '''
+      [0, 1, 2, 3, 4]
+      '''
+
+    #+END_SRC
+
 
     - using integer array indexing, 
       `-input[range(target.shape[0]), target]` extracts
@@ -1278,6 +1291,22 @@
       is the maximum value of each row of the input tensor 
       in the given dimension dim. And indices is the index 
       location of each maximum value found (argmax).
+
+
+    #+BEGIN_SRC python
+      a = torch.randn(4, 4)
+      a
+      tensor([[-1.2360, -0.2942, -0.1222,  0.8475],
+              [ 1.1949, -1.1127, -2.2379, -0.6702],
+              [ 1.5717, -0.9207,  0.1297, -1.8768],
+              [-0.6172,  1.0036, -0.6060, -0.2432]])
+      torch.max(a, 1)
+
+      '''
+      torch.return_types.max(values=tensor([0.8475, 1.1949, 1.5717, 1.0036]), 
+      indices=tensor([3, 0, 0, 1]))
+      '''
+    #+END_SRC
 
       # definiton of `max` from pytorch doc
       https://pytorch.org/docs/stable/generated/torch.max.html
@@ -1319,7 +1348,7 @@
       largest element for each row and returns a tensor
       whose size is `torch.Size([64])`
 
-    #+BEGIN_SRC python
+      #+BEGIN_SRC python
       tensor([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8,
                8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8,
                8, 8, 1, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 4],
@@ -1374,103 +1403,106 @@
 
     - `n` is the size of the training data
 
-    - `(n-1)//bs` is to be read as
-      "the data size minus one devided by the batch size"
-      which calculates how many sets of batches can be
-      created from the training data
-
-      n-1
-      bs
-
-      |---+---+---+---+---+---+---+---+---+---+---+---|
-      |   |   |   |   |   |   |   |   |   |   |   |   |
-      |---+---+---+---+---+---+---+---+---+---+---+---|
-      |   |   |   | 
-      |---+---+---+
-
-
-    - `n-1` is used instead of `n` 
-      so that `start_i` won't exceed `n` when `n` is 
-      a multiple of `bs`
-
-      e.g. n=12, bs=3
-
     - `(n-1)//bs` returns the largest integer less than `(n-1)/bs`
       - `//` does integer devision, 
         whereas `/` does floating point devision
 
-    - `for i in range((n-1)//bs +1)` sweeps integers 
-      from 0 to (n-1)//bs
+    - `(n-1)//bs` determines the largest value of `start_i`
 
-      #+BEGIN_SRC python
-        import sys
-        my_n=10
-        my_bs=3
-        print((my_n-1)//my_bs)
+    # - `(n-1)//bs` is to be read as
+    #   "the data size minus one devided by the batch size"
+    #   which calculates the biggest possible value for `start_i`
 
-        for i in range((my_n-1)//my_bs + 1):
-          print(i)
+    - the largest value of `start_i` should be the value such that
+      (batch size) * (max of `start_i`)
+      is less than `n`, the size of the training data, 
+      in order to make the last batch contain at least one element.
 
-        '''
-        3
-        0
-        1
-        2
-        3
+    - we can get such a number by subtracting 1 from `n` 
+      and deviding it by `bs`;
+      `bs` * `(n-1)//bs` never exceeds `n`
 
-        '''
-      #+END_SRC
+    - for better understanding above, think of an example below
+       n=12, bs=3
 
-      #+BEGIN_SRC python
-        n,m = x.train.shape
-      #+END_SRC
+       |---+---+---+---+---+---+---+---+---+---+---+---|
+       |   |   |   |   |   |   |   |   |   |   |   |   |
+       |---+---+---+---+---+---+---+---+---+---+---+---|
+       |   |   |   | 
+       |---+---+---+
 
-    - `xb = x_train[start_i:end_i]` returns the elements of `x_train`
-      from index `start_i` up to `end_i-1`
+     - `for i in range((n-1)//bs +1)` sweeps integers 
+       from 0 to (n-1)//bs
 
-      #+BEGIN_SRC python
-        #memo
-        my_array1 = [0,1,2,3]
-        my_array1[0:2]
+       #+BEGIN_SRC python
+         import sys
+         my_n=10
+         my_bs=3
+         print((my_n-1)//my_bs)
 
-        '''
-        [0, 1]
-        '''
-      #+END_SRC
+         for i in range((my_n-1)//my_bs + 1):
+           print(i)
 
-    - unless `n` is a multiple of `bs`, the last batch
-      will be smaller than other batches.
+         '''
+         3
+         0
+         1
+         2
+         3
 
-    - `x_train[start_i:end_i]` works fine even when `end_i`
-      exceeds the size of `x_train`
+         '''
+       #+END_SRC
+
+       #+BEGIN_SRC python
+         n,m = x.train.shape
+       #+END_SRC
+
+     - `xb = x_train[start_i:end_i]` returns the elements of `x_train`
+       from index `start_i` up to `end_i-1`
+
+       #+BEGIN_SRC python
+         #memo
+         my_array1 = [0,1,2,3]
+         my_array1[0:2]
+
+         '''
+         [0, 1]
+         '''
+       #+END_SRC
+
+     - unless `n` is a multiple of `bs`, the last batch
+       will be smaller than other batches.
+
+     - `x_train[start_i:end_i]` works fine even when `end_i`
+       exceeds the size of `x_train`
       
     #+BEGIN_SRC python
-      #memo
-      my_array1 = [0,1,2,3]
-      my_array1[0:10]
+     #memo
+     my_array1 = [0,1,2,3]
+     my_array1[0:10]
 
-      '''
-      [0, 1, 2, 3]
-      '''
+     '''
+     [0, 1, 2, 3]
+     '''
     #+END_SRC
 
-    - `Model` is from `Model(nn.Module)` ver3
+     - `Model` is from `Model(nn.Module)` ver3
 
-      #+BEGIN_SRC python
-        class Model(nn.Module):
-            def __init__(self, n_in, nh, n_out):
-                super().__init__()
-                self.layers = [nn.Linear(n_in,nh), nn.ReLU(), nn.Linear(nh,n_out)]
+       #+BEGIN_SRC python
+         class Model(nn.Module):
+             def __init__(self, n_in, nh, n_out):
+                 super().__init__()
+                 self.layers = [nn.Linear(n_in,nh), nn.ReLU(), nn.Linear(nh,n_out)]
                 
-            def __call__(self, x):
-                for l in self.layers: x = l(x)
-                return x
-      #+END_SRC
+             def __call__(self, x):
+                 for l in self.layers: x = l(x)
+                 return x
+       #+END_SRC
 
-    - [ ] `with torch.no_grad()` is necessary since otherwise
-      pytorch's auto grad mechanics would keep track of
-      all the calculation weight is involved, for calculating
-      gradient, which costs lot of memoris
+     - [ ] `with torch.no_grad()` is necessary since otherwise
+       pytorch's auto grad mechanics would keep track of
+       all the calculation weight is involved, for calculating
+       gradient, which costs lot of memoris
 
 *** Model(DummyModule) (=Model(nn.Module) ver4 preliminary)
     
