@@ -1420,7 +1420,7 @@
 
     - we can get such a number by subtracting 1 from `n` 
       and deviding it by `bs`;
-      `bs` * `(n-1)//bs` never exceeds `n`
+      `bs` * `(n-1)//bs` will be smaller than `n` at least by 1
 
     - for better understanding above, think of an example below
        n=12, bs=3
@@ -1469,9 +1469,6 @@
          [0, 1]
          '''
       #+END_SRC
-
-    - unless `n` is a multiple of `bs`, the last batch
-      will be smaller than other batches.
 
     - `x_train[start_i:end_i]` works fine even when `end_i`
       exceeds the size of `x_train`
