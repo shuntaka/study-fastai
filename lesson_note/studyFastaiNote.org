@@ -107,6 +107,12 @@
     - ParamScheduler
     - BatchNorm
 
+*** elements of a model
+    - data
+    - model
+    - loss function
+    - optimizer
+
 *** components of deep learning
     - techniques to initialize parameters & normalize activations in order to keep activations nice
       - kaiming initialization (weight initialization)
@@ -1507,7 +1513,7 @@
 
     - [ ] `with torch.no_grad()` is necessary since otherwise
       pytorch's auto grad mechanics would keep track of
-      all the calculation weight is involved, for calculating
+      all the calculation where `weight` is involved, for calculating
       gradient, which costs lot of memoris
 
 *** Model(DummyModule) (=simplified replica of Model(nn.Module) ver4)
@@ -1681,10 +1687,9 @@
     - however, with 'layers' approach, `__setattr__` which
       registers a layer to `self._modules` won't be
       called anymore as was the case with `Model(nn.Module)` ver4
-      (or whose implementation is like `Model(DummyModule)`
+      (its implementation is almost like `Model(DummyModule)` )
       and so `parameters` method which refers to `self._modules`
       would not work.
-
 
     #+BEGIN_SRC python
       # Model(DummyModule)  (simplified replica of Model(nn.Model) ver4)
@@ -1698,8 +1703,7 @@
               for p in l.parameters(): yield p
     #+END_SRC
 
-
-    - in order to resolve this issue,  we need to somehow
+    - in order to resolve the problem,  we need to somehow
       register each layer as a module, and `self.add_module`
       inheritted from nn.Module does the job;
       `self.add_module` is called on `__init__` and it registers
@@ -1719,11 +1723,11 @@
     #+END_SRC
 
     # overview
-    - it is for getting rid of cranky part of __init__ 
-      of 'Model(nn.Model) ver5' by using nn.ModuleList
+    - it is for getting rid of cranky part of `__init__` 
+      of 'Model(nn.Model) ver5' by using `nn.ModuleList`
 
-      # Model(nn.Model) ver5
       #+BEGIN_SRC python
+        # Model(nn.Model) ver5
         class Model(nn.Module):
             def __init__(self, layers):
                 super().__init__()
@@ -1749,12 +1753,15 @@
     #+END_SRC
 
     # overview
+    - `Optimizer` instance is an object which refers to the parameters 
+      of a model, and is responsible for upating the parameters
+
     - we create optimizer to make the parameter update in fit ver1 
       more concise by factoring out the loop which sweeps through
-      the model parameters
+      the model parameters.
 
-      # fit ver1
       #+BEGIN_SRC python
+        # fit ver1
         def fit():
             for epoch in range(epochs):
                 for i in range((n-1)//bs + 1):
@@ -1774,6 +1781,10 @@
       #+END_SRC
 
     - we will implement more general optimizer later in the lesson
+
+      # detail
+      - `__init__` recieves `params` which are all the parameters
+        for a model, and add it to `self.params`
 
 *** training loop ver2 (cnosidered as fit ver2), refactored with Optimizer
 
@@ -1798,7 +1809,7 @@
     #+END_SRC
 
 *** optim
-    - optim is the pytorch equivalent of Optimizer implement above
+    - optim is the pytorch equivalent of `Optimizer` implemented above
 
 *** get_model ver1
 
@@ -1812,7 +1823,6 @@
       - optimizer is initialized with the model.parameters()
 
 *** Dataset
-
     #+BEGIN_SRC python
       #export
       class Dataset():
@@ -1822,14 +1832,14 @@
     #+END_SRC
 
     # overview
-    - `Dataset` pairs up two independent lists x and y
-      so that ds[i] returns a tuple (x[i], y[i])
+    - `Dataset` pairs up two independent lists `x` and `y`
+      so that `ds[i]` returns a tuple (x[i], y[i])
 
     - `Dataset` is for removing clunky part of fit ver2
-      for grabbing batch xb, yb
+      for grabbing batch `xb`, `yb`
       
-      # fit ver2
       #+BEGIN_SRC python
+        # fit ver2
         for epoch in range(epochs):
             for i in range((n-1)//bs + 1):
                 start_i = i*bs
@@ -1844,8 +1854,8 @@
                 opt.zero_grad()
       #+END_SRC
 
-    # detail
-    - __getitem__ returns a tuple (self.x[i], self.y[i])
+    # __getitem__ detail
+    - `__getitem__` returns a tuple `(self.x[i], self.y[i])`
 
     - when range of index, like `[i*bs : i*bs+bs]` as in train_ds[i*bs : i*bs+bs], 
       is passed to `__getitem__`, it passes along that range of
@@ -1886,8 +1896,6 @@
     #+END_SRC
 
     # overview
-    - `DataLoader` gives a part of `Dataset` instance
-
     - `DataLoader` is for removing for-loop in fit ver3 by
       returning a part of `DataSet` instance on calling `__iter__`
 
@@ -1904,8 +1912,8 @@
                 opt.zero_grad()
       #+END_SRC
 
-    - DataLoader accepts an instance of DataSet implemented above,
-      and it will return xb & yb by 
+    - `DataLoader` accepts an instance of DataSet implemented above,
+      and it will return xb & yb by `next(iter(...))` syntax
 
       #+BEGIN_SRC python
         train_dl = DataLoader(train_ds, bs)
@@ -1915,8 +1923,11 @@
       #+END_SRC
 
     # detail
-    `for i in range(0, len(self.ds), self.bs)` is equivalent to
-    `for i in range((n-1)//bs + 1)`
+    - `ds` is an `DataSet` instance
+    - `bs` is  batch size
+    - `for i in range(0, len(self.ds), self.bs)` 
+      is equivalent to
+      `for i in range((n-1)//bs + 1)`
 
 *** fit ver4, refactored with home-made DataLoader ver1
 
