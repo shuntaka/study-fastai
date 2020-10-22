@@ -2,6 +2,12 @@
   https://course19.fast.ai/part2
 
 * things to keep in mind
+** python
+*** packing & unpacking operator (single asterisk)
+    - 'list-ify' when used in function definition,
+    - 'argument-ify' when used on function call
+
+** deep learning
 *** tensor sum
     - for explanation, think of a tensor below;
 
@@ -138,10 +144,62 @@
       - res-net
       - Xres-net
 
+
+
 * things to understand
+** pyhton
+*** zip
+    https://realpython.com/python-zip-function/
+    
+    - "Python’s zip() function is defined as zip(*iterables). 
+      The function takes in iterables as arguments and 
+      returns an iterator. This iterator generates a 
+      series of tuples containing elements from each iterable. 
+      zip() can accept any type of iterable, such as
+      files, lists, tuples, dictionaries, sets, and so on."
+    
+*** python > install packages with conda
+    https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
+
+*** python > if not
+
+*** python > return value of `and`, `or`
+
+*** function annotation
+*** yield
+
+** pyotrch
+*** auto grad
+    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+    https://towardsdatascience.com/understanding-pytorch-with-an-example-a-step-by-step-tutorial-81fc5f8c4e8e
+
+*** with torch.no_grad
+*** why do we zero out gradient?  (1:14:58)
+*** zero_grad()
+*** .grad.zero_()
+
+*** tensor broadcasting
+    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
+
+*** tensor related operation (stack, squeeze)
+    https://deeplizard.com/learn/video/kF2AlpykJGY
+    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
+
+*** tensor mean, std
+
 ** CNN
-*** CNN
-*** right kernel size for CNN
+*** why can a kernel detects edge?
+    - lecture by andres ng
+      https://www.youtube.com/watch?v=XuD4C8vJzEQ&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=101
+
+*** what is pooling for?
+    - lecture by andres ng
+      https://www.youtube.com/watch?v=8oOgPUO-TBY&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=108
+
+    
+*** how to determine the right kernel size for CNN?
+
 
 *** meaning of filters & channels
     - are they used interchangably?
@@ -149,10 +207,11 @@
 *** what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
     
 ** initialization & normalization
-*** why initialization matters
-*** why BatchNorm works
+*** how does initialization work?
+*** why does BatchNorm works?
 
 ** regularlization
+*** what is regularlization?
 *** L2 regularlization
 *** weight decay
 
@@ -202,36 +261,6 @@
 *** average pooling
 *** maximum pooling
 *** concat pooling
-
-** pyotrch
-*** auto grad
-    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
-    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
-    https://towardsdatascience.com/understanding-pytorch-with-an-example-a-step-by-step-tutorial-81fc5f8c4e8e
-
-*** with torch.no_grad
-*** why we zero out gradient (1:14:58)
-*** zero_grad()
-*** .grad.zero_()
-
-*** tensor broadcasting
-    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
-
-*** tensor related operation (stack, squeeze)
-    https://deeplizard.com/learn/video/kF2AlpykJGY
-    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
-
-*** tensor mean, std
-
-** pyhton
-*** python > install packages with conda
-    https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
-
-*** python > if not
-
-*** python > return value of `and`, `or`
-
-*** function annotation
 
 ** handling images
 *** can we flip, resize while a image is still a byte (before byte tensor, float tensor)
@@ -618,7 +647,6 @@
     - `output` is in the form of torch.Size([50000, 1])
     - `target` is in the form of torch.Size([50000])
     - `output.squeeze(-1)` is necessary to match the shape of `targ`
-
 
 *** forward & backward ver1
 
@@ -1896,6 +1924,8 @@
     #+END_SRC
 
     # overview
+    - `DataLoader` returns a subset of `Dataset` instance
+
     - `DataLoader` is for removing for-loop in fit ver3 by
       returning a part of `DataSet` instance on calling `__iter__`
 
@@ -1913,7 +1943,8 @@
       #+END_SRC
 
     - `DataLoader` accepts an instance of DataSet implemented above,
-      and it will return xb & yb by `next(iter(...))` syntax
+      and it will return a part of Dataset instance when through 
+      `__iter__` which is called by `next(iter(...))` syntax
 
       #+BEGIN_SRC python
         train_dl = DataLoader(train_ds, bs)
@@ -1953,6 +1984,9 @@
             return model, optim.SGD(model.parameters(), lr=lr)
       #+END_SRC
 
+    - with fit ver4, `model`, `loss_func`, `opt`, `train_dl` are not yet
+      defined to be arguments of `fit`, but will be arguments with fit ver5
+
 *** home-made Sampler
 
     #+BEGIN_SRC python
@@ -1988,7 +2022,7 @@
             xb,yb = train_ds[i*bs : i*bs+bs]
       #+END_SRC
 
-    - `Sampler` retunrs an array of indexes on calling `__iter__`
+    - `Sampler` retunrs an array of indexes (more strictly, rank1 tensor) on calling `__iter__`
 
     - note that this 'home-made Sampler' will be used
       only with 'home-made DataLoader'
@@ -2013,7 +2047,6 @@
 
     - `for i in range(0, self.n, self.bs)` is equivalent to
       `for i in range((n-1)//bs + 1)`
-
 
     - `train_ds[:10]` returns a tuple (x[0:10], y[0:10])
 
@@ -2053,8 +2086,8 @@
       - `batch_size` must be passed to `DataLoader`
 
 
-    # home-made DataLoader ver2 detail
-    - `ds` in `DataLoader::__init__` is a `Dataset` instance, 
+    # home-made DataLoader ver2 > __iter__ detail
+    - `ds` is a `Dataset` instance,
       and so `self.ds[i]` is a tuple
       
       # Dataset
@@ -2065,13 +2098,17 @@
               def __getitem__(self, i): return self.x[i],self.y[i]
       #+END_SRC
 
-    - `sampler` is a `Sampler` instance which returns
-      an array of indexes on callint `__iter__`
+    - `sampler` is a `Sampler` instance which yields
+      an array of indexes(rank1 tensor) on calling its `__iter__`
+      method by `for...in` syntax
 
     - `collate_fn` is a function like `collate` implmented above,
       and it combines the tuples in the list
       `[self.ds[i] for i in s]` and returns
       a tuple of 2 tensors (one is for x, and the other is for y)
+
+    - `[self.ds[i] for i in s]` as in `collate_fn([self.ds[i] for i in s])`
+      is a python syntax called "list construction"
 
     - note that `DataLoader` itself does not do transform.
       it is `ds` passed that could do transform.
@@ -2125,15 +2162,14 @@
       #+END_SRC
 
     - zip as in `zip(*b)`:
+      https://realpython.com/python-zip-function/
       https://www.youtube.com/watch?v=VbBozykILZ0
 
-      `zip` accepts a list of tupples, and collects the 
+      `zip` accepts several tupples, and collects the 
       elements in 'x-axis', 'y-axis', 'z-axis', so on
-      as tuples
+      as tuples.
 
-      For example, when `zip` is passed (tuple1, tuple2, tuple3),
-      it stacks tuples vertically and make new tuples by grouping
-      elements vertically, then return them as yet another tuple
+      To understand visually, think of the following exmaple
 
       | tuple1: | t1x | t1y |
       | tuple2: | t2x | t2y |
@@ -2141,9 +2177,12 @@
       | ...     | ... | ... |
       | tupleN: | tNx | tNy |
 
-      => 
+
+      The iterator that zip returns generates a seriese of tuples
+      as below;
       
-      (t1x, t2x, t3x, ..., tNx), (t1y, t2y, t3y, ..., tNy)
+      (t1x, t2x, t3x, ..., tNx), 
+      (t1y, t2y, t3y, ..., tNy)
 
     - `torch.stack` "tensor-ify" a tuple;
       `torch.stack(xs)` converts a tuple (`xs`) to a rank2 tensor
@@ -2176,13 +2215,17 @@
           return tot_loss/nv, tot_acc/nv
     #+END_SRC
 
-    - model.train() sets model.training true
-    - mode.eval()  sets model.training false
-    - we always call model.train() before training, 
-      and model.eval() before inference, because
-      these are used by layers such as nn.BatchNorm2d
-      and nn.Dropout to ensure appropriate behaviour 
+    # detail
+    - `model.train()` sets `model.training` true
+    - `mode.eval()`  sets `model.training` false
+    - we always call `model.train()` before training, 
+      and `model.eval()` before inference, because
+      these are used by layers such as `nn.BatchNorm2d`
+      and `nn.Dropout` to ensure appropriate behaviour 
       for these different phases.
+    - for validation, we do not need to keep track of the 
+      calculations during the forward path since we do not need gradient,
+      hence we call `with torch.no_grad()`
 
 *** fit ver5 (factor out arguments from fit ver4)
     #+BEGIN_SRC python
@@ -2203,8 +2246,8 @@
     #+END_SRC
 
     # overview
-    - factor out all the things necessary inside fit ver4
-      as arguments of `fit`
+    - with fit ver5, `model`, `loss_func`, `opt`, `train_dl`
+      is defined to be arguments of `fit`
 
 *** get_dls ver1
 
@@ -2214,9 +2257,11 @@
                   DataLoader(valid_ds, batch_size=bs*2, **kwargs))
     #+END_SRC
 
+    # overview
     - `get_dls` is just a convinent helper for getting a tuple of 
       (DL for train_ds, DL for valid_ds)
 
+    # detail
     - `DataLoader` is from `PyTorch`, and not the 'home-made' `DataLoader`
 
     - DL for valid_ds  has bigger batch size than DL for training_ds
@@ -2268,7 +2313,8 @@
       loss_func = F.cross_entropy
     #+END_SRC
 
-    - get_data from 02_fully_connected.ipynb
+    # detail
+    - `get_data` is from 02_fully_connected.ipynb
 
       #+BEGIN_SRC python
 
@@ -2322,20 +2368,22 @@
               self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
     #+END_SRC
 
-    - get_model ver2 accepts DataBunch object whereas
+    # get_model overview
+    - get_model ver2 accepts `DataBunch` object whereas
       get_model ver1 does not accept data, and just return
       model and optimizer
 
     - get model ver2 use DataBunch object to determine
       number of input, and the size of the final output
-      for creating model
+      for creating model, and it does not really use the `data`
+      itself.
 
     # Learner overview
-    - Learner is just a storage containing (model, opt, loss_func, data)
+    - `Learner` is just a storage containing (model, opt, loss_func, data)
       to be passed to fit ver5, as is mentioned above
 
-    - later in the course, Learner will be merged to Runner
-      since Learner just stores things and does nothing
+    - later in the course, `Learner` will be merged to `Runner`
+      since `Learner` just stores things and does nothing
 
     - (model, opt) can be obtained through get_model ver2
 
@@ -2364,9 +2412,9 @@
     #+END_SRC
 
     # overview
-    - with fit ver6, the things necessary
+    - with `fit` ver6, the things necessary
       (model, loss_func, opt, train_dl, valid_dl) are
-      packaged up as `learn`
+      packaged p as `learn`
 
     - since now `learn` contains all of
       (model, opt, loss_func, data),now the signature of fit is;
@@ -2388,12 +2436,29 @@
     #+END_SRC
 
     # overview
-    - with fit ver7, training logic of fit ver4 is factored out
+    - with `fit` ver7, training logic of `fit` ver4 is factored out
       as `one_batch`
 
-    - fit ver7 is just for illustrating how to factor out 
-      training logic, and omitting features in fit ver6. 
-      These features will be included again in fit ver8
+    - `fit` ver7 is just for illustrating how to factor out 
+      training logic, and omitting features in `fit` ver6,
+      such as including (model, loss_func, opt ) as its arguments,
+      and having validation.
+      These features will be included again in `fit` ver8
+
+    #+BEGIN_SRC python
+      # fit ver4
+      model,opt = get_model()
+
+      def fit():
+          for epoch in range(epochs):
+              for xb,yb in train_dl:
+                  pred = model(xb)
+                  loss = loss_func(pred, yb)
+                  loss.backward()
+                  opt.step()
+                  opt.zero_grad()
+
+    #+END_SRC
 
 *** fit ver8
 
@@ -2424,21 +2489,61 @@
     #+END_SRC
 
     # overview
-    - as fit ver7, we factor out the training logic of fit ver6 
+    - with fit ver8,  the training logic of fit ver6 is factored out
+
+      #+BEGIN_SRC python
+        # fit ver6
+        def fit(epochs, learn):
+            for epoch in range(epochs):
+                learn.model.train()
+                for xb,yb in learn.data.train_dl:
+                    loss = learn.loss_func(learn.model(xb), yb)
+                    loss.backward()
+                    learn.opt.step()
+                    learn.opt.zero_grad()
+
+                learn.model.eval()
+                with torch.no_grad():
+                    tot_loss,tot_acc = 0.,0.
+                    for xb,yb in learn.data.valid_dl:
+                        pred = learn.model(xb)
+                        tot_loss += learn.loss_func(pred, yb)
+                        tot_acc  += accuracy (pred,yb)
+                nv = len(learn.data.valid_dl)
+                print(epoch, tot_loss/nv, tot_acc/nv)
+            return tot_loss/nv, tot_acc/nv
+       #+END_SRC
+
 
     - with fit ver8, training logic of fit ver6
       is factored out as `all_batches` and `one_batch`
 
-    - with fit ver8, several callbacks are called additionally
+    - inside `fit`, several callbacks are called additionally
       - cb.begin_fit(learn)    (beggining of fit)
       - cb.begin_epoch(epoch)  (beggining of epoch)
       - cb.begin_validate()    (beggining of validate)
+      - cb.after_epoch()       (end of epoch)
       - cb.after_fit()         (end of fit)
-
-    - if ..or not ... : break
 
     # detail
     - `cb` is an instance of `Callback` which will be defined later.
+
+    - `if not cb.begin_fit(learn): return` means
+      if `cb.begin_fit(learn)` returns falsy value, 
+      `fit` stops execution and returns.
+
+    - in python, the return value of a function defaults
+      to `NaN`, a falsy value, so unless `cb.begin_fit` returns 
+      a trusy value, `fit` stops and returns.
+
+    - on the other hand, 
+      `if not cb.begin_epoch(epoch): continue` means
+      if `cb.begin_epoch(epoch)` is falsy, `fit` continues the 
+      for loop
+
+    - `if cb.do_stop() or not cb.after_epoch(): break` means
+      if `cb.do_stop()` is true or `cb.after_epoch()` is false,
+      it breaks
       
 *** Callback ver1
 
@@ -2473,7 +2578,7 @@
       and more concrete logics will be implemented inside 
       callback methods of a subclass inheritting `Callback` class.
 
-    - also ,each callback returns a boolean value to signal
+    - also, each callback returns a boolean value to signal
       either or not to stop;
 
 *** CallbackHandler
@@ -2547,10 +2652,15 @@
       registered to the "callback instance group", and call
       the corresponding method.
 
-    - the return value of a callback method (begin_fit, begin_batch, etc)
-      is updated everytime the corresonding callback method of a
-      `Callback` subclass instance in the "callback instance group" 
-      is called.
+    - in each of the callback methods (begin_fit, begin_batch, etc)
+      the return value `res` is updated everytime the
+      corresonding callback method of a `Callback` subclass
+      instance in the "callback instance group" is called,
+      and `res` will be true only when all of the callback methods
+      returns true.
+
+    # detail
+    `cbs if cbs else []` is similar to ternary operator x?a:b in javascript
 
 *** putting (fit ver8, CallbackHandler, Callback) all together
 
@@ -2580,7 +2690,7 @@
               if cb.do_stop() or not cb.after_epoch(): break
           cb.after_fit()
 
-      # example of `Callback` subclass
+      # an example of `Callback` subclass
       class TestCallback(Callback):
           def begin_fit(self,learn):
               super().begin_fit(learn)
@@ -2611,7 +2721,7 @@
     # TestCallback overview 
     - `TestCallback` implements simple callbacks as follows;
       - begin_fit: 
-        initialize n_iter which keeps track of the index of the current step
+        initialize `n_iter` which keeps track of the index of the current step
 
       - after_step: 
         keep track of the training steps in a epoch and set learn.stop flag true
@@ -2725,7 +2835,7 @@
       - `after_step`
 
 
-    # overview > `Learner` instance
+    # overview > how `Learner` instance is passed
     - with `Runner` ver1 (=fit ver9), a `learn` (a `Learner` instance)
       which  contains (model, opt, loss_func, data) is passed 
       dynamically to `fit` method, which is SAME AS fit ver8.
@@ -2740,56 +2850,48 @@
       and `fit` itself as if it is a property of the `Runner`
       instance; `self.model`, `self.opt`
 
-    # overview > callbacks
+    # overview > how callbacks are passed and accessed
     - with fit ver9, `CallbackHandler` instance which bundles
       `Callback` subclass instances is NOT passed to `fit`.
 
-    - instead, instances of a `Callback` subclass are directly
+    - instead, instances of a `Callback` ver2 subclass are directly
       passed in either of the 2 ways below:
-      - 1. `Callback` subclass CONSTRUCTORs are passed as a list
+      - 1. `Callback` subclass CONSTRUCTORS are passed as a list
           to `cb_funcs` argument of  __init__ of Runner class
 
-      - 2. `Callback` subclass INSTANCEs are passed to `cbs` argument of
+      - 2. `Callback` subclass INSTANCES are passed to `cbs` argument of
            __init__ of Runner class.
 
-      (NOTE: the class of each of the callback instances 
-      is inheritting Callback ver2, not Callback ver1)
+      (NOTE: note again that the class of each of the callback
+      instances is inheritting `Callback` ver2, not `Callback` ver1)
 
-    - with the 1st way, inside __init__ of Runner class, an instance
+    - with the 1st way, inside `__init__` of Runner class, an instance
       of each `Callback` subclass is created, and 2 things are done 
       for each of the `Callback` subclass instances;
 
-      - 1. auto-register itself as a property of the  Runner
+      - 1. auto-register itself as a property of the Runner
         instance with key equal to `name` property of the 
         `Callback` subclass instances. 
-        This is a benefit of passing as an CONSTRUCTOR
         
-        example1: learn.Recorder in real fastai 
-        (`Learn` in real fastai is equivalent to `Runner`)
+        # example1: learn.Recorder in real fastai 
+        # (`Learn` in real fastai is equivalent to `Runner`)
 
-        example2: run.avg_stats
 
-      - 2. append the instance of the `Callback` subclass to `self.cbs`
-        which is later used when sweeping through 
-        the `Callback` subclass instances and call 
-        'begin_epoch', 'begin_batch' of each
+        
+      - 2. append the instance of the `Callback` subclass to 
+        `self.cbs` which is later refered to inside `__init__`
+        when sweeping through  the `Callback` subclass instances
+        and call 'begin_epoch', 'begin_batch' of each of the instances
         (NOTE: TrainEvalCallback is appended as a default callback)
 
         #+BEGIN_SRC python
-          def __init__(self, cbs=None, cb_funcs=None):
-          cbs = listify(cbs)
-          cbf in listify(cb_funcs)
-          cb = cbf()
-          setattr(self, cb.name, cb)
-          cbs.append(cb)
+          for cbf in listify(cb_funcs)
+              cb = cbf()
+              setattr(self, cb.name, cb)
+              cbs.append(cb)
         #+END_SRC
 
-    - with `Callback` subclass instances being set as a property
-      of `Runner` instance, a callback such as `begin_fit`
-      of each `Callback` subclass instance is called 
-      as `self('begin_fit')` through `__call__` method
-
-    - when a callback is passed as a CONSTRUCTOR,
+    - when a callback is passed as a CONSTRUCTOR (the 1st way)
       the callback instance created during init becomes
       available as the property of the `Runner` instance,
       whereas when a callback is passed as an object,
@@ -2818,44 +2920,51 @@
 
     - in the very beggining of `fit`, each instance of 
       `Callback` ver2 subclass is passed an reference
-      to the instance of `Runner` by
-      `for cb in self.cbs: cb.set_runner(self)`
+      to the instance of `Runner`;
+
+      #+BEGIN_SRC python
+        `for cb in self.cbs: cb.set_runner(self)`
+      #+END_SRC
 
     - this way, each instance of `Callback` ver2 subclass
       has a reference to the runner instance, and can
-      pass the reference to an instance of a  helper class
+      pass it to an instance of a helper class
       which utilizes input, prediction, labels, etc
         
     # `fit` detail
     - `cb` is an instance of a subclass of `Callback` ver2 which will be
       implmeneted later.
 
-    - `cb.set_runner` store the reference to the `Runner` instance 
+    - `cb.set_runner` stores the reference to the `Runner` instance 
       on each instance of `Callback` ver2 subclass in order for
-      them to record statistics they calculate on the `Runner`
+      it to record statistics it calculates on the `Runner`
       instance.
 
-    - `self('begin_fit')`, `self('begin_epoch')` calls `__call__` method
+    - `self('begin_fit')`, `self('begin_epoch')` calls
+      `__call__` method
 
     - `fit` is implemented to run all_batches() unless
-      the return value of `self('begin_epoch')` is `true`.
-      If the return value of self('begin_epoch') returns `false`
-      it keeps going
-      
-      In python, return value of a function is default to NaN, 
+      the return value of `self('begin_epoch')` explicitly
+      returns truesy value.
+
+      (If the return value of self('begin_epoch') returns `false`
+      it keeps going. In python, return value of a function is default to NaN, 
       which is converted to `false`, so 
-      - if a function returns true, `fit` stops
       - if a function does not return any value, 
-        or explicitly returns `false`, `fit` keeps going
+        or explicitly returns a falsy value, `fit` keeps going
+
+      - if a function returns a truesy value, `fit` stops
       
     # `__call__` detail
     - it sweeps through the `Callback` subclass instances 
       stored in `self.cbs` according to its `_order` property,
       and for each of the `Callback` subclass instances, 
       it grabs the callback method (begin_epoch, begin_batch, etc)
-      If the callback method exists, it is called.
-      And if the return value of the callback method is `True`,
-      it returns `True`.
+      by `f = getattr(cb, cb_name, None`
+
+    - if the callback method exists, it is called, 
+      and if the return value of the callback method is `True`,
+      it returns `True`, otherwise `False`
 
 *** Callback ver2
       #+BEGIN_SRC python
@@ -2899,8 +3008,10 @@
     - by this delegation, an instance of `Callback` subclass 
       can read AND write a property of the `Runner` instance
       it is refering to as if it is the property of the instance
-      of `Callback` subclass;
-      `self.in_train` in `after_loss` of `AvgStatsCallback` 
+      of `Callback` subclass.
+
+    - for example, look at
+      `self.in_train` in `after_loss` of `AvgStatsCallback` (it will be implemented later);
 
       #+BEGIN_SRC python
         #export
@@ -2958,7 +3069,7 @@
         '''
       #+END_SRC
 
-*** TrainEvalCallback
+*** TrainEvalCallback ver1
 
     #+BEGIN_SRC python
       #export
@@ -2985,7 +3096,7 @@
 
     # overview
     - `TrainEvalCallback` is a default callback registered to
-      `cbs` property of a `Runner` instance.
+      `cbs` property of a `Runner`
       
       # Runner __init__
       #+BEGIN_SRC python
@@ -3000,27 +3111,28 @@
 
     - `TrainEvalCallback` is responsible for managing if the `Runner`
       instance is in training, or validation 
-      by switching self.in_train flag of the `Runner` instance
+      by switching `self.in_train` flag of the `Runner` instance
       inside `begin_validate`.
 
-    - self.in_train of the `Runner` instance will be refered to
-      from inside an instance of `AvgStatsCallback`
+    - `self.in_train` of the `Runner` instance will be refered to
+      from inside an instance of a `Callback` ver2 subclass
+      such as `AvgStatsCallback`
 
-    # begin_epoch 
+    # begin_epoch detail
     - `TrainEvalCallback` inherits `Callback` ver2, 
-      and `self.run` is set to reference to an instance of `Runner`
+      and `self.run` is set to a reference to an instance of `Runner`
       inside `set_runner`
 
-    # Callback ver2
     #+BEGIN_SRC python
-      class Callback():
-          _order=0
-          def set_runner(self, run): self.run=run
-          def __getattr__(self, k): return getattr(self.run, k)
-          @property
-          def name(self):
-              name = re.sub(r'Callback$', '', self.__class__.__name__)
-              return camel2snake(name or 'callback')
+      # Callback ver2
+        class Callback():
+            _order=0
+            def set_runner(self, run): self.run=run
+            def __getattr__(self, k): return getattr(self.run, k)
+            @property
+            def name(self):
+                name = re.sub(r'Callback$', '', self.__class__.__name__)
+                return camel2snake(name or 'callback')
     #+END_SRC
 
 *** AvgStats & AvgStatsCallback ver1
@@ -3030,7 +3142,7 @@
       #export
       import sys
       class AvgStats():
-          def __init__(self, metrics, in_train): self.metrics,self.in_train = listify(metrics),in_train
+         def __init__(self, metrics, in_train): self.metrics,self.in_train = listify(metrics),in_train
           
           def reset(self):
               self.tot_loss,self.count = 0.,0
@@ -3131,7 +3243,7 @@
 
     - `self.tot_loss` records the accumulated sum, over all the batches,
       of the losses weighted by batch size.
-      it will be a tensor of the form `tensor(15825.9590)`.
+      it will be a rank0 tensor of the form `tensor(15825.9590)`.
       in order to get the raw number, we need to call `.item()`
 
       #+BEGIN_SRC python
@@ -3173,7 +3285,7 @@
       (the batch size of each batch is used as the weight)
 
     - `self.count` is the sum of the batch size over all the batches
-
+      which is initialized to be 0 inside `reset`
   
     # AvgStats::accumulate detail
     - `accumulate` is called by an instance of `Callback` ver2
@@ -3181,16 +3293,18 @@
     - `run` is an instance of `Runner` an instance of 
       `Callback` ver2 subclass is refering to.
 
-    - `bn` is teh size of the curent batch
+    - `bn` is the size of the curent batch
 
     - `self.tot_loss += run.loss * bn` 
       is a weighted sum of the loss over all the batches
 
     - `self.tot_mets[i] += m(run.pred, run.yb) * bn`
-      is a weighted sum of a metrics over all the batches.
+      is a weighted sum of a metrics(e.g. `accuracy`)
+      over all the batches.
 
     # AvgStatsCallback overview
-    - `AvgStatsCallback` is a subclass of `Callback` ver2
+    - `AvgStatsCallback` is a subclass of `Callback` ver2,
+      and an adapter for `AvgStats`
 
     - it contains an instance of `AvgStats`
 
@@ -3244,7 +3358,7 @@
 *** standard deviation
     - 35:30
     - the data type of variance is not a row number.
-      instead, it is a tensor like;
+      instead, it is a rank0 tensor like;
 
       #+BEGIN_SRC python
         tensor(6.8693)
@@ -3289,7 +3403,7 @@
       covariance is small
 
 *** when softmax should NOT be used
-    - 45:00
+    - lesson10, 45:00
     - two pictures with different 'fishiness',
       one with 2, and the other only with 0.63
       will end up having same softmax value
@@ -3306,10 +3420,14 @@
     - softmax should be used when we are sure that
       an input has at least 1 label.
 
-*** binary
-    - 48:30
+*** binominal
+    - lesson10, 48:30
     - when we are not sure if an image has at least 1 lalbel,
-      we use binary
+      we use binominal;e^x/(1+e^x)
+      since this will map values to [0, 1], taking into account
+      of the abolute magnitude
+
+      https://www.desmos.com/calculator
 
 *** when softmax is a good idea
     - language model
@@ -3369,10 +3487,19 @@
     - a function to retun get_model (ver2) 
       with a specified learning rate applied
 
+    - get_model is as below;
+
+      #+BEGIN_SRC python
+        def get_model(data, lr=0.5, nh=50):
+            m = data.train_ds.x.shape[1]
+            model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,data.c))
+            return model, optim.SGD(model.parameters(), lr=lr)
+      #+END_SRC
+
 *** debugging
     - 1:59:00
 
-*** Recorder ver1 
+*** TODO Recorder ver1 
 
     #+BEGIN_SRC python
       #export
@@ -3387,23 +3514,33 @@
           def plot_lr  (self): plt.plot(self.lrs)
           def plot_loss(self): plt.plot(self.losses)
 
-
     #+END_SRC
-    - `param_groups` is groups of HYPER PARAMETERS in the form of
 
-      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
-
-    - `lrs` is an history array for `lr`
-
-    - there are possibly more than 1 parameter group, and 
-      each group has 'lr' of different values
-
-    - Recorder records the change of `lr` of only the last parameter group
-      after every batch.
+    # overview
+    - `Recorder` records the value of `lr` of only the last 
+      parameter group (which is accessed by index -1) 
+      everytime `after_batch` is called
       
       #+BEGIN_SRC python
         self.lrs.append(self.opt.param_groups[-1]['lr'])
       #+END_SRC
+
+    # after_batch detail
+    - `param_groups` is groups of HYPER PARAMETERS in the form of
+
+      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+
+    - `lrs` is an history array for `lr` of the last parameter group
+
+    - there are possibly more than 1 parameter groups, and 
+      each group has 'lr' of different values
+
+    - [ ] why do we need to call detach?
+
+      #+BEGIN_SRC python
+        self.losses.append(self.loss.detach().cpu())        
+      #+END_SRC
+
 
 *** ParamScheduler ver1
 
@@ -3420,19 +3557,29 @@
               if self.in_train: self.set_param()
     #+END_SRC
 
-    - ParamScheduler sets to each parameter group a concrete value calculated by passed
-      `sched_func`, in the beggining of every batch
+    # overview
+    - `ParamScheduler` updates the parameter specified
+      by `self.pname` of all the parameter groups
+      by the value calculated by passed `sched_func`, 
+      in the beggining of every batch
 
-    - `param_groups` is groups of weight&biases in the form of
+    # set_param detail
+    - as with `Recorder` ver1, `param_groups` is groups of HYPER PARAMETERS in the form of
 
-      #+BEGIN_SRC python
-        # the 1st param group is for layer 1 to m (main body)
-        # the 2nd param group is for layer m+1 to n (last few layers)
-        [
-            [W1, B1, ..., Wm, Bm],
-            [Wm+1, Bm+1 ..., Wn, Bn]
-        ]
-      #+END_SRC
+      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+
+    - note that the "group" refers to group of LAYERS, i.e., 
+      - the 1st param group is for layer 1 to m (main body)
+      - the 2nd param group is for layer m+1 to n (last few layers)
+
+      # #+BEGIN_SRC python
+      #   # the 1st param group is for layer 1 to m (main body)
+      #   # the 2nd param group is for layer m+1 to n (last few layers)
+      #   [
+      #       [W1, B1, ..., Wm, Bm],
+      #       [Wm+1, Bm+1 ..., Wn, Bn]
+      #   ]
+      # #+END_SRC
 
 *** sched_lin (that does currying)
 
@@ -3442,16 +3589,18 @@
           return partial(_inner, start, end)
     #+END_SRC
 
-    - `sched_lin` is a "function which returns a function"
-      ,or what I call "currying function"
+    # overview
+    - `sched_lin` is a "function which returns a function",
+      or what I call "currying function"
 
     - a returned function takes only `pos`
 
+    # detail
     - `start` is the starting value of a hyper parameter
 
     - `end` is the ending value of a hyper parameter
 
-*** annealer (decorator)
+*** annealer
 
     #+BEGIN_SRC python
       #export
@@ -3463,20 +3612,55 @@
       def sched_lin(start, end, pos): return start + pos*(end-start)
     #+END_SRC
 
-    - `annealer` is a "function which returns a function".
-      It accepts a NORMAL scheduler function, and it returns
+    # overview
+    - `annealer` is a "function which returns a function",
+      which accepts a NORMAL scheduler function, and it returns
       a function which is yet another "function which returns a function".
 
-    - The returned function is a "currying function" 
+    - the returned function is a "currying function" 
       that does currying, as the version of `sched_lin`
       in the previous section
 
     - the point of `annealer` is that, with `annealer`, we
-      do not have to manual implemente the "currying function" for
+      do not have to manually implemente the "currying function" for
       a scheduler function.
 
-    - In other words, annealer helps to create a
+    - in other words, annealer helps to create a
       currying function from a normal scheduler function
+
+    # detail
+    - with `@` (method decorator), the followings become equivalent
+      https://realpython.com/primer-on-python-decorators/
+
+      #+BEGIN_SRC python
+        sched_lin(1,2)
+
+        annealer(sched_lin)(1,2)
+      #+END_SRC
+      
+*** other scheduler functions with @annealer (sched_cos, sched_no, sched_exp, cos_1cycle_anneal)
+
+    #+BEGIN_SRC python
+      #export
+      @annealer
+      def sched_cos(start, end, pos): return start + (1 + math.cos(math.pi*(1-pos))) * (end-start) / 2
+      @annealer
+      def sched_no(start, end, pos):  return start
+      @annealer
+      def sched_exp(start, end, pos): return start * (end/start) ** pos
+
+      def cos_1cycle_anneal(start, high, end):
+          return [sched_cos(start, high), sched_cos(high, end)]
+
+      #This monkey-patch is there to be able to plot tensors
+      torch.Tensor.ndim = property(lambda x: len(x.shape))
+    #+END_SRC
+
+    # detail
+    - for visualization of `sched_cos`, use the web page below;
+    https://www.desmos.com/calculator
+    
+    0.2+(1+cos(pi(1-x)))*(0.6-0.2)/2
 
 *** monkey patching Tensor.ndim
 
@@ -3484,7 +3668,8 @@
       #This monkey-patch is there to be able to plot tensors
       torch.Tensor.ndim = property(lambda x: len(x.shape))
     #+END_SRC
-    
+
+    # overview
     - this is for telling matplot the dimension of a tensor
       e.g. tensor.Size([50000, 784])
 
@@ -3504,12 +3689,41 @@
           return _inner
     #+END_SRC
 
+    # detail
     - `torch.cumsum`
       https://pytorch.org/docs/master/generated/torch.cumsum.html
 
-    - `pcts` is in the form of [0.3, 0.7]
+      #+BEGIN_SRC python
+        a = torch.randn(10)
 
-    - `torch.cumsum([0.3, 0.7])` will be `[0, 0.3, 1.0]`
+        a
+        '''
+        tensor([-0.8286, -0.4890,  0.5155,  0.8443,  0.1865, -0.1752, -2.0595,
+                 0.1850, -1.1571, -0.4243])
+        '''
+
+        torch.cumsum(a, dim=0)
+        '''
+        tensor([-0.8286, -1.3175, -0.8020,  0.0423,  0.2289,  0.0537, -2.0058,
+                -1.8209, -2.9780, -3.4022])
+        '''
+      #+END_SRC
+
+    - `pcts` in the argument is in the form of [0, 0.3, 0.7]
+
+    - an element of `pcts` means how much percentage of
+      the total steps the corresponding interval is allocated,
+      e.g., when pcts = [0, 0.3, 0.7], 
+      - the 1st interval is allocated 0.3
+      - the 2nd interval is allocated 0.7
+
+    - `torch.cumsum([0, 0.3, 0.7])` will be `[0, 0.3, 1.0]`
+
+    - `pcts` after `pcts = torch.cumsum(pcts, 0)` gives 
+      the 'coordinates' of the edges of the schedulling intervals,
+      e.g., when pcts = [0, 0.3, 0.7], 
+      - the coordinate of the edges of 1st interval is 0, 0.3
+      - the coordinate of the edges of 2nd interval is 0.3, 1.0
 
 *** how to use combine_scheds 
 
@@ -3519,30 +3733,11 @@
 
     #+END_SRC
 
-    
-    - Here is an example: use 30% of the budget to go
+    # overview
+    - here is an example: use 30% of the budget to go
       from 0.3 to 0.6 following a cosine, 
       then the last 70% of the budget to go from 0.6 to 0.2, 
       still following a cosine.
-
-*** sched_cos, sched_no, sched_exp, cos_1cycle_anneal
-
-    #+BEGIN_SRC python
-      #export
-      @annealer
-      def sched_cos(start, end, pos): return start + (1 + math.cos(math.pi*(1-pos))) * (end-start) / 2
-      @annealer
-      def sched_no(start, end, pos):  return start
-      @annealer
-      def sched_exp(start, end, pos): return start * (end/start) ** pos
-
-      def cos_1cycle_anneal(start, high, end):
-          return [sched_cos(start, high), sched_cos(high, end)]
-
-      #This monkey-patch is there to be able to plot tensors
-      torch.Tensor.ndim = property(lambda x: len(x.shape))
-    #+END_SRC
-
 
 * lesson10
 ** 05b_early_stopping.ipynb
@@ -3584,7 +3779,7 @@
       !cp /content/exp/nb_05.py /content/exp.nb_05.py
     #+END_SRC
     
-*** Callback ver3
+*** Callback ver3, TrainEvalCallback ver2, CancelTrainException, CancelEpochException, CancelBatchException, 
 
     #+BEGIN_SRC python
       #export
@@ -3627,10 +3822,27 @@
       class CancelBatchException(Exception): pass
     #+END_SRC
 
-    - with Callback ver3, __call__ is added,
-      and a user can add any extra behavior they like 
-      on calling a callback method by overriding
-      __call__, method
+    # Callback ver3 overview
+    - with `Callback` ver3, `__call__` is added,
+      and with this, a developer can add any extra behavior
+      by overriding `__call__` method.
+
+    - the extra behavior can be made use of as below;
+
+      #+BEGIN_SRC python
+        class MyCallback(Callback)
+            def __call__(self, cb_name):
+                super().__call__(self, cb_name);
+                print('this is extra behaviour')
+
+        my_callback_instance = MyCallback()
+        my_callback_instance('begin_batch')
+      #+END_SRC
+
+    # TrainEvalCallback ver2 overview
+    - the implementation is exactly the same as `TrainEvalCallback` ver1.
+      the only difference is that it inherits `Callback` ver3 instead of
+      `Callback` ver2
 
 *** Cancel class
 
@@ -3640,12 +3852,14 @@
       class CancelBatchException(Exception): pass
     #+END_SRC
 
+    # overview
     - we can make use of the Exception mechanism to 
       interuppt epoch, fit, 
 
-    - inherit Exception, and just say `pass`
-    - by saying pass, it has all the same behaviors and propeties
-      ,but have different name
+    - to do so, inherit `Exception`, and just say `pass`
+
+    - by saying `pass`, it has all the same behaviors and propeties,
+      but have different name
 
 *** Runner ver2 (=fit ver10)
 
@@ -3716,12 +3930,15 @@
               for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) or res
               return res
     #+END_SRC
-    - note that callack instances are registered as propeties of
-      `Runner` instance by `setattr` inside __init__
 
+    # overview
+
+    # - note that callack instances are registered as propeties of
+    #   `Runner` instance by `setattr` inside __init__
+    
     - Runner ver2  makes use of Callback ver3, and
-      so a specific callback(e.g. begin_batch) of a callback
-      instance can be called as `cb(cb_name)`
+      so a specific callback(e.g. begin_batch) of an instance
+      of `Callback` subclass can be called as `cb(cb_name)`
 
       #+BEGIN_SRC python
         def __call__(self, cb_name):
@@ -3730,14 +3947,15 @@
             return res
       #+END_SRC
 
-    - a line of code to throw CancelTrainException is added to `fit` 
-      to catch CancelTrainException
+    - a line of code to throw `CancelTrainException` is
+      added to `fit` to catch `CancelTrainException`
+      (`try-except` syntax which is the python version of try-catch)
 
       #+BEGIN_SRC python
         except CancelTrainException: self('after_cancel_train')
       #+END_SRC
 
-*** _AvgStatsCallback ver2 (same as ver1?)
+*** AvgStatsCallback ver2
 
     #+BEGIN_SRC python
       #export
@@ -3756,8 +3974,11 @@
           def after_epoch(self):
               print(self.train_stats)
               print(self.valid_stats)
-
     #+END_SRC
+
+    # overview
+    - the implementation is exactly the same as `AvgStatsCallback` ver1,
+      and the only difference is that it now inherits `Callback` ver3
 
 *** Recorder ver2 
 
@@ -3785,12 +4006,14 @@
 
        #+END_SRC
 
+    # overview
     - with Recorder ver2, `lr` are recorded for all the layers,
       and with `plot_lr` function, we can choose the layer 
       for which to plot the change of `lr` 
       (defaults to the last layer [-1] )
 
-    - in `begin_fit`, it creates
+    # begin_fit overview
+    - `begin_fit` creates
       - `lrs`, array of "learning rate history array"
 
         (each element of `lrs` is 'learning rate history array'
@@ -3798,15 +4021,24 @@
 
       - "loss history array" (`losses`)
 
-    - in the end of every batch (inside `after_batch`),
-      for each parameter group, it update "learning rate history array"
-      also, it update "losses history array"
+    # after_batch overview
+    - in the end of every batch for each parameter group, 
+      `after_batch` updates "learning rate history array", 
+      and it also updates "losses history array"
 
+    # after_batch detail
+    - as with `Recorder` ver1, `param_groups` is groups of
+      HYPER PARAMETERS in the form of
+
+      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]    
+
+    # plot overview
     - `plot` shows (learning rate VS loss)
       for the parameter group specified by pgid
       (default to -1 = the last parameter group)
 
-    - `plot_lr` shows "learning rage history array" of 
+    # plot_lr overview
+    - `plot_lr` shows "learning rage history array" of the
       specified paramter group (default to -1 = the last parameter group)
 
 *** ParamScheduler ver2
@@ -3829,22 +4061,26 @@
               if self.in_train: self.set_param()
     #+END_SRC
 
-    - it takes several schduler functions whereas
-      ParamScheduler ver1 takes only 1 scheduler function
+    # overview
+    - `ParamScheduler` ver2 takes several schduler functions whereas
+      `ParamScheduler` ver1 takes only 1 scheduler function
 
     - each shceduler function corrresponds to a parameter group
       (=layer group)
 
-    - parameter group is in the form of 
-      #+BEGIN_SRC python
-        # the 1st param group is for layer 1 to m (main body)
-        # the 2nd param group is for layer m+1 to n (last few layers)
-        [
-            [W1, B1, ..., Wm, Bm],
-            [Wm+1, Bm+1 ..., Wn, Bn]
-        ]
-      #+END_SRC      
+    - note that the "group" refers to group of LAYERS, i.e., 
+      - the 1st param group is for layer 1 to m (main body)
+      - the 2nd param group is for layer m+1 to n (last few layers)      
 
+    - `param_groups` is groups of HYPER PARAMETERS in the form of
+
+      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+
+    # begin_fit detail
+    - if `self.sched_funcs` is not `list` nor `tuple`,
+      i.e., a single function, `begin_fit` creates 
+      an array of scheduler functions so that 
+      each parameter group has its corresponding scheduler function.
 
 *** LR_Find ver1
 
@@ -3867,9 +4103,13 @@
               if self.loss < self.best_loss: self.best_loss = self.loss
     #+END_SRC
 
-    - in begin_batch, a new value for `lr`, and update
-      `lr` property of each parameter group.
-    - 
+    # begin_batch overview
+    - `begin_batch` calculates a new value for `lr`, 
+      and set `lr` property of each parameter group
+      to the calculated value.
+
+    # begin_batch detail
+    - `**` is exponentiation.
 
 ** 06_cuda_cnn_hooks_init
 *** imports
@@ -3924,6 +4164,12 @@
 
     - normalize training & validation data set
 
+    - `normalize` is implemented above;
+      #+BEGIN_SRC python
+        def normalize(x, m, s): return (x-m)/s
+      #+END_SRC
+
+
 *** view
 
     #+BEGIN_SRC python
@@ -3950,6 +4196,7 @@
       '''
     #+END_SRC
 
+    # overview
     - `view` reshapes a tensor in the way that total numbe of 
       the elements does not change. This is as if reshaping
       a rectangle so that the area of the rectangle is preserved
@@ -3979,14 +4226,16 @@
       def mnist_resize(x): return x.view(-1, 1, 28, 28)
     #+END_SRC
 
-    - reshape a mnist batch 
+    # overview
+    - `mnist_resize` reshapes a mnist batch 
       from  tensor.Size(512, 784)
       to    tensor.Size(-1, 1, 28, 28)
 
-    - chanel & width & height are (1, 28, 28)
+    - after reshaping, chanel & width & height are (1, 28, 28)
+
+    # detail
     - batch size `-1` means what is possible after specifying 
       (chahel:1, width:28, height:28) which is 512
-
 
     #+BEGIN_SRC python
       my_xb, my_yb = next(iter(data.train_dl))
@@ -3999,7 +4248,8 @@
       def flatten(x):      return x.view(x.shape[0], -1)
     #+END_SRC
 
-    - flatten reshapes a batch such that
+    # overview
+    - `flatten` reshapes a batch such that
       - the value for the 1st axis (batch axis) remains the same
       - the value of the 2nd axis will be the product of the values
         for channel, width, height
@@ -4023,6 +4273,7 @@
       def flatten(x):      return x.view(x.shape[0], -1)
     #+END_SRC
 
+    # overview
     - `Lambda` is a 'helper' layer to run a reshaping function 
       such as `flatten`
 
@@ -4041,7 +4292,6 @@
 
 *** AdaptiveAvgPool2d
     https://pytorch.org/docs/stable/nn.html
-    
 
     #+BEGIN_SRC python
       m = nn.AdaptiveAvgPool2d((5,7))
@@ -4079,7 +4329,9 @@
 
     - Applies a 2D adaptive average pooling over an
       input signal composed of several input planes.
+
     - The output is of size H x W, for any input size.
+
     - The number of output features is equal to the number of 
       input planes.
     
@@ -4099,6 +4351,7 @@
           )
     #+END_SRC
 
+    # overview
     - `data` is used for defining the final layer
       `nn.Linear(32, data.c)`
 
@@ -4257,7 +4510,6 @@
           return learn, Runner(cb_funcs=listify(cbs))
     #+END_SRC
 
-
 *** SequentialModel ver2
 
     #+BEGIN_SRC python
@@ -4390,7 +4642,6 @@
         '''
       #+END_SRC
 
-
 *** Hooks
 
     #+BEGIN_SRC python
@@ -4487,7 +4738,6 @@
       
     - so, l[0] is a single nn.Conv2d instance
 
-      
 *** TODO creating histogram
 
     #+BEGIN_SRC python
@@ -4577,7 +4827,6 @@
 
     - with GeneralRelu, we can improve the ratio of non-zero
       activation elements in an activation tensor
-
 
 *** TODO leaky relu
     - why leaky relu works better ?
@@ -11242,6 +11491,7 @@ class BatchNorm(nn.Module):
 
     #+END_SRC
 
+
 * audio lesson
 *** install notebooks
 
@@ -11732,6 +11982,9 @@ class BatchNorm(nn.Module):
 
 
 * deep learning misc resource
+*** andres ng videos on youtube
+    https://www.youtube.com/watch?v=CS4cs9xVecg&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe
+
 *** how you should read research papers
     https://link.medium.com/JPM8q4SSN7
 
@@ -11743,7 +11996,6 @@ class BatchNorm(nn.Module):
 
 *** train GAN with less data
     https://analyticsindiamag.com/can-we-train-gans-with-less-data/
-
 
 
 *** attention and memory
