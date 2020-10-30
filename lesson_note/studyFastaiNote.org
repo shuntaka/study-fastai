@@ -1,6 +1,3 @@
-* part2 new URL
-  https://course19.fast.ai/part2
-
 * things to keep in mind
 ** python
 *** packing & unpacking operator (single asterisk)
@@ -196,9 +193,8 @@
 *** what is pooling for?
     - lecture by andres ng
       https://www.youtube.com/watch?v=8oOgPUO-TBY&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=108
-
-    
-*** how to determine the right kernel size for CNN?
+*** how does the 'face size' of activation change by convolution
+*** how do we determine the right kernel size for CNN?
 
 
 *** meaning of filters & channels
@@ -1184,9 +1180,10 @@
       ,which is along each row (50000 rows),
 
     - with `keepdim=True`, for each row, after the summation,
-      the sum will be a tensor with size `torch.Size([1])` instead of a scalar
-      and so the size of the resulting tensor is `torch.Size([50000,1])`
-      which is helpful when broadcasting later
+      the `x.exp().sum(01, keepdim=True))` will be a rank2 tensor 
+      of `torch.Size([50000, 1])` instead of a rank1 tensor
+      of `torch.Size([50000])`, with which `x.exp() / (x.exp().sum(-1, keepdim=True))`
+      can use broadcasting.
 
     - x.exp() => torch.Size([50000,10])
 
@@ -2344,6 +2341,7 @@
           def valid_ds(self): return self.valid_dl.dataset
     #+END_SRC
 
+    # overview
     - DataBunch bundle together training DL & validation DL
 
 *** get_model ver2, Learner
@@ -2876,8 +2874,6 @@
         # example1: learn.Recorder in real fastai 
         # (`Learn` in real fastai is equivalent to `Runner`)
 
-
-        
       - 2. append the instance of the `Callback` subclass to 
         `self.cbs` which is later refered to inside `__init__`
         when sweeping through  the `Callback` subclass instances
@@ -3541,7 +3537,6 @@
         self.losses.append(self.loss.detach().cpu())        
       #+END_SRC
 
-
 *** ParamScheduler ver1
 
     #+BEGIN_SRC python
@@ -3853,10 +3848,13 @@
     #+END_SRC
 
     # overview
-    - we can make use of the Exception mechanism to 
-      interuppt epoch, fit, 
+    - we can make use of the exception mechanism(try-except syntax)
+      to  interuppt `fit`, or `one_batch` instead of relying on the
+      return value of `self(...)`, e.g., `self('begin_batch)` 
+      in `if` blocks
 
-    - to do so, inherit `Exception`, and just say `pass`
+    - to do so, make a new class which inherits `Exception`, 
+      and just say `pass`
 
     - by saying `pass`, it has all the same behaviors and propeties,
       but have different name
@@ -3938,7 +3936,9 @@
     
     - Runner ver2  makes use of Callback ver3, and
       so a specific callback(e.g. begin_batch) of an instance
-      of `Callback` subclass can be called as `cb(cb_name)`
+      of `Callback` subclass can be called as `cb(cb_name)`,
+      e.g., MyCallback('begin_batch')
+
 
       #+BEGIN_SRC python
         def __call__(self, cb_name):
@@ -4249,15 +4249,18 @@
     #+END_SRC
 
     # overview
-    - `flatten` reshapes a batch such that
-      - the value for the 1st axis (batch axis) remains the same
-      - the value of the 2nd axis will be the product of the values
-        for channel, width, height
-        e.g. 
-        torch.Size([512, 32, 1, 1]) => torch.Size([512, 32])
+    - `flatten` removes 'horizontal' & 'vertical' axis
+      and leaves only 'batch' & 'channel' axis, 
+      so the input will be a rank2 tensor
 
+      e.g. 
+      torch.Size([512, 32, 1, 1]) => torch.Size([512, 32])
+    
+    # detail
+    - `x.shape[0]` is the value for the 'batch' axis  (e.g. 512)
     - `-1` means "whatever possible" after specifying 
-      x.shape[0] (=e.g. 512) 
+      the other axis (=the 'batch' axis)
+
 
 *** Lambda 
 
@@ -4277,18 +4280,23 @@
     - `Lambda` is a 'helper' layer to run a reshaping function 
       such as `flatten`
 
+*** convolution summary
+    - the depth of a kernel should matches the depth of an input
+    - the number of the kernels determines the depth of the ouput
+
 *** signature of nn.Conv2d
     - calling nn.Conv2d is in the form like;
       nn.Conv2d(8, 16, 3, padding=1, stride=2)
 
-    - convolution kernel can be considered as sticks of "金太郎飴"
-      stacked together
+    - `nn.Conv2d(8, 16, 3, padding=1, stride=2)` implies
+      - input has 8 channels
+      - output has 16 channels
+    # - convolution kernel can be considered as sticks of "金太郎飴"
+    #   stacked together
 
-    - 8 is length of "金太郎飴"
-
-    - 16 is the number of "金太郎飴"
-
-    - 3 is the size of the face of "金太郎飴"
+    #   - 8 is length of "金太郎飴" => number of the channels
+    #   - 16 is the number of "金太郎飴" => number of the filters
+    #   - 3 is the size of the face of "金太郎飴"
 
 *** AdaptiveAvgPool2d
     https://pytorch.org/docs/stable/nn.html
@@ -4327,13 +4335,18 @@
       '''
     #+END_SRC
 
-    - Applies a 2D adaptive average pooling over an
-      input signal composed of several input planes.
+    # overview
+    - `AdaptiveAvgPool2d` transforms the 'height' and 'width'
+      to the specified values, leaving the value of
+      'batch' and 'channel' unchanged.
 
-    - The output is of size H x W, for any input size.
+    # - Applies a 2D adaptive average pooling over an
+    #   input signal composed of several input planes.
 
-    - The number of output features is equal to the number of 
-      input planes.
+    # - The output is of size H x W, for any input size.
+
+    # - The number of output features is equal to the number of 
+    #   input planes.
     
 *** get_cnn_model ver1
 
@@ -4351,11 +4364,11 @@
           )
     #+END_SRC
 
-    # overview
+    # detail
     - `data` is used for defining the final layer
       `nn.Linear(32, data.c)`
 
-    - Lambda(mnist_resize) reshapes an input 
+    - `Lambda(mnist_resize)` reshapes an input 
       from  tensor.Size([512, 784])
       to    tensor.Size([512, 1, 28, 28]) 
 
@@ -4382,13 +4395,15 @@
           def begin_batch(self): self.run.xb,self.run.yb = self.xb.to(self.device),self.yb.to(self.device)
     #+END_SRC
 
+    # overview
     - we could train a model with CPU.
       actually, the training during lesson 8 - middle of 10
       are done on CPU
 
     - but CPU is slow, so we want to train the model on GPU.
-    - in order to do that, we need to load (model, input) to GPU
-    - to load (model, input), we use CudaCallback
+
+    # detail
+    - `to` is part of a pytorch, and it moves a thing with a tensor to cuda
 
 *** CudaCallack ver2
 
@@ -4409,32 +4424,8 @@
               nn.Conv2d(ni, nf, ks, padding=ks//2, stride=stride), nn.ReLU())
     #+END_SRC
 
+    # overview
     - conv2d is a Sequential module consisting of nn.Conv2d & nn.ReLU
-
-*** BatchTransformXCallback
-
-    #+BEGIN_SRC python
-      #export
-      class BatchTransformXCallback(Callback):
-          _order=2
-          def __init__(self, tfm): self.tfm = tfm
-          def begin_batch(self): self.run.xb = self.tfm(self.xb)
-
-      def view_tfm(*size):
-          def _inner(x): return x.view(*((-1,)+size))
-          return _inner
-    #+END_SRC
-
-*** how to use BatchTransformXCallback
-
-    #+BEGIN_SRC python
-      mnist_view = view_tfm(1,28,28)
-      cbfs.append(partial(BatchTransformXCallback, mnist_view))
-
-      model = get_cnn_model(data, nfs)
-      learn,run = get_runner(model, data, lr=0.4, cbs=cbfs)
-
-    #+END_SRC
 
 *** get_cnn_layers ver1 & get_cnn_model ver2
 
@@ -4449,6 +4440,7 @@
       def get_cnn_model(data, nfs): return nn.Sequential(*get_cnn_layers(data, nfs))
     #+END_SRC
 
+    
     - note that nfs[0] = 1, and the first conv2d will be
       conv2d(1, 8, 5 if i==0 else 3)
 
@@ -4461,6 +4453,57 @@
 
     - note it is `nn.Sequential` that is used, and 
       NOT home made `Sequential`
+
+
+*** BatchTransformXCallback, view_tfm
+
+    #+BEGIN_SRC python
+      #export
+      class BatchTransformXCallback(Callback):
+          _order=2
+          def __init__(self, tfm): self.tfm = tfm
+          def begin_batch(self): self.run.xb = self.tfm(self.xb)
+
+      def view_tfm(*size):
+          def _inner(x): return x.view(*((-1,)+size))
+          return _inner
+    #+END_SRC
+
+    # view_trm detail
+    - `*size` 'array-fy' arguments
+    - with `(-1,)+size`, an array is created by
+      appending to [-1] the elements inside `size`
+      e.g.
+
+      #+BEGIN_SRC python
+        size = [1, 28, 28]
+        newArray = (-1,)+size
+        newArray
+
+        '''
+        [-1, 1, 28, 28]
+        '''
+      #+END_SRC
+
+      (-1,)+size
+    
+*** how to use BatchTransformXCallback
+
+    #+BEGIN_SRC python
+      x_train,x_valid = normalize_to(x_train,x_valid)
+      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
+
+      data = DataBunch(*get_dls(train_ds, valid_ds, bs), c)
+
+      mnist_view = view_tfm(1,28,28)
+      cbfs.append(partial(BatchTransformXCallback, mnist_view))
+
+      nfs = [8,16,32,32]
+
+      model = get_cnn_model(data, nfs)
+      learn,run = get_runner(model, data, lr=0.4, cbs=cbfs)
+
+    #+END_SRC
 
 *** how to determine filter size (the "face size" of "金太郎飴")
     - 1:09:05
@@ -5394,6 +5437,7 @@ class BatchNorm(nn.Module):
 
 *** TODO BatchNorm with L2 regularlization
     https://forums.fast.ai/t/great-article-on-the-interaction-between-batchnorm-and-l2-regularization-discussed-in-lesson-11/43949
+
 
 * lesson11
 ** 07a_lsuv.ipynb
@@ -6516,7 +6560,6 @@ class BatchNorm(nn.Module):
     #+END_SRC
 
       
-
 *** using Optimizer ver2
 
     #+BEGIN_SRC python
@@ -7274,7 +7317,6 @@ class BatchNorm(nn.Module):
         def param_getter(m): return m.parameters()
       #+END_SRC
 
-
 *** get_learner ver1
 
     #+BEGIN_SRC python
@@ -7734,6 +7776,7 @@ class BatchNorm(nn.Module):
       creating a batch before we move a batch to GPU
 
     - fastai v1 is not equipped with data augumentation for batch
+
 
 * lesson12
 ** 10b_mixup_label_smoothing.ipynb
@@ -11984,6 +12027,15 @@ class BatchNorm(nn.Module):
 * deep learning misc resource
 *** andres ng videos on youtube
     https://www.youtube.com/watch?v=CS4cs9xVecg&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe
+
+*** fastai 2019 courses
+    https://course19.fast.ai/part2
+
+
+*** fastai 2020 courses
+    https://course.fast.ai/
+
+    
 
 *** how you should read research papers
     https://link.medium.com/JPM8q4SSN7
