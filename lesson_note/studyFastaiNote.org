@@ -4,6 +4,13 @@
     - 'list-ify' when used in function definition,
     - 'argument-ify' when used on function call
 
+
+** pytorch
+*** stack
+    - `torch.stack` "tensor-ify" a tuple;
+      `torch.stack(xs)` converts a tuple (`xs`) to a rank2 tensor
+      by stacking them together
+
 ** deep learning
 *** tensor sum
     - for explanation, think of a tensor below;
@@ -141,8 +148,6 @@
       - res-net
       - Xres-net
 
-
-
 * things to understand
 ** pyhton
 *** zip
@@ -165,6 +170,8 @@
 *** function annotation
 *** yield
 
+*** iter
+
 ** pyotrch
 *** auto grad
     https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
@@ -185,6 +192,10 @@
 
 *** tensor mean, std
 
+** DNN misc
+*** the relation between the size of the activation std & gradient
+    - 
+
 ** CNN
 *** why can a kernel detects edge?
     - lecture by andres ng
@@ -194,8 +205,12 @@
     - lecture by andres ng
       https://www.youtube.com/watch?v=8oOgPUO-TBY&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=108
 *** how does the 'face size' of activation change by convolution
+    https://deepage.net/deep_learning/2016/11/07/convolutional_neural_network.html
+    - determined by the values of padding, stride 
+      - Oh = 1 + (H + 2P - Fh) / S
+      - Ow = 1 + (H + 2P - Fw) / S
+      
 *** how do we determine the right kernel size for CNN?
-
 
 *** meaning of filters & channels
     - are they used interchangably?
@@ -203,7 +218,7 @@
 *** what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
     
 ** initialization & normalization
-*** how does initialization work?
+*** why does initialization work?
 *** why does BatchNorm works?
 
 ** regularlization
@@ -395,7 +410,7 @@
 *** mean & standard deviation of a TENSOR
     # mean
     https://pytorch.org/docs/stable/torch.html#torch.mean
-    - mean of a tensor is a SCALAR, and is the average over
+    - mean of a tensor is a rank0-tensor(scalar), and is the average over
       ALL the elements in the input tensor.
 
     - especially, in lesson8, the mean of a input is
@@ -404,7 +419,7 @@
 
     # std
     https://pytorch.org/docs/master/generated/torch.std.html
-    - std of a tensor is a SCALAR, and the standard-deviation 
+    - std of a tensor is a rank0-tensor(scalar), and the standard-deviation 
       over ALL the elements in the input tensor.
 
 
@@ -420,7 +435,7 @@
       #+END_SRC
 
 *** mean & standard-deviation for data (e.g. x_train)
-    - recall mean&std of a tensor is a scalar
+    - recall mean&std of a tensor is a rank0-tensor(scalar)
     - mean&std for training input are calculated 
       over all the elements of the batch which is a 
       10000x784 rank 2 tensor
@@ -1076,6 +1091,7 @@
     #+END_SRC
 
 *** Model(nn.Module) ver3
+
       #+BEGIN_SRC python
         class Model(nn.Module):
             def __init__(self, n_in, nh, n_out):
@@ -1613,7 +1629,7 @@
     - `l.parameters()` calls `parameters` method
       implemented on a PyTorch layer class such as `nn.Linear`
 
-*** Model(nn.Module) ver4
+*** Model(nn.Module) ver4 (also look at Model(DuumyModule) above)
 
     #+BEGIN_SRC python
       class Model(nn.Module):
@@ -2328,6 +2344,7 @@
       #+END_SRC
 
 *** DataBunch
+
     #+BEGIN_SRC python
       #export
       class DataBunch():
@@ -2344,7 +2361,7 @@
     # overview
     - DataBunch bundle together training DL & validation DL
 
-*** get_model ver2, Learner
+*** get_model ver2, Learner ver1
 
     #+BEGIN_SRC python
       # get_dls ver1
@@ -3284,7 +3301,7 @@
       which is initialized to be 0 inside `reset`
   
     # AvgStats::accumulate detail
-    - `accumulate` is called by an instance of `Callback` ver2
+    - `accumulate` is called by an instance of `AvgStatsCallback` 
 
     - `run` is an instance of `Runner` an instance of 
       `Callback` ver2 subclass is refering to.
@@ -3309,6 +3326,16 @@
       (the average) to the instance of `AvgStats`
       by passing the reference to an instance of `Runner`
       at `stats.accumulate(self.run)`
+
+    # AvgStatsCallback::after_loss detail
+    - `with torch.no_grad` is necessary because
+      we are still in training phase, but do not
+      need gradient calculation for `accumulate` to run
+      
+      
+      
+
+      https://stackoverflow.com/questions/55627780/evaluating-pytorch-models-with-torch-no-grad-vs-model-eval
 
 *** using AvgStatsCallback
 
@@ -4169,7 +4196,6 @@
         def normalize(x, m, s): return (x-m)/s
       #+END_SRC
 
-
 *** view
 
     #+BEGIN_SRC python
@@ -4261,7 +4287,6 @@
     - `-1` means "whatever possible" after specifying 
       the other axis (=the 'batch' axis)
 
-
 *** Lambda 
 
     #+BEGIN_SRC python
@@ -4299,7 +4324,6 @@
     #   - 3 is the size of the face of "金太郎飴"
 
 *** AdaptiveAvgPool2d
-    https://pytorch.org/docs/stable/nn.html
 
     #+BEGIN_SRC python
       m = nn.AdaptiveAvgPool2d((5,7))
@@ -4339,6 +4363,14 @@
     - `AdaptiveAvgPool2d` transforms the 'height' and 'width'
       to the specified values, leaving the value of
       'batch' and 'channel' unchanged.
+
+    - from official doc
+      https://pytorch.org/docs/stable/nn.html
+      "output_size – the target output size of the image of the
+      form H x W. 
+      Can be a tuple (H, W) or a single H for a square image H x H.
+      H and W can be either a int, or None which means the size
+      will be the same as that of the input."
 
     # - Applies a 2D adaptive average pooling over an
     #   input signal composed of several input planes.
@@ -4440,20 +4472,21 @@
       def get_cnn_model(data, nfs): return nn.Sequential(*get_cnn_layers(data, nfs))
     #+END_SRC
 
-    
+    # get_cnn_layers ver1 detail
     - note that nfs[0] = 1, and the first conv2d will be
       conv2d(1, 8, 5 if i==0 else 3)
 
-    - `get_cnn_model` ver2 
-      - utilizes conv2d which bundles nn.Conv2d & ReLU
-      - factor out `Lambda(mnist_resize)` for generalization.
-        Instead of `Lambda(mnist_resize)`, we use
-        `BatchTransformXCallback`, and pass it 
-        when creating a model
+    # get_cnn_model ver2  overview
+    - `get_cnn_model` ver2 utilizes `conv2d` which bundles `nn.Conv2d` & `ReLU`
+      through `get_cnn_layers` 
+    - with `get_cnn_model` ver2 combined with `get_cnn_layers`,
+      `Lambda(mnist_resize)` which does batch transformation 
+      is factored out for generalization, and instead of
+      using `Lambda(mnist_resize)`, we use more general
+      `BatchTransformXCallback`, which will be implmented below.
 
     - note it is `nn.Sequential` that is used, and 
       NOT home made `Sequential`
-
 
 *** BatchTransformXCallback, view_tfm
 
@@ -4468,6 +4501,11 @@
           def _inner(x): return x.view(*((-1,)+size))
           return _inner
     #+END_SRC
+
+    # BatchTransformXCallback overview
+    - `BatchTransformXCallback` is a subclass of `Callback` ver2
+      which implementes `begin_batch` and accepts a transformer 
+      in `__init__`.
 
     # view_trm detail
     - `*size` 'array-fy' arguments
@@ -4484,10 +4522,8 @@
         [-1, 1, 28, 28]
         '''
       #+END_SRC
-
-      (-1,)+size
     
-*** how to use BatchTransformXCallback
+*** how to use get_cnn_model ver2 with BatchTransformXCallback
 
     #+BEGIN_SRC python
       x_train,x_valid = normalize_to(x_train,x_valid)
@@ -4505,9 +4541,10 @@
 
     #+END_SRC
 
+    - `DataBunch`, `get_runner` will be implemented later
+
 *** how to determine filter size (the "face size" of "金太郎飴")
-    - 1:09:05
-    - 1:17:05
+    https://course19.fast.ai/videos/?lesson=10&t=4353
 
     - first, let's suppose the 1st conv layer is of
       conv2d(1, 8, 3)
@@ -4527,20 +4564,19 @@
       9=(1x3x3) to 8  (only 1 less)
       which is a waste of computations
 
-    - on the other hand, for imagenet, input(3x28x28) has 3 channels,
-      and lets' suppose the 1st conv lsyer is of
-      conv2d(3, 27, 7)
-      - length of "金太郎飴" : 3
-      - number of "金太郎飴" : 27
-      - face size of "金太郎飴": 7
+    - as another example, think of imagenet, where input(3x28x28) has 3 channels
+      and the 1st layer often has 32 filters (kernels)
 
-    - now, focus on a (3x7x7) part of the entire input of (3x28x28)
-      the information can be reduced a lot as a result of the computation
-      from 147=(3x7x7) to 27
+    - if the kernel size is 3x3, since there are 32 kernels,
+      3x3x3 (=27) part of the input will be reduced into 32 numbers,
+      which results in not reducing the amount of the information the original input has
+
+    - on the other hand, if the kernel size is 7x7,
+      3x7x7 (=147) part of the input will be reduced into 32 numbers,
+      which is actually reducing the amount of the information.
 
     - for the similar reson, we use 5 for the kernel size of 1st layer.
-      this way, the information is reduced 
-      from 25(1x5x5) to 8
+      this way, the information is reduced from 25(1x5x5) to 8
 
 *** get_runner
 
@@ -4553,7 +4589,12 @@
           return learn, Runner(cb_funcs=listify(cbs))
     #+END_SRC
 
+    # detail
+    - `Learner` is `Learner` ver1
+    - `Runner` is `Runner` ver2
+
 *** SequentialModel ver2
+    https://course19.fast.ai/videos/?lesson=10&t=4353
 
     #+BEGIN_SRC python
       class SequentialModel(nn.Module):
@@ -4573,28 +4614,55 @@
           def __iter__(self): return iter(self.layers)
     #+END_SRC
 
-    - it creates "activation mean history" for each layer
-    - it creates "activation std history" for each layer
+    # overview
+    - `SequentialModel` creates "activation mean history" for each layer
+    - `SequentialModel` creates "activation std history" for each layer
     - on every call to the model, for eacn layer, 
-      it record the mean&stds of the resulting activation 
+      it records the mean&stds of the resulting activation 
       on "activation mean history" and "activation std history"
       for the layer
-    - SequentialModel ver2 is just for showing "clunky code"
-      to record "activation mean history" , "activation std history"
-      ,and not used later. Instead we use nn.Sequential
+    - `SequentialModel` ver2 is just for showing a primitive way to
+      record "activation mean history", "activation std history",
+    - later, we refactor this using layer-wise callback (with pytorch's terminalogy, "hook")
 
-*** how to interpret "activation mean history"
-    
+    # _call_ detail
+    - for a specific layer whose index is `i`, 
+      "activation means history" `act_means[i]` gets
+      a new entry every time `SequentialModel` is called,
+      and `SequentialModel` is called for every single batch.
+    - hence, `act_means[i]` for a specific layer shows
+      how activation means for that specific layer was changing
+      as the model is called and the parameters were updated
+      for every single batch.
+
+*** TODO how to interpret "activation mean history" graphs in the Jupyter notebook
+    https://course19.fast.ai/videos/?lesson=10&t=4353
+
     # helpful reference?
     https://prateekvjoshi.com/2016/03/29/understanding-xavier-initialization-in-deep-neural-networks/
     https://pouannes.github.io/blog/initialization/    
 
-    - let's look at one layer, layer5
-    - rapid change of "activation mean" is meaning that
-      the weights are updated a lot (=big gradient)
-      and so activation jumps at the next step.
+    - look at a specific single batch, and see how activations change through layers
+    - for good training, the means of an activation should be close to 0,
+      but that is not the case for most of the batches.
+      (especially, because of ReLue layer, mean will be close to 0.5)
 
-*** TODO why activation mean dropps off the clif suddenly?
+    - also, the standard deviation of activations should be close to 1,
+      but the standard deviations of activation is getting closer to 0
+      as we go through the layers
+      
+    - [ ] (?) when the activation is small, the gradients of the
+      paramters are also small, and so the model learns only
+      slowly.
+
+    # - let's look at one layer, layer5
+    # - rapid change of "activation mean" means that
+    #   the weights are updated a lot (=big gradient)
+    #   and so activation jumps at the next step.
+
+*** TODO why does activation mean dropp off the clif suddenly?
+    - (?) a large gradient of the mean history graph implies a big change in paramters?
+
     - think of concaved 3 dimensional loss landscape, with only 2 parameters
     - steep curves means large gradient,
     - when gradient is very big, a parameter will change a lot
@@ -4607,7 +4675,30 @@
       whereas the callbacks we have impelemented so far
       can be called only batch-wise, or epoch-wise
 
-*** Hook
+    - in Pytorch, for some reason, these "layer-wise" callbacks
+      are called "hooks", instead of "callback"
+
+*** append_stats ver1 
+
+    #+BEGIN_SRC python
+      act_means = [[] for _ in model]
+      act_stds  = [[] for _ in model]
+
+      def append_stats(i, mod, inp, outp):
+          act_means[i].append(outp.data.mean())
+          act_stds [i].append(outp.data.std())
+
+      for i,m in enumerate(model): m.register_forward_hook(partial(append_stats, i))    
+    #+END_SRC
+
+    # append_stats overview
+    - a layer-wise callback passed to pytorch `m.register_forward_hook`
+      will receives 3 arguments;
+      - `mod`: the layer(module) the callback is registered on
+      - `inp`: the input for the layer
+      - `outp`: the ouput for the layer
+
+*** Hook, children, append_stats ver2
 
     #+BEGIN_SRC python
       #export
@@ -4624,6 +4715,48 @@
           means.append(outp.data.mean())
           stds .append(outp.data.std())
 
+    #+END_SRC
+
+    # Hook overview
+    - `Hook` is for generalizing the process of registering 
+      a layer-wise callback to a layer(module)
+
+    - in __init__, Hook instance registers the passed function `f`
+      to the passed layer(module) `m`
+
+    - for this purpose, 
+      - `__init__` registers any passed callback to the passed layer(module)
+      - `__init__` passes the instance of `Hook` itself to 
+        the passed callback so that the callback can record
+        the result of a calculation it does.
+
+    - we create a dedicated `Hook` instance for each single layer(module)
+
+    # Hook::__init__ detail
+    - `f` is the layer-wise callback (in pytorch's terminalogy, hook) 
+      to be registered to a module
+
+    - `f` will be called every time a layer calculates
+      forward path, receiving (layer/module, input, output)
+
+    - `f` is passed a reference to the `Hook` instance so that
+      it can record the result of a calculation on the `Hook`
+      instance by `partial(f, self)`
+
+    - for an example of `f`, see `append_stats`
+
+    # append_stats overview
+    - since `append_stats` is a layer-wise callback,
+      and expects to be passed to `__init__` of `Hook`,
+      it has 4 arguments
+      - `hook`: an instance of `Hook`
+      - `mod`: the layer(module) the callback is registered on
+      - `inp`: the input for the layer
+      - `outp`: the ouput for the layer
+
+*** using Hook
+
+    #+BEGIN_SRC python
       # how to use Hook
       model = get_cnn_model(data, nfs)
       learn,run = get_runner(model, data, lr=0.5, cbs=cbfs)
@@ -4631,24 +4764,11 @@
       hooks = [Hook(l, append_stats) for l in children(model[:4])]
     #+END_SRC
 
-    - in __init__, Hook instance register the passed function (`f`)
-      to the passed layer/module (`m`)
-
-    - `partial(f,self)` is the hook(=callback) registered to a module.
-
-    - In order to have a place to record the calculation result of hook(=callback),
-      instead of passing a "normal" function, we pass a method of an object.
-      This way, the passed hook(=callback) can record a calculation result on
-      the instance to which the hoook belongs to
-
-    - `f` is the callback called every time a layer calculate
-      forward path, receiving (layer/module, input, output)
-
-    - `f` has reference to the Hook instance so that it can
-      record the result of a calculation on the Hook instance
-      (as `stats` property in the case above)
-
-[[[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200603_134658_879KUy.png]]]]
+    # detail
+    - `get_cnn_model` is `get_cnn_model` ver2
+    - `hooks = [Hook(l, append_stats)...]` is a list construction syntax
+      and `Hook` instance is created for each of the layers(modules)
+      of `model`
 
 *** ListContainer
 
@@ -4672,8 +4792,8 @@
               return res
     #+END_SRC
 
-    - `ListContainer` gives a child class inheritting the
-      behaviors of python List, and some of numpy.
+    # overview
+    - an instance of `ListContainer` has behavors from python List, and some from numpy.
 
     - `isinstance(idx, (int,slice))` means if `idx` is
       either of type `int`, or type `slice` (such as slice(0,4))
@@ -4705,6 +4825,17 @@
               for h in self: h.remove()
     #+END_SRC
 
+    # overview
+    - `Hooks` is for refactoring the process of manually 
+      registering layer-wise callback
+      (with pytorch's terminalogy, hook), for each of the
+      layers(modules)
+      
+    # Hooks::remove detail
+    - since `Hooks` inherits `ListContainer` implemented above,
+      we can iterate through the `Hooks` instance by
+      `for h in self`
+
 *** using Hooks
 
     #+BEGIN_SRC python
@@ -4725,6 +4856,7 @@
           plt.legend(range(6));
     #+END_SRC
 
+    # overview
     - using `with`, the Hooks instance will be destroyed
       after the code is exceuted.
 
@@ -4781,7 +4913,7 @@
       
     - so, l[0] is a single nn.Conv2d instance
 
-*** TODO creating histogram
+*** TODO append_stats ver3 (creating histogram)
 
     #+BEGIN_SRC python
       def append_stats(hook, mod, inp, outp):
@@ -4792,23 +4924,58 @@
           hists.append(outp.data.cpu().histc(40,0,10)) #histc isn't implemented on the GPU
     #+END_SRC
 
-    - [ ] "activation histogram history array" is in the form of
-      [[0.1, 0.3, ..., 0.2], [0.2, 0.1, ..., 0.3], ...,  []]
+    # detail
+    - `hists` is a history of the histogram of the output(=activations),
+      and is  in the form of
+      [[23, 12, ..., 3], [20, 11, ..., 1], ...,  [10, 9, ..., 2]]
 
-      hists[t][0] always corresponds to the 1st bin
+      - hist[0] is the distribution of an activation for the layer(module) for the 1st batch,
+        hist[1] is the distribution of an activation for the layer(module) for the 2nd batch,
+      hist[2] is the distribution of an activation for the layer(module) for the 3rd batch,        
 
-    - the first bin corresponds to the frequency of 
-      each INDIVIDUAL element of an acitivation tensor 
-      whose value is near zero.
+    - the first bin corresponds to the frequency of the value near 0
+      in an acitivation tensor 
+      - hists[t][0] always corresponds to the 1st bin
 
-      If lots of INDIVIDUAL elements of an acitivation tensor
+    - If lots of INDIVIDUAL elements of an acitivation tensor
       are near zero, the calculations there after will be a waste
       of computations since they do not contribute to loss
       and hence gradient
-
       (NOTE that we are not talking about mean of the activation
        but individual activations)      
       
+*** get_hist
+
+    #+BEGIN_SRC python
+      # Thanks to @ste for initial version of histgram plotting code
+      def get_hist(h): return torch.stack(h.stats[2]).t().float().log1p()
+    #+END_SRC
+
+    # detail
+
+    - `h` is an instance of `Hook`
+    - `get_hist` is expecting `h` to have been initialized 
+      with `append_stats` ver3, and have `stats` property
+    - `h.stats[2]` is a history of histogram of the activation
+      for the layer(module) which `h` received
+
+*** looking at the histogram
+
+    #+BEGIN_SRC python
+      fig,axes = plt.subplots(2,2, figsize=(15,6))
+      for ax,h in zip(axes.flatten(), hooks[:4]):
+          ax.imshow(get_hist(h), origin='lower')
+          ax.axis('off')
+      plt.tight_layout()
+    #+END_SRC
+
+    # overview
+    - the code is showing the history of the histogram of the activation
+      for the first 4 layers
+
+    # detail
+    - `hooks[:4]` retrieves the `Hook` instances for the first 4 layers(modules)
+
 *** get_min
 
     #+BEGIN_SRC python
@@ -4817,14 +4984,33 @@
           return h1[:2].sum(0)/h1.sum(0)
     #+END_SRC
 
-    - h.stats[2] is "activation histogram history"
-    - by stacking "activation history history",
+    # detail
+    - `h` is an instance of `Hook`
+    - `get_hist` is expecting `h` to have been initialized 
+      with `append_stats` ver3, and have `stats` property
+    - `h.stats[2]` is a history of histogram of the activation
+      for the layer(module) which `h` received
 
-    - h1[0] is the frequency of the first bin,
+    - `h.stats[2]` is "activation histogram history"
 
-    - so, h1[:2].sum(0)/h1.sum(0) represents 
+    - `torch.stack(h.stats[2])` 
+
+    - h1[0], h1[1], h1[2] are the frequencies of the 1st-3rd bin,
+      respectively, where activation is small
+
+    - h1[:2].sum(0)/h1.sum(0) represents 
       the history of the proportion of the occurences of 
-      the fitst bin to the sum of the occurences of all the bins.
+      the 1st-3rd bin to the sum of the occurences of all the bins.
+
+*** showing the proportion of the bins for small values
+
+    #+BEGIN_SRC python
+      fig,axes = plt.subplots(2,2, figsize=(15,6))
+      for ax,h in zip(axes.flatten(), hooks[:4]):
+          ax.plot(get_min(h))
+          ax.set_ylim(0,1)
+      plt.tight_layout()
+    #+END_SRC
 
 *** GeneralRelu, get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1
 
@@ -4872,7 +5058,7 @@
       activation elements in an activation tensor
 
 *** TODO leaky relu
-    - why leaky relu works better ?
+    - why does leaky relu work better ?
 
 ** 07_batchnorm.ipynb
 *** imports
@@ -5437,7 +5623,6 @@ class BatchNorm(nn.Module):
 
 *** TODO BatchNorm with L2 regularlization
     https://forums.fast.ai/t/great-article-on-the-interaction-between-batchnorm-and-l2-regularization-discussed-in-lesson-11/43949
-
 
 * lesson11
 ** 07a_lsuv.ipynb
@@ -7283,7 +7468,7 @@ class BatchNorm(nn.Module):
         self.cbs.append(cb)
       #+END_SRC
 
-    - `Leaner` ver2 is `Runner` ver2 with 
+    - `Leaner` ver2 is a slightly different verwion of `Runner` ver2 with 
       every property of `Learner` ver1 moved into `Runner` ver2
 
       #+BEGIN_SRC python
@@ -7388,7 +7573,7 @@ class BatchNorm(nn.Module):
       !cp /content/exp/nb_09b.py /content/exp.nb_09b.py
     #+END_SRC
 
-*** AvgStatsCallback
+*** AvgStatsCallback ver3
 
     #+BEGIN_SRC python
       # export 
@@ -7776,7 +7961,6 @@ class BatchNorm(nn.Module):
       creating a batch before we move a batch to GPU
 
     - fastai v1 is not equipped with data augumentation for batch
-
 
 * lesson12
 ** 10b_mixup_label_smoothing.ipynb
@@ -12031,12 +12215,10 @@ class BatchNorm(nn.Module):
 *** fastai 2019 courses
     https://course19.fast.ai/part2
 
-
 *** fastai 2020 courses
     https://course.fast.ai/
 
     
-
 *** how you should read research papers
     https://link.medium.com/JPM8q4SSN7
 
