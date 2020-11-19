@@ -4,12 +4,19 @@
     - 'list-ify' when used in function definition,
     - 'argument-ify' when used on function call
 
-
 ** pytorch
 *** stack
-    - `torch.stack` "tensor-ify" a tuple;
-      `torch.stack(xs)` converts a tuple (`xs`) to a rank2 tensor
-      by stacking them together
+    - `torch.stack` "tensor-ify" an array or tuple;
+ 
+      #+BEGIN_SRC python
+        my_tuple = (torch.tensor([1,2,3]), torch.tensor([4,5,6]), torch.tensor([7,8,9]))
+        my_stacked = torch.stack(my_tuple)
+        my_stacked
+
+        '''
+        tensor([[1,2,3,], [4,5,6], [7,8,9]])
+        '''
+      #+END_SRC
 
 ** deep learning
 *** tensor sum
@@ -194,7 +201,9 @@
 
 ** DNN misc
 *** the relation between the size of the activation std & gradient
-    - 
+    - (?) a loss function is a function of activation of the final layer,
+      and
+    - (?) see "vanishing gradient problem"
 
 ** CNN
 *** why can a kernel detects edge?
@@ -4479,6 +4488,7 @@
     # get_cnn_model ver2  overview
     - `get_cnn_model` ver2 utilizes `conv2d` which bundles `nn.Conv2d` & `ReLU`
       through `get_cnn_layers` 
+
     - with `get_cnn_model` ver2 combined with `get_cnn_layers`,
       `Lambda(mnist_resize)` which does batch transformation 
       is factored out for generalization, and instead of
@@ -4530,6 +4540,8 @@
       train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
 
       data = DataBunch(*get_dls(train_ds, valid_ds, bs), c)
+
+      cbfs = [Recorder, partial(AvgStatsCallback,accuracy)]
 
       mnist_view = view_tfm(1,28,28)
       cbfs.append(partial(BatchTransformXCallback, mnist_view))
@@ -4913,7 +4925,7 @@
       
     - so, l[0] is a single nn.Conv2d instance
 
-*** TODO append_stats ver3 (creating histogram)
+*** append_stats ver3 (creating histogram)
 
     #+BEGIN_SRC python
       def append_stats(hook, mod, inp, outp):
@@ -4970,13 +4982,14 @@
     #+END_SRC
 
     # overview
-    - the code is showing the history of the histogram of the activation
-      for the first 4 layers
+    - the code is showing the history of the histogram of the 
+      activation for the first 4 layers
 
     # detail
-    - `hooks[:4]` retrieves the `Hook` instances for the first 4 layers(modules)
+    - `hooks[:4]` retrieves the `Hook` instances for the first 
+      4 layers(modules)
 
-*** get_min
+*** get_min ver1
 
     #+BEGIN_SRC python
       def get_min(h):
@@ -4984,16 +4997,24 @@
           return h1[:2].sum(0)/h1.sum(0)
     #+END_SRC
 
+    # overview
+    - `get_min` shows the history of the proportion of 
+      an activation entries with small value (near 0)
+    
     # detail
     - `h` is an instance of `Hook`
-    - `get_hist` is expecting `h` to have been initialized 
-      with `append_stats` ver3, and have `stats` property
+    - `get_hist` asumes that `h` has been initialized 
+      with `append_stats` ver3 and that `append_stats` ver3
+      implemented later has been called once to
+      write `stats` property on `h` 
+
     - `h.stats[2]` is a history of histogram of the activation
       for the layer(module) which `h` received
 
     - `h.stats[2]` is "activation histogram history"
 
-    - `torch.stack(h.stats[2])` 
+    - `torch.stack(h.stats[2])` converts the history of 
+      the distribution of the activation into rank2 tensor
 
     - h1[0], h1[1], h1[2] are the frequencies of the 1st-3rd bin,
       respectively, where activation is small
@@ -5012,7 +5033,15 @@
       plt.tight_layout()
     #+END_SRC
 
-*** GeneralRelu, get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1
+    # overview
+    - the code is showing the result of `get_min` 
+      for `h` for the first 4 layers(modules)
+
+    # detail
+    - `hooks[:4]` retrieves the `Hook` instances for the first 
+      4 layers(modules)
+
+*** get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1, GeneralRelu, init_cnn ver1
 
     #+BEGIN_SRC python
       #export
@@ -5048,17 +5077,81 @@
           return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
     #+END_SRC
 
-    - now `get_cnn_layers` ver2, `get_cnn_model` ver3
-      taks `**kwags` which will be eventually passed to GeneralRelu
+    # get_cnn_layers ver2 overview
+    - with `get_cnn_layers` ver2, a layer function such as
+      `conv2d`, `conv_layer` which consists of the model
+      can be specified dynamically whereas
+      `get_cnn_layers` ver1 always uses `conv2d`
 
+    - `get_cnn_layers` ver2 takes `**kwags` which will be
+      eventually passed to GeneralRelu
+
+    # get_cnn_layers ver2 detail
+    - `layer` is a function such as `conv2d`, `conv_layer`
+
+    # get_cnn_model ver3 overview
+    - `get_cnn_model` ver3 takes `**kwags` which will be
+      eventually passed to GeneralRelu
+
+    # layer overview
     - `layer` in `get_cnn_layers(data, nfs, layer, **kwargs)` is
       a function, such as `conv_layer` to create a convolution layer
 
-    - with GeneralRelu, we can improve the ratio of non-zero
+    # conv_layer
+    - `conv_layer` creates a layer which consists of `nn.Conv2d`,
+      and `GeneralRelu` instead of normal `nn.Relu`
+
+    # GeneralRelu overview
+    - with `GeneralRelu`, we can improve the ratio of non-zero
       activation elements in an activation tensor
+
+*** append_stat ver4
+
+    #+BEGIN_SRC python
+      def append_stats(hook, mod, inp, outp):
+          if not hasattr(hook,'stats'): hook.stats = ([],[],[])
+          means,stds,hists = hook.stats
+          means.append(outp.data.mean().cpu())
+          stds .append(outp.data.std().cpu())
+          hists.append(outp.data.cpu().histc(40,-7,7))
+    #+END_SRC
+
+    # overview
+    - now that `GeneralRelu` is used in the conv layers,
+      the activations will be distributed around 0, instead of 0.5,
+      so the histogram counts the values between -7 and 7
+      instead of 0 and 10
+
+
 
 *** TODO leaky relu
     - why does leaky relu work better ?
+
+*** get_min ver2
+
+    #+BEGIN_SRC python
+      def get_min(h):
+          h1 = torch.stack(h.stats[2]).t().float()
+          return h1[19:22].sum(0)/h1.sum(0)
+    #+END_SRC
+
+    # overview
+    - now that we use `GeneralRelu`, and changed
+      the range for the histogram to (-7, 7),
+      the bin corresponding to small value has changed from 
+      (0, 1, 2) to (19, 20, 21)
+
+*** get_learn_run
+
+    #+BEGIN_SRC python
+      #export
+      def get_learn_run(nfs, data, lr, layer, cbs=None, opt_func=None, uniform=False, **kwargs):
+          model = get_cnn_model(data, nfs, layer, **kwargs)
+          init_cnn(model, uniform=uniform)
+          return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
+    #+END_SRC
+
+    
 
 ** 07_batchnorm.ipynb
 *** imports
@@ -5141,25 +5234,83 @@
               return x*self.mults + self.adds
     #+END_SRC
 
-    - x is rank4 tensor (batch, channel, width, height)
-    - subtracting mean and deviding by std is a type of
-      normalization for `x`, which is an outgoing
-      ACTIVATION of the layer preceding the BatchNorm layer
+    # BatchNorm overview
+    - to understand batch normalizaton, keep in mind that
+      there are 2 kind of things in deep learning;
+      - activation: things to be calculated: 
+      - parameter : things to be learned: 
+
+    - `BatchNorm` layer does "normalization" for the activation
+      of the layer preceding it
+
+    - "normalization" means subtracting mean and deviding 
+      by std is a type of normalization for `x`
+
+    - there are 2 group of things appearing in batch normalization
+      - 1. relating to activation
+        `mean` and `vars` for, which are updated
+        for every new batch of activation, using 
+        the memory of "mean" and "var" of the current batch
+        and all the preceding batches of activations
+
+      - 2. relating to parameters
+        `mults` and `adds` which are "parameters" for
+        a `BatchNorm` layer and since they are parameters,
+        they can be learned
+
+    # BatchNorm::__init__ detail
+    - `mults` is an instance of nn.Parameter, which means
+      it can be learned
+
+    - since `mults` is a type of weight and
+      `adds` is a type of bias,
+      BatchNorm is considered as special kind of a linear layer
+
+    - `nf` corresponds to the value of the channel axis of
+      the activations of the precedeing layer
+
+    - ?? note that the channel axis of the input and the
+      activation are different
+
+    - `lerp` is torch's linear interpolation 
+      ( little bit of this, and little bit of that; a*0.9 + b*0.1)
+
+    - we use self.register_buffer('vars', torch.ones(1, nf, 1,1))
+      to automatically move `vars` and `means` onto GPU on
+      moving the model to GPU
+
+      when (model, inputs) are on GPU, in order to use `vars`
+      and `means` in any calculation within the model, 
+      these variables must be on GPU too because we
+      can't add things on GPU with things on CPU
+
+      also, when we save a trained model, variable 
+      defined with register_buffer will also be saved.
+
+    - [ ] `self.eps`, and `self.mom` are scalars, 
+      and different from tensors, they will go to GPU automatically
+
+      https://discuss.pytorch.org/t/what-is-the-difference-between-register-buffer-and-register-parameter-of-nn-module/32723
+      https://kite.com/python/docs/torch.nn.Module.register_buffer
+
+    # BatchNorm::update_stats detail
+    - `m` and `v` is mean and vars respectively for the
+      current batch of activations, and `means`, `vars`
+      are updated using `m`, `v`.
 
     - `x.mean((0,2,3), keepdim=True)` takes mean over
       (batch, width, height).
 
-    - To do understand this, imagine a number of cubes alinged along batch axis
-    - first, we take mean over batch axis, which corresponds to (0)
-    - then, we have one 3 x <width> x <height> cubes 
-    - this can be considered as "mean input among the batch"
-    - next, take mean over (width, height) which corresponds to (2, 3)
-    - now, we have three 1x1 cube aligned along the chanel axis
-    - each of 1x1 cube represents the mean value over (batch, width ,height)
-      for the chanel
-
-    - keepdim is for broadcasting when subtracting the mean from
-      each x
+      - to understand this, imagine a number of cubes alinged along batch axis
+      - first, we take mean over batch axis, which corresponds to (0)
+      - then, we have one 3 x <width> x <height> cubes 
+      - this can be considered as "mean input among the batch"
+      - next, take mean over (width, height) which corresponds to (2, 3)
+      - now, we have three 1x1 cube aligned along the chanel axis
+      - each of 1x1 cube represents the mean value over
+        (batch, width ,height) for the chanel
+      - keepdim is for broadcasting when subtracting the mean from
+        each x
 
       #+BEGIN_SRC python
 
@@ -5177,113 +5328,21 @@
         '''
       #+END_SRC
 
-    - `mults` is an instance of nn.Parameter, which means
-      it can be learned
+    # BatchNorm::forward detail
+    - `x` is the activation coming out from the layer
+      preceding the `BatchNorm` layer, and is a rank4 tensor
+      with 4 axis (batch, channel, width, height)
 
-    - since `mults` is a type of weight and  `adds` is a type of bias,
-      BatchNorm is considered as special kind of a linear layer
+    - [ ] (?) `with torch.no_grad()` is necessary because
+      `self.update_stats(x)` involves `x` but does not 
+      contribute to the calculation of the gradients
 
-    - `nf` corresponds to the value of the channel axis of
-      the activations of the precedeing layer
-
-    - ?? note that the channel axis of the input and the
-      activation are different
+    - `mults` and `adds` are  "γ" and "β", respectively
+      for batch normalization
 
     - for tarining time, we use mean & vars of that specific batch
       of activations, whereas for inference time, we use
       averaged means & vars over many batches of activations
-
-    - `lerp` is torch's linear interpolation 
-      ( little bit of this, and little bit of that; a*0.9 + b*0.1)
-
-    - we use self.register_buffer('vars', torch.ones(1, nf, 1,1))
-      to automatically move `vars` and `means` onto GPU on
-      moving the model to GPU
-
-      When (model, inputs) are GPU, in order to use `vars`
-      and `means` in any calculation within the model, 
-      these variables must be on GPU too.
-
-      we can't add things on GPU with things on CPU
-
-
-    - [ ] `self.eps`, and `self.mom` are scalars, and
-      different from tensors, they will go to GPU automatically
-      
-    - also, when we save a trained model, variable 
-      defined with register_buffer will also be saved.
-
-      https://discuss.pytorch.org/t/what-is-the-difference-between-register-buffer-and-register-parameter-of-nn-module/32723
-      https://kite.com/python/docs/torch.nn.Module.register_buffer
-
-*** TODO BatchNorm question
-# When do model properties automatically move to GPU
-
-# I am having trouble clearly understanding the requirement 
-# for properties defined on a layer class (such as BatchNorm) 
-# to be automatically moved to GPU when moving a model to GPU
-
-# Specifically, I do not understand why we do NOT have to
-# use `register_buffer` for defining `self.eps` on `BatchNorm` 
-
-Why not using "register_buffer" for "self.eps" in `BatchNorm`
-
-For implementing `BatchNorm` in lesson10, Jeremy used `register_bufer`
-as below for defining `vars` & `means`, the explanation for which 
-I can understand.
-
-However, his exlanation makes me wonder why we do NOT have
-to use `register_bufer` as well for defining `self.eps`
-
-At 1:43:12 of the lecture video for Lesson10,
-Jeremy says,
-
-*If we move the model to the GPU anything registered as buffer
-will be moved to GPU as well
-If we didn't do that, then it tries to do the calculation down here,
-and vars and means are not on the GPU, but everything else is on the GPU
-we get an error.*
-
-If this is the case, do we not have to define `eps` 
-using buffer as well, since it is also involved 
-in the calculation inside `forward`?
-
-Since `self.eps` is defined as `self.eps = eps`, 
-it will NOT automatically moved on GPU when the model
- is moved to GPU, if I understand correctly.
-
-Then, we should get an error while  `x = (x-m) / (v+self.eps).sqrt()`  is executed 
-since we are trying to use a thing (= `x`) on the GPU 
-with a thing(= `eps`) NOT on the GPU.
-
-Thanks
-
-
-``` python
-class BatchNorm(nn.Module):
-    def __init__(self, nf, mom=0.1, eps=1e-5):
-        super().__init__()
-        # NB: pytorch bn mom is opposite of what you'd expect
-        self.mom,self.eps = mom,eps
-        self.mults = nn.Parameter(torch.ones (nf,1,1))
-        self.adds  = nn.Parameter(torch.zeros(nf,1,1))
-        self.register_buffer('vars',  torch.ones(1,nf,1,1))
-        self.register_buffer('means', torch.zeros(1,nf,1,1))
-
-    def update_stats(self, x):
-        m = x.mean((0,2,3), keepdim=True)
-        v = x.var ((0,2,3), keepdim=True)
-        self.means.lerp_(m, self.mom)
-        self.vars.lerp_ (v, self.mom)
-        return m,v
-        
-    def forward(self, x):
-        if self.training:
-            with torch.no_grad(): m,v = self.update_stats(x)
-        else: m,v = self.means,self.vars
-        x = (x-m) / (v+self.eps).sqrt()
-        return x*self.mults + self.adds
-```
 
 *** conv_layer ver2
 
@@ -5305,7 +5364,7 @@ class BatchNorm(nn.Module):
 
     - bn is default to be true
 
-*** init_cnn, get_learn_run ver1
+*** init_cnn ver2, get_learn_run ver1
 
     #+BEGIN_SRC python
       #export
@@ -7961,6 +8020,7 @@ class BatchNorm(nn.Module):
       creating a batch before we move a batch to GPU
 
     - fastai v1 is not equipped with data augumentation for batch
+
 
 * lesson12
 ** 10b_mixup_label_smoothing.ipynb
