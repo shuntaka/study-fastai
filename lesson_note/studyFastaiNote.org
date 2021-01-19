@@ -1,3 +1,4 @@
+* 
 * things to keep in mind
 ** python
 *** packing & unpacking operator (single asterisk)
@@ -5,6 +6,13 @@
     - 'argument-ify' when used on function call
 
 ** pytorch
+*** using `nn` module
+    import torch
+    from torch import nn
+
+*** mean
+    - `torch.mean` is 'fusion' inside the specified axis
+
 *** stack
     - `torch.stack` "tensor-ify" an array or tuple;
  
@@ -17,6 +25,17 @@
         tensor([[1,2,3,], [4,5,6], [7,8,9]])
         '''
       #+END_SRC
+
+*** broadcast
+    https://pytorch.org/docs/stable/notes/broadcasting.html
+    two tensors are “broadcastable” if the following rules hold:
+
+    Each tensor has at least one dimension.
+
+    When iterating over the dimension sizes, starting at the trailing dimension, 
+    the dimension sizes must either be equal, one of them is 1, or one of them does not exist.
+
+
 
 ** deep learning
 *** tensor sum
@@ -204,6 +223,8 @@
     - (?) a loss function is a function of activation of the final layer,
       and
     - (?) see "vanishing gradient problem"
+      https://www.youtube.com/watch?v=qhXZsFVxGKo
+
 
 ** CNN
 *** why can a kernel detects edge?
@@ -229,6 +250,14 @@
 ** initialization & normalization
 *** why does initialization work?
 *** why does BatchNorm works?
+    # NeurIPS 2018
+    https://www.youtube.com/watch?v=ZOabsYbmBRM
+
+    # paper author lecture
+    https://www.youtube.com/watch?v=EvAVCxZJN2U
+
+    # deep lizard
+    https://www.youtube.com/watch?v=dXB-KQYkzNU
 
 ** regularlization
 *** what is regularlization?
@@ -1905,11 +1934,15 @@
       #+END_SRC
 
     # __getitem__ detail
+    - `__getitem__` defines what will be returned when
+      `ds[i]` is called where `ds` is a `Dataset` instance
+
     - `__getitem__` returns a tuple `(self.x[i], self.y[i])`
 
     - when range of index, like `[i*bs : i*bs+bs]` as in train_ds[i*bs : i*bs+bs], 
       is passed to `__getitem__`, it passes along that range of
       index, and returns a tuple of part of arrays
+
       (self.x[i*bs : i*bs+bs], self.y[i*bs : i*bs+bs])
 
 *** training loop ver3 (fit ver3), refactored with dataset
@@ -1946,7 +1979,10 @@
     #+END_SRC
 
     # overview
-    - `DataLoader` returns a subset of `Dataset` instance
+    - `DataLoader` returns a subset of `ds`
+
+    - `ds` can be an instance of a class which implements
+      `__getitem__` such as `Dataset` instance, or `ListItem`
 
     - `DataLoader` is for removing for-loop in fit ver3 by
       returning a part of `DataSet` instance on calling `__iter__`
@@ -1963,10 +1999,10 @@
                 opt.step()
                 opt.zero_grad()
       #+END_SRC
-
-    - `DataLoader` accepts an instance of DataSet implemented above,
-      and it will return a part of Dataset instance when through 
-      `__iter__` which is called by `next(iter(...))` syntax
+      
+    - `DataLoader` accepts an instance of `DataSet` implemented above,
+      and it will return a part of `Dataset` instance through
+      `__iter__` which is called in the following way
 
       #+BEGIN_SRC python
         train_dl = DataLoader(train_ds, bs)
@@ -2352,7 +2388,7 @@
 
       #+END_SRC
 
-*** DataBunch
+*** DataBunch ver1
 
     #+BEGIN_SRC python
       #export
@@ -4704,8 +4740,9 @@
     #+END_SRC
 
     # append_stats overview
-    - a layer-wise callback passed to pytorch `m.register_forward_hook`
-      will receives 3 arguments;
+    - `append_stats` is a "hook"(=layer-wise callback) passed to `m.register_forward_hook`
+    - since a `append_stats` is a callback passed to pytorch `m.register_forward_hook`,
+      it is implemented to accept 3 arguents that `m.register_forward_hook` passes
       - `mod`: the layer(module) the callback is registered on
       - `inp`: the input for the layer
       - `outp`: the ouput for the layer
@@ -5078,10 +5115,11 @@
     #+END_SRC
 
     # get_cnn_layers ver2 overview
-    - with `get_cnn_layers` ver2, a layer function such as
-      `conv2d`, `conv_layer` which consists of the model
-      can be specified dynamically whereas
-      `get_cnn_layers` ver1 always uses `conv2d`
+    - `get_cnn_layers` ver2 accepts `layer`, 
+      and a layer function such as
+      `conv2d`, `conv_layer`can be used as a building block
+      of cnn layers whereas `get_cnn_layers` 
+      ver1 always uses `conv2d`
 
     - `get_cnn_layers` ver2 takes `**kwags` which will be
       eventually passed to GeneralRelu
@@ -5090,6 +5128,9 @@
     - `layer` is a function such as `conv2d`, `conv_layer`
 
     # get_cnn_model ver3 overview
+    - `get_cnn_model` ver3 accepts `layer` which will be
+      passed along to `get_cnn_layers` ver2 which will be called inside 
+
     - `get_cnn_model` ver3 takes `**kwags` which will be
       eventually passed to GeneralRelu
 
@@ -5141,7 +5182,7 @@
       the bin corresponding to small value has changed from 
       (0, 1, 2) to (19, 20, 21)
 
-*** get_learn_run
+*** get_learn_run ver1
 
     #+BEGIN_SRC python
       #export
@@ -5151,8 +5192,12 @@
           return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
     #+END_SRC
 
+    # get_learn_run ver1 overview
+    - `get_learn_run` works as below;
+      - first ceate a model with `get_cnn_model`
+      - initialize the model with `init_cnn`
+      - create instances of `Learner` & `Runner` with `get_runner`
     
-
 ** 07_batchnorm.ipynb
 *** imports
 
@@ -5207,6 +5252,8 @@
     https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
 
 *** BatchNorm
+    # video
+    https://course19.fast.ai/videos/?lesson=6?t=2700
 
     #+BEGIN_SRC python
       class BatchNorm(nn.Module):
@@ -5244,11 +5291,11 @@
       of the layer preceding it
 
     - "normalization" means subtracting mean and deviding 
-      by std is a type of normalization for `x`
+      by std for `x`
 
     - there are 2 group of things appearing in batch normalization
       - 1. relating to activation
-        `mean` and `vars` for, which are updated
+        `mean` and `vars`  which are updated
         for every new batch of activation, using 
         the memory of "mean" and "var" of the current batch
         and all the preceding batches of activations
@@ -5259,21 +5306,24 @@
         they can be learned
 
     # BatchNorm::__init__ detail
-    - `mults` is an instance of nn.Parameter, which means
-      it can be learned
+    - `nf` corresponds to the value of the channel axis of
+      the activations of the precedeing layer
+
+    - `mults` and `adds` are  "γ" and "β", respectively
+      for batch normalization
+
+    - since `mults` is a parameter as mentioned above,
+      we use nn.Parameter
 
     - since `mults` is a type of weight and
       `adds` is a type of bias,
       BatchNorm is considered as special kind of a linear layer
 
-    - `nf` corresponds to the value of the channel axis of
-      the activations of the precedeing layer
+    - `mult` is a rank3 tensor of torch.Size([nf, 1, 1]),
+      and when multiplied by `x`, broadcasting occurs
 
     - ?? note that the channel axis of the input and the
       activation are different
-
-    - `lerp` is torch's linear interpolation 
-      ( little bit of this, and little bit of that; a*0.9 + b*0.1)
 
     - we use self.register_buffer('vars', torch.ones(1, nf, 1,1))
       to automatically move `vars` and `means` onto GPU on
@@ -5301,32 +5351,45 @@
     - `x.mean((0,2,3), keepdim=True)` takes mean over
       (batch, width, height).
 
-      - to understand this, imagine a number of cubes alinged along batch axis
-      - first, we take mean over batch axis, which corresponds to (0)
-      - then, we have one 3 x <width> x <height> cubes 
-      - this can be considered as "mean input among the batch"
-      - next, take mean over (width, height) which corresponds to (2, 3)
-      - now, we have three 1x1 cube aligned along the chanel axis
-      - each of 1x1 cube represents the mean value over
-        (batch, width ,height) for the chanel
-      - keepdim is for broadcasting when subtracting the mean from
-        each x
+      - firstly, it does 'fusion' along batch axis
+      - secondly, it does 'fusion' along width axis
+      - thirdly, it does 'fusion' along height axis
+      # - to understand this, imagine a number of cubes alinged along batch axis
+      # - first, we take mean over batch axis, which corresponds to (0)
+      # - then, we have one 3 x <width> x <height> cubes 
+      # - this can be considered as "mean input among the batch"
+      # - next, take mean over (width, height) which corresponds to (2, 3)
+      # - now, we have three 1x1 cube aligned along the chanel axis
+      # - each of 1x1 cube represents the mean value over
+      #   (batch, width ,height) for the chanel
+      # - keepdim is for broadcasting when subtracting the mean from
+      each x
 
       #+BEGIN_SRC python
 
-        # example of `mean((0, 2, 3), keepdim=True)`
-        # note we calculate the mean for incoming activation,
-        # we really do not calculate the mean for input, but
-        # can get the idea of what `mean((0, 2, 3), keepdim=True)` does
+      # example of `mean((0, 2, 3), keepdim=True)`
+      # note we calculate the mean for incoming activation,
+      # we really do not calculate the mean for input, but
+      # can get the idea of what `mean((0, 2, 3), keepdim=True)` does
 
-        my_xb, my_yb = next(iter(data.train_dl))
-        my_xb.shape, my_yb.shape;
-        my_xb_reshaped = my_xb.view(-1, 1, 28, 28)
-        my_xb_reshaped.shape, my_xb_reshaped.mean((0, 2, 3), keepdim=True)
-        '''
-        (torch.Size([512, 1, 28, 28]), tensor([[[[-0.0046]]]]))
-        '''
+      my_xb, my_yb = next(iter(data.train_dl))
+      my_xb.shape, my_yb.shape;
+      my_xb_reshaped = my_xb.view(-1, 1, 28, 28)
+      my_xb_reshaped.shape, my_xb_reshaped.mean((0, 2, 3), keepdim=True)
+      '''
+      (torch.Size([512, 1, 28, 28]), tensor([[[[-0.0046]]]]))
+      '''
       #+END_SRC
+
+    - `lerp` is torch's linear interpolation 
+      ( little bit of this, and little bit of that; a*0.9 + b*0.1)
+
+    - we use `lerp`, exponentially weighted moving average,
+      instead of normal moving average because normal 
+      moving average requires keeping the history of activations
+      for every single `BatchNorm` layer and the amount of data
+      will grows quickly as the model starts to contain more
+      `BatchNorm` layers
 
     # BatchNorm::forward detail
     - `x` is the activation coming out from the layer
@@ -5337,12 +5400,26 @@
       `self.update_stats(x)` involves `x` but does not 
       contribute to the calculation of the gradients
 
-    - `mults` and `adds` are  "γ" and "β", respectively
-      for batch normalization
-
     - for tarining time, we use mean & vars of that specific batch
       of activations, whereas for inference time, we use
       averaged means & vars over many batches of activations
+
+    - `means` is a rank4 tensor of torch.Size([1,nf,1,1])
+      since it is an exponentially moving average of `m`,
+      which is also a rank4 tensor of torch.Size([1,nf,1,1])
+
+    - `mults` is a rank3 tensor of torch.Size([nf,1,1]),
+      `x` is a rank4 tensor of torch.Size([bs,nf,h,w]),
+      and so `x*self.mults` is possible according to the
+
+      broadcasting rule:
+      - Each tensor has at least one dimension.
+      - When iterating over the dimension sizes, 
+        starting at the trailing dimension, 
+        the dimension sizes must either
+        - be equal, 
+        - one of them is 1
+        - or one of them does not exist.
 
 *** conv_layer ver2
 
@@ -5355,6 +5432,9 @@
           return nn.Sequential(*layers)
     #+END_SRC
 
+    # conv_layer detail
+    - `conv_layer` now contains `BatchNorm` layer
+
     - when BathcNorm layer is inserted by setting `bn=True`,
       we do not need `bias` anymore since it is same 
       as `add` in the BatchNorm layer
@@ -5362,9 +5442,9 @@
     - `not bn` of `nn.Conv2d(... bias=not bn)` is just the negation of `bn`;
       if `bn` is True, then `not bn` is `False`
 
-    - bn is default to be true
+    - `bn` is default to be true
 
-*** init_cnn ver2, get_learn_run ver1
+*** init_cnn ver2, get_learn_run ver2
 
     #+BEGIN_SRC python
       #export
@@ -5388,17 +5468,27 @@
       run.fit(3, learn)
 
     #+END_SRC
-    - get_learn_run works as below;
-      - first ceate a model with `get_cnn_model`
-      - initialize the model with `init_cnn`
-      - create instances of `Learner` & `Runner` with `get_runner`
 
+    # init_cnn_
     - the name of `init_cnn_` and `init_cnn` are slightly different!
       look at the last "_"
 
-    - get_cnn_model & get_cnn_layers & get_runner are as below
+    # get_learn_run ver2 overview
+    - `get_learn_run` ver2 makes use of `get_cnn_model` ver3
+      which accepts `layer` 
+
+    - the implemntation of `get_learn_run` ver2 is same as
+      `get_learn_run` ver1, but now it is using
+      `init_cnn` ver2 instead of `init_cnn` ver1
+
+    # get_learn_run ver2 detail
+    - `get_cnn_model` & `get_cnn_layers` & `get_runner` are as below
 
       #+BEGIN_SRC python
+        # get_cnn_model ver3
+        def get_cnn_model(data, nfs, layer, **kwargs):
+            return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
+
         # get_cnn_layers ver2
         def get_cnn_layers(data, nfs, layer, **kwargs):
             nfs = [1] + nfs
@@ -5406,10 +5496,6 @@
                     for i in range(len(nfs)-1)] + [
                 nn.AdaptiveAvgPool2d(1), Lambda(flatten), nn.Linear(nfs[-1], data.c)]
         # layer is a function, such as `conv_layer`, to create a cnn layer
-
-        # get_cnn_model ver3
-        def get_cnn_model(data, nfs, layer, **kwargs):
-            return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
 
         # get_runner
         def get_runner(model, data, lr=0.6, cbs=None, opt_func=None, loss_func = F.cross_entropy):
@@ -5419,6 +5505,36 @@
             return learn, Runner(cb_funcs=listify(cbs))
 
       #+END_SRC
+
+*** using get_learn_run ver2
+
+    #+BEGIN_SRC python
+      # data, loss_func, nfs
+      x_train,y_train,x_valid,y_valid = get_data()
+      x_train,x_valid = normalize_to(x_train,x_valid)
+      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
+
+      nh,bs = 50,512
+      c = y_train.max().item()+1
+      loss_func = F.cross_entropy
+
+      data = DataBunch(*get_dls(train_ds, valid_ds, bs), c)
+
+      nfs = [8,16,32,64,64]
+
+      # callbacks
+      mnist_view = view_tfm(1,28,28)
+      cbfs = [Recorder,
+              partial(AvgStatsCallback,accuracy),
+              CudaCallback,
+              partial(BatchTransformXCallback, mnist_view)]
+
+      learn,run = get_learn_run(nfs, data, 0.9, conv_layer, cbs=cbfs)
+
+    #+END_SRC
+
+    - `get_learn_run` ver2 makes use of `conv_layer` ver2
+      which contains batchnorm layer
 
 *** conv_layer ver3
 
@@ -5431,7 +5547,9 @@
           return nn.Sequential(*layers)
     #+END_SRC
 
-    - now, we use builtin BatchNorm2d
+    # overview
+    - `conv_layer` ver3 uses builtin nn.BatchNorm2d
+      whereas `conv_layer` ver2 uses home-made BatchNorm
 
 *** LayerNorm
 
@@ -5451,9 +5569,11 @@
               return x*self.mult + self.add
     #+END_SRC
 
-    - with x.mean(1,2,3), keepdim=True), we have 
-      1x1x1 cube aligning along the batch axis
-
+    - with x.mean(1,2,3), keepdim=True)
+      - firstly, it does 'fusion' along channel
+      - secondly, it does 'fusion' along width
+      - thirdly, it does 'fusion along height
+      
 *** conv_ln
 
     #+BEGIN_SRC python
@@ -5464,15 +5584,33 @@
           return nn.Sequential(*layers)
     #+END_SRC
 
-*** InstanceNorm
+    # overview
+    - conv layer with layer norm
 
+*** InstanceNorm
     #+BEGIN_SRC python
-      def conv_ln(ni, nf, ks=3, stride=2, bn=True, **kwargs):
-          layers = [nn.Conv2d(ni, nf, ks, padding=ks//2, stride=stride, bias=True),
-                    GeneralRelu(**kwargs)]
-          if bn: layers.append(LayerNorm())
-          return nn.Sequential(*layers)
+      class InstanceNorm(nn.Module):
+          __constants__ = ['eps']
+          def __init__(self, nf, eps=1e-0):
+              super().__init__()
+              self.eps = eps
+              self.mults = nn.Parameter(torch.ones (nf,1,1))
+              self.adds  = nn.Parameter(torch.zeros(nf,1,1))
+
+          def forward(self, x):
+              m = x.mean((2,3), keepdim=True)
+              v = x.var ((2,3), keepdim=True)
+              res = (x-m) / ((v+self.eps).sqrt())
+              return res*self.mults + self.adds
     #+END_SRC
+
+    # overview
+    - with instance norm,
+      - firstly, it does 'fusion' along width axis
+      - secondly, it does 'fusion' along height axis
+
+    - with instance norm, for every channel of every single input in a batch,
+      the mean is 0, and standard deviation is 1
 
 *** conv_in
 
@@ -5484,7 +5622,26 @@
           return nn.Sequential(*layers)
     #+END_SRC
 
+    # overview
+    - conv layer with instance norm
+
+*** conv_layer ver4 (?? same as conv_layer ver3)
+
+    #+BEGIN_SRC python
+      def conv_layer(ni, nf, ks=3, stride=2, bn=True, **kwargs):
+          layers = [nn.Conv2d(ni, nf, ks, padding=ks//2, stride=stride, bias=not bn),
+                    GeneralRelu(**kwargs)]
+          if bn: layers.append(nn.BatchNorm2d(nf, eps=1e-5, momentum=0.1))
+          return nn.Sequential(*layers)
+
+    #+END_SRC
+
 *** TODO RunningBatchNorm
+    # video
+    https://course19.fast.ai/videos/?lesson=10&t=7740
+
+    # debias (Andrew Ng)
+    https://www.youtube.com/watch?v=lWzo8CajF5s
 
     #+BEGIN_SRC python
       class RunningBatchNorm(nn.Module):
@@ -5533,7 +5690,66 @@
               return x.mul_(self.mults).add_(self.adds)
     #+END_SRC
 
-    - [ ] why do we devide `x.numel()` by `nc`?
+    # overview
+    - with `RunningBatchNorm` addresses the issue of 
+      varying batch size
+
+    - with `RunningBatchNorm`, moving aveage version of
+      batch mean and variance are used for training time as well
+      not only for inference time.
+
+    - however, when batch size varies, simply taking 
+      moving average of variance does not make sense,
+      since the contribution of variance of a batch
+      to the moving average should be weighted according to 
+      its batch size (=the number of the elements in a batch)
+
+    - however, with the original definiton of the variance
+      var = (xi-mean)^2 / N,
+      mean is already included in the calculation before taking
+      the moving average
+
+    - so, the following formula is used instead
+      variance  = E(X^2) - (E(x))^2 
+      variance  = x*x / c  - (x/c)^2
+
+      where the moving average, weighted by the batch size, is 
+      calculated for `x*x`, `x`, and `c` using the weighting factor
+
+      (`mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)`)
+
+
+    # update_stats detail
+    - `c` is a number of the elements in the current batch over which
+      `x` and `x*x` is summed
+
+    - with `mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)`,
+      the variance of a small batch size(e.g. bs=2) 
+      will be less weighted
+
+      # from the forum
+      This what i understood.
+      We are updating the weight(mom1) that we pass into the
+      linear interpolation formula(lerp). mom1 depends on mom and bs.
+      When bs=2 ; mom1 = mom =0.1 (default value of mom=0.1).
+      When bs=512; mom1 =0.96
+      So as bs increases mom1 increases.
+      Now let us look at lerp: 
+      old_value * (1-wt) + new_value * wt ; where wt = mom1
+      So as bs increases, mom1 increases, so weight for your
+      current sample increases.
+      
+      As you batch size increases the computed value is 
+      more “trustworthy” so you can weigh it more heavily 
+      in the linear interpolation.
+
+      4: when number of samples are not multiples of your batch size. 
+      Say you have 1030 samples with a bs=512. So batch 1 and batch 2 
+      will 512 samples each and the last batch will only have 6 samples.
+
+      # forward
+      - as `sums` and `sqrs` are the weighted moving average version of `s` and `s*s`,
+        `count` is the weighted moving average version of 
 
 *** conv_rnb
 
@@ -5681,6 +5897,7 @@
     #+END_SRC
 
 *** TODO BatchNorm with L2 regularlization
+    https://blog.janestreet.com/l2-regularization-and-batch-norm/
     https://forums.fast.ai/t/great-article-on-the-interaction-between-batchnorm-and-l2-regularization-discussed-in-lesson-11/43949
 
 * lesson11
@@ -5775,13 +5992,35 @@
           return isinstance(l, lin_layers)
     #+END_SRC
 
-*** append_stat
+    # find_modules detail
+    - `sum`:
+
+      sum(iterable, start)
+      The sum() function adds start and items of the given 
+      iterable from left to right.
+
+
+    #+BEGIN_SRC python
+
+      sum([[1,2],[11,12],[21, 22]], [])
+
+      '''
+      [1, 2, 11, 12, 21, 22]
+      '''
+    #+END_SRC
+
+*** append_stat ver5
 
     #+BEGIN_SRC python
       def append_stat(hook, mod, inp, outp):
           d = outp.data
           hook.mean,hook.std = d.mean().item(),d.std().item()
     #+END_SRC
+
+    # overview
+    - `append_stats` ver5 is a hook, and record the statistics
+      on the `hook` istance everytime it is callled 
+      overwriting the previous ones.
 
 *** TODO lsuv_module
 
@@ -5797,6 +6036,7 @@
           return h.mean,h.std
     #+END_SRC
 
+    # overview
     - [ ] why use `m.weight.data`
       https://discuss.pytorch.org/t/layer-weight-vs-weight-data/24271
 
@@ -5809,10 +6049,15 @@
     - note that ConvLayer does NOT contain a BatchNorm layer
       for normalizing the outgoing activation of the layer.
 
-    - instead, we do "initialization" for each of (Conv2d, GeneralRelu) layers
-      by gradually do the following;
-      - the weight of Conv2d layer
-      - the leakyness of GeneralRelu layer
+    - note that adjusting the weights and biases of a layer does not
+      affect the outputs of the previous layers up to that layer,
+      hence lsuv_module can be applied one by one throuth all
+      the layers
+
+    # - "initialization" for each of (Conv2d, GeneralRelu) layers
+    #   by gradually do the following;
+    #   - the weight of Conv2d layer
+    #   - the leakyness of GeneralRelu layer
 
         #+BEGIN_SRC python
           for m in mods: print(lsuv_module(m, xb))
@@ -5885,7 +6130,6 @@
     #+END_SRC
 
 *** setify
-
     #+BEGIN_SRC python
       #export
       def setify(o): return o if isinstance(o,set) else set(listify(o))
@@ -5902,7 +6146,11 @@
         '''
       #+END_SRC
 
-    - listify
+      # overview
+      - `setify` creates a set out of a string, list, or iterable
+
+      # detail
+      - listify
 
       #+BEGIN_SRC python
         #export
@@ -5927,9 +6175,11 @@
           return res
     #+END_SRC
 
+    # overview
     - `_get_files` grabs the files specified by file names under
       a specified path
 
+    # detail
     - note that the list on the right hand side of `res = [...]`
       contains just a single long if-statement in the form of
       "if not A and (B or C)".
@@ -5938,12 +6188,11 @@
       #+END_SRC
 
     - "B or C" part is saying
-      "either extensions is not specified at all" 
+      "`extensions` is `None`" 
       or
       "the exptension of `f` is in `extensions`"
 
 *** get_files
-
     #+BEGIN_SRC python
       #export
       def get_files(path, extensions=None, recurse=False, include=None):
@@ -5962,10 +6211,11 @@
               return _get_files(path, f, extensions)
     #+END_SRC
 
+    # overview
     - `get_files` grabs all the files of the specified extention 
       under a specified directory using `_get_files`
 
-*** ItemList, ImageList
+*** compose, ItemList, ImageList
 
     #+BEGIN_SRC python
       #export
@@ -6002,20 +6252,64 @@
           def get(self, fn): return PIL.Image.open(fn)
     #+END_SRC
 
-    - `compose` applys a pssed `funcs` in "pipe-line"
+    # compose overview
+    - `compose` applys a passed `funcs` in "pipe-line"
       x2 = f1(x1)
       x3 = f2(x2)
       
       - `funcs` are arranged according to `_order` property
 
+    # ItemList overview
+    - `ItemList` inherits `ListContainer`, and overwrites
+      `__getitem__`
 
+    - since `ItemList` has `__getitem__` methods,
+      it can be passed to `DataLoader`     
+      
       #+BEGIN_SRC python
-        def _get(self, i): return compose(self.get(i), self.tfms)
+        #export
+        class ListContainer():
+            def __init__(self, items): self.items = listify(items)
+            def __getitem__(self, idx):
+                if isinstance(idx, (int,slice)): return self.items[idx]
+                if isinstance(idx[0],bool):
+                    assert len(idx)==len(self) # bool mask
+                    return [o for m,o in zip(idx,self.items) if m]
+                return [self.items[i] for i in idx]
+            def __len__(self): return len(self.items)
+            def __iter__(self): return iter(self.items)
+            def __setitem__(self, i, o): self.items[i] = o
+            def __delitem__(self, i): del(self.items[i])
+            def __repr__(self):
+                res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
+                if len(self)>10: res = res[:-1]+ '...]'
+                return res
       #+END_SRC
 
-    - Since it implements __getitem__, identical to that of `DataSet`, 
-      `ItemList` instance can be passed to `DataLoader`     
+      
+    # ItemList::get detail
+    - `get` method is expected to be overwritten by each concrete subclass
+      inheritting `ItemList` such as `ImageList`
 
+    - in the case of `ItemList`, `get` is as below;
+
+    #+BEGIN_SRC python
+      def get(self, fn): return PIL.Image.open(fn)
+    #+END_SRC
+
+    # ItemList::__getitem__ detail
+    - `__getitem__` calls `_get` instead of directly calling `get`
+      to allow `tfms` (transformers) to be applied to the result
+      of `get` through `compose`
+    
+    # ImageList::fromfiles detail
+    - `fromfiles` is decorated by `@classmethod`, and 
+      the constructor (i.e., `__init__`) is passed as `cls`
+
+
+      
+
+      
 *** Transform, MakeRGB
 
     #+BEGIN_SRC python
@@ -6302,7 +6596,7 @@
       - since `ItemList` inherits `ListContainer`, 
         it has `self.items` which is guaranteed to be 
         a list by `listify`
-        
+
         #+BEGIN_SRC python
           #export
           class ListContainer():
@@ -6408,7 +6702,7 @@
           plt.imshow(im.permute(1,2,0))
     #+END_SRC
 
-*** DataBunch
+*** DataBunch ver2
 
     #+BEGIN_SRC python
       #export
@@ -6512,7 +6806,6 @@
       ])
     #+END_SRC
 
-
 *** model_summary
 
     #+BEGIN_SRC python
@@ -6525,6 +6818,7 @@
           f = lambda hook,mod,inp,out: print(f"{mod}\n{out.shape}\n")
           with Hooks(mods, f) as hooks: learn.model(xb)
     #+END_SRC
+
 
 ** 09_optimizers.ipynb
 *** imports
@@ -7292,7 +7586,7 @@
       where avg0(=initial value of grad_avg') is defined to be zero
 
       debiasing term is defined to be 1-beta^i according to 
-      Andrew Ng's lesson 
+      Andrew Ng's lecture
       https://www.youtube.com/watch?v=lWzo8CajF5s
 
       # this means, exponentially weighted moving averate is now indexed
@@ -7368,7 +7662,6 @@
 
       https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
       https://arxiv.org/pdf/1904.00962.pdf
-
 
 *** the right value for `eps` of ADAM
     - 1:44:00
@@ -8982,7 +9275,6 @@
 
 
     
-
 *** get_batch ver2
 
     #+BEGIN_SRC python
@@ -12165,7 +12457,6 @@
     - `shower`: example is `partial(show_spectro, with_shape=False)`
 
 
-
 * NLP course
   https://www.fast.ai/2019/07/08/fastai-nlp/
 
@@ -12208,7 +12499,6 @@
 
 *** Using deep neural network with small dataset to predict material defects
     https://www.sciencedirect.com/science/article/pii/S0264127518308682
-
 
 * video classification
 *** a
@@ -12268,17 +12558,44 @@
 
 
 
-* deep learning misc resource
-*** andres ng videos on youtube
-    https://www.youtube.com/watch?v=CS4cs9xVecg&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe
 
-*** fastai 2019 courses
+* ========
+* fastai 2019 courses
     https://course19.fast.ai/part2
 
-*** fastai 2020 courses
-    https://course.fast.ai/
+* fastai 2020 courses
+  https://course.fast.ai/
 
-    
+* andres ng lecture videos on youtube
+** playlists
+   https://www.youtube.com/channel/UCcIXc5mJsHVYTZR1maL5l9w/playlists
+
+** course2 
+*** playlists
+    https://www.youtube.com/watch?v=tNIpEZLv_eg&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=27
+
+*** BatchNorm 
+
+
+*** regularization (C2W1L04)
+    https://www.youtube.com/watch?v=6g0t3Phly2M&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=4 
+
+*** vanishing/exploding gradients (C2W1L10)
+    https://www.youtube.com/watch?v=qhXZsFVxGKo
+
+    https://www.youtube.com/watch?v=qO_NLVjD6zE
+
+
+*** exponentially weighted average (C2W2L03)
+    https://www.youtube.com/watch?v=lAq96T8FkTw&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=17
+
+
+*** debiasing (bias correction) (C2W2L05)
+    https://www.youtube.com/watch?v=lWzo8CajF5s&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=19
+
+
+
+* misc resource    
 *** how you should read research papers
     https://link.medium.com/JPM8q4SSN7
 
