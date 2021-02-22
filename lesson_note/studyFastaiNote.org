@@ -32,9 +32,10 @@
 
     Each tensor has at least one dimension.
 
-    When iterating over the dimension sizes, starting at the trailing dimension, 
-    the dimension sizes must either be equal, one of them is 1, or one of them does not exist.
-
+    When iterating over the dimension sizes, 
+    starting at the trailing dimension, 
+    the dimension sizes must either be equal, 
+    one of them is 1, or one of them does not exist.
 
 
 ** deep learning
@@ -259,6 +260,16 @@
     # deep lizard
     https://www.youtube.com/watch?v=dXB-KQYkzNU
 
+*** why is it OK not fo define `backward` on `BatchNorm`
+    # stack overflow
+    https://stackoverflow.com/questions/49594858/how-does-pytorch-module-do-the-back-prop
+
+
+    # my guess
+    - `BatchNorm` inherits `backward` from `nn.Module`,
+      which calls `backwrd` on all the `nn.Parameter` instance
+      
+
 ** regularlization
 *** what is regularlization?
 *** L2 regularlization
@@ -318,7 +329,6 @@
     https://mlexplained.com/2019/05/13/a-tutorial-to-fine-tuning-bert-with-fast-ai/
     https://medium.com/@abhikjha/fastai-integration-with-bert-a0a66b1cecbe
     https://towardsdatascience.com/fastai-with-transformers-bert-roberta-xlnet-xlm-distilbert-4f41ee18ecb2
-
 
 * lesson8
 ** 00_exports.ipynb
@@ -1786,7 +1796,7 @@
       register each layer as a module, and `self.add_module`
       inheritted from nn.Module does the job;
       `self.add_module` is called on `__init__` and it registers
-      each layer in `layers` in the same way as `__setattr__`
+      each layer contained in `layers` in the same way as `__setattr__`
 
 *** SequentialModel (=Model ver6)
 
@@ -1902,6 +1912,7 @@
       - optimizer is initialized with the model.parameters()
 
 *** Dataset
+
     #+BEGIN_SRC python
       #export
       class Dataset():
@@ -1916,7 +1927,7 @@
 
     - `Dataset` is for removing clunky part of fit ver2
       for grabbing batch `xb`, `yb`
-      
+
       #+BEGIN_SRC python
         # fit ver2
         for epoch in range(epochs):
@@ -2121,7 +2132,7 @@
       class DataLoader():
           def __init__(self, ds, sampler, collate_fn=collate):
               self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
-              
+
           def __iter__(self):
               for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
     #+END_SRC
@@ -4819,7 +4830,7 @@
       and `Hook` instance is created for each of the layers(modules)
       of `model`
 
-*** ListContainer
+** ListContainer
 
     #+BEGIN_SRC python
       #export
@@ -4853,6 +4864,9 @@
         slice
         '''
       #+END_SRC
+
+    # __init__ overview
+    - `__init__` makes sure that `self.items` is a list
 
 *** Hooks
 
@@ -5411,7 +5425,6 @@
     - `mults` is a rank3 tensor of torch.Size([nf,1,1]),
       `x` is a rank4 tensor of torch.Size([bs,nf,h,w]),
       and so `x*self.mults` is possible according to the
-
       broadcasting rule:
       - Each tensor has at least one dimension.
       - When iterating over the dimension sizes, 
@@ -6150,7 +6163,7 @@
       - `setify` creates a set out of a string, list, or iterable
 
       # detail
-      - listify
+      - listify is as below
 
       #+BEGIN_SRC python
         #export
@@ -6176,8 +6189,10 @@
     #+END_SRC
 
     # overview
-    - `_get_files` grabs the files specified by file names under
-      a specified path
+    - `_get_files` recieves a list of file names, and
+      creates a list of file paths by prefixing 
+      the path to the file names for the file names 
+      with the specified extension
 
     # detail
     - note that the list on the right hand side of `res = [...]`
@@ -6212,8 +6227,10 @@
     #+END_SRC
 
     # overview
-    - `get_files` grabs all the files of the specified extention 
-      under a specified directory using `_get_files`
+    - `get_files` grabs the names of the files unders the specified directory path,
+      and creates a list of file paths by prefixing 
+      the path to the file names for the file names 
+      with the specified extension
 
 *** compose, ItemList, ImageList
 
@@ -6260,55 +6277,51 @@
       - `funcs` are arranged according to `_order` property
 
     # ItemList overview
+    - `ItemList` is a 'template' to create a `ListContainer`
+      subclass which implements various `get` depending on
+      a type of item to contain
+
     - `ItemList` inherits `ListContainer`, and overwrites
       `__getitem__`
 
-    - since `ItemList` has `__getitem__` methods,
-      it can be passed to `DataLoader`     
-      
-      #+BEGIN_SRC python
-        #export
-        class ListContainer():
-            def __init__(self, items): self.items = listify(items)
-            def __getitem__(self, idx):
-                if isinstance(idx, (int,slice)): return self.items[idx]
-                if isinstance(idx[0],bool):
-                    assert len(idx)==len(self) # bool mask
-                    return [o for m,o in zip(idx,self.items) if m]
-                return [self.items[i] for i in idx]
-            def __len__(self): return len(self.items)
-            def __iter__(self): return iter(self.items)
-            def __setitem__(self, i, o): self.items[i] = o
-            def __delitem__(self, i): del(self.items[i])
-            def __repr__(self):
-                res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
-                if len(self)>10: res = res[:-1]+ '...]'
-                return res
-      #+END_SRC
+    - notice that so far, an `ItemList` subclass instance  that `ItemList` expcets 
+      is just an array of file names, and not yet associates with a label;
+      label will be given by `CategoryProcessor`
 
+    # ItemList::__init__ overview
+    - `__init__` expects a list of someting
+
+    # ItemList::__getitem__ overview
+    - `__getitem__` delegate to `_get` to retrieve the item
+
+    # ItemListf::_get overview
+    - `_get` is just a version of `get` extended with `self.tfms`
       
     # ItemList::get detail
     - `get` method is expected to be overwritten by each concrete subclass
       inheritting `ItemList` such as `ImageList`
 
     - in the case of `ItemList`, `get` is as below;
+      #+BEGIN_SRC python
+        def get(self, fn): return PIL.Image.open(fn)
+      #+END_SRC
 
-    #+BEGIN_SRC python
-      def get(self, fn): return PIL.Image.open(fn)
-    #+END_SRC
+    # ItemList::new detail
+    - for a `ItemList` subclass that does not overwrites
+      `new` methods, `self.__class__` will be that subclass
 
-    # ItemList::__getitem__ detail
-    - `__getitem__` calls `_get` instead of directly calling `get`
-      to allow `tfms` (transformers) to be applied to the result
-      of `get` through `compose`
-    
-    # ImageList::fromfiles detail
-    - `fromfiles` is decorated by `@classmethod`, and 
+
+    # ImageList::from_files overview
+    - `from_files` recieves a directory path, an extension
+      and then returns an `ImageList` instance
+
+    # ImageList::from_files detail
+    - `from_files` is decorated by `@classmethod`, and 
       the constructor (i.e., `__init__`) is passed as `cls`
 
-
-      
-
+    - (??)since `__init__` is not defined on `ImageList`,
+      it will be one created automatically inside which
+      `__init__` inherited from `ItemList` is called
       
 *** Transform, MakeRGB
 
@@ -6326,6 +6339,7 @@
       which is called from `_get` of `ItemList`
       (`_get` is called from `__getitem__`)
 
+      # ItemList
       #+BEGIN_SRC python
         compose(x, funcs, *args, order_key='_order', **kwargs):
         key = lambda o: getattr(o, order_key, 0)
@@ -6353,7 +6367,6 @@
       #+END_SRC
     
 *** grandparent_splitter, split_by_func
-
     #+BEGIN_SRC python
       #export
       def grandparent_splitter(fn, valid_name='valid', train_name='train'):
@@ -6368,29 +6381,11 @@
           return f,t
     #+END_SRC
 
-    - `grandparent_splitter` judge if a file is under
-      the directory for training set, or the directory for validation set
+    - `grandparent_splitter` judges if a file is under
+      the directory for validation set, or the directory for training set
 
     - split_by_func splits `items` and creates two lists
-      out of it based on the `mask` created by passes splitter `f` .
-      it is in the form of
-
-*** uniqueify
-
-    #+BEGIN_SRC python
-      #export
-      from collections import OrderedDict
-
-      def uniqueify(x, sort=False):
-          res = list(OrderedDict.fromkeys(x).keys())
-          if sort: res.sort()
-          return res
-    #+END_SRC
-
-    - OrderedDict.fromkeys
-      https://appdividend.com/2019/04/13/python-dictionary-fromkeys-example-fromkeys-method-tutorial/
-
-    - `uniqueify` returns a list of 
+      out of it based on the `mask` created by splitter `f`
 
 *** SplitData
 
@@ -6412,12 +6407,14 @@
     #+END_SRC
 
     # overview
-    - `SplitData` is just a storage to store training & validation data
+    - `SplitData` is just a storage to store a pair of 
+      training & validation data each of which is a `Dataset` instance
 
-    # split_by_func
+    # split_by_func detail
     - `SplitData::split_by_func` is a factory method to create a
-      `SplitData` instance.
-      - `split_by_func` is a global function previously defined, 
+      `SplitData` instance out of a `ItemList` subclass instance
+
+    - `split_by_func` is a global function previously defined, 
         which returns two lists created out of one list
 
         #+BEGIN_SRC python
@@ -6428,6 +6425,85 @@
             t = [o for o,m in zip(items,mask) if m==True ]
             return f,t
       #+END_SRC
+
+    - since the global function `split_by_func` returns 
+      pair of plain lists each of which can be a different type 
+      of list than the original `il.items`, the class method
+      `SplitData::split_by_func` calls
+      `map(il.new, split_by_func(il.items,f))`
+
+    - `il.new` is defined on `ItemList` as below:
+
+      #+BEGIN_SRC python
+        def new(self, items, cls=None):
+            if cls is None: cls=self.__class__
+            return cls(items, self.path, tfms=self.tfms)
+      #+END_SRC
+
+*** uniqueify
+
+    #+BEGIN_SRC python
+      #export
+      from collections import OrderedDict
+
+      def uniqueify(x, sort=False):
+          res = list(OrderedDict.fromkeys(x).keys())
+          if sort: res.sort()
+          return res
+    #+END_SRC
+
+    # uniqueify overview
+    - `uniqueify` returns a list of dictionary keys
+
+    # uniqueify detail
+    - OrderedDict.fromkeys
+      https://docs.python.org/3/library/collections.html#collections.OrderedDict
+      https://appdividend.com/2019/04/13/python-dictionary-fromkeys-example-fromkeys-method-tutorial/
+
+
+    #+BEGIN_SRC python
+      #export
+      class ListContainer():
+          def __init__(self, items): self.items = listify(items)
+          def __getitem__(self, idx):
+              if isinstance(idx, (int,slice)): return self.items[idx]
+              if isinstance(idx[0],bool):
+                  assert len(idx)==len(self) # bool mask
+                  return [o for m,o in zip(idx,self.items) if m]
+              return [self.items[i] for i in idx]
+          def __len__(self): return len(self.items)
+          def __iter__(self): return iter(self.items)
+          def __setitem__(self, i, o): self.items[i] = o
+          def __delitem__(self, i): del(self.items[i])
+          def __repr__(self):
+              res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
+              if len(self)>10: res = res[:-1]+ '...]'
+              return res
+
+      myList = ListContainer(['tench', 'saba', 'saba','aji'])
+      myList
+      '''
+      ListContainer (4 items)
+      ['tench', 'saba', 'saba', 'aji']
+      '''
+
+      from collections import OrderedDict
+      myDict = OrderedDict.fromkeys(myList)
+      myKeys = myDict.keys()      print(myDict.keys())
+      print(list(myDict.keys()))
+      '''
+      odict_keys(['tench', 'saba', 'aji'])
+      ['tench', 'saba', 'aji']
+      '''
+
+      myObj = {v:k for k,v in enumerate(myKeys)}
+      myObj
+      '''
+      {'aji': 2, 'saba': 1, 'tench': 0}
+
+      '''
+
+    #+END_SRC
 
 *** Processor, CategoryProcessor
 
@@ -6453,11 +6529,15 @@
           def deproc1(self, idx): return self.vocab[idx]
     #+END_SRC
 
-    - __call__ of `CategoryProcessor` will receive
-      list of labels in the form of
-      ['tench', 'dog', 'cat', 'cat', 'tench', ...]
+    # CategoryProcessor overivew
+    - `CategoryProcessor` "numer-ify" string labels
 
-    - applying `uniqueify` to the list of labels will create a new list
+    # CategoryProcessor::__call__ detail
+    - `__call__` of `CategoryProcessor` will receive
+      a ItemList subclass instance corresponding to 
+      `ys`, i.e., labels such as 'tench', 'dog', 'cat', etc.
+
+    - applying `uniqueify` to `items` will create a new list
       without any redundant value in the form of 
       ['tench', 'dog', 'cat', ...]
       and set it to `self.vocab`
@@ -6466,10 +6546,14 @@
       {'tench':1 , 'dog':2, 'cat':3, ...}
       and set it to `self.otoi`
 
-    - proc1 just translates a string(=label name) to a number using `self.otoi`
-
-    - altogether, __call__ returns a list of number in the form of
+    - in the end, `__call__` returns a list of numbers in the form of
       [1, 2, 3, 3, 1, ...]
+
+    # CategoryProcessor::proc1 overview    
+    - `proc1` just translates a string(=label name) to a number using `self.otoi`
+
+    # CategoryProcessor::deproc1 overview    
+    - `deproc1` translates an index to a string(=label name)
 
 *** parent_labeler, LabeledData, label_by_func
 
@@ -6512,31 +6596,64 @@
           return SplitData(train,valid)
     #+END_SRC
 
+    # `parent_labeler` overview
     - `parent_labeler` can tell the label of a file
       since the name of the parent directory is same as the label
 
-    - `_labe_by_func` is a facotry method to create a listy instance
-      converting the passed listy instance (e.g. list of file names)
-      by `f`
-      - ds: ['041AB.png', '042AC.png', ...]
-      - `f` is a function such as `parent_labeler`
-      - return value:
-        ['tench', 'cat', 'dog', ...]
-   
-    - `LabeledData` is almost same as ItemList, and it stores the
-      "processed" version of x(=input) & y(=target)
+    # `_label_by_func` overview
+    - `_labe_by_func` is a facotry method for creating labels
+      from an instance of `ItemList` subclass such as `ImageList
+      by applying `f`
+    
+    # `_label_by_func` detail
+    - ds: an instance of an ItemList subclass such as `ImageList`
+    - `f` is a function such as `parent_labeler`
+    - return value: an ItemList subclass instance corresponding to
+      labels such as 'tench', 'cat', 'dog', etc
 
-    - `LabeledData` is identical as `DataSet`. 
-      Since it implements __getitem__, identical to that of `DataSet`, 
-      `LabeledData` instance can be passed to `ds` of 
-      `DataLoader::__init__` inside `get_dls`
+    # `LabeledData` overview
+    - `LabeledData` is for creating labels from an instance of
+      `ItemList` subclass such as `ImageList`, and associate it
+      with the passed instance of `ItemList` subclass,
+      additionaly applying `CategoryProcessor` to the created 
+      labels in order to "numer-ify" the labels.
 
-      - when indexed,  it returns a tuple of (x[idx], y[idx]) 
+    - `LabeledData` class is expected to be used in the following way
+      - call the global function `label_by_func`
+      - the global function `label_by_func` calls the class method
+        `LabeledData::label_by_func`
+      - `LabeledData::label_by_func` calls `LabeledData::__init__`
+
+    - since `LabeledData` implements `__getitem__` similar to 
+      that of `Dataset`, a `LabeledData` instance can be
+      passed to `ds` of `DataLoader::__init__` inside `get_dls`
+
+      - `get_dls` is as below. (note `DataLoader` is from PyTorch.)
+
+        # get_dls
         #+BEGIN_SRC python
-          def __getitem__(self,idx): return self.x[idx],self.y[idx]
+          def get_dls(train_ds, valid_ds, bs, **kwargs):
+              return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
+                      DataLoader(valid_ds, batch_size=bs*2, **kwargs))
         #+END_SRC
+
         
-      - `Dataset` is as below
+        # home made DataLoader ver2 for showing the implementation of pytorch `DataLoader`
+        #+BEGIN_SRC python
+          def collate(b):
+              xs,ys = zip(*b)
+              return torch.stack(xs),torch.stack(ys)
+
+          class DataLoader():
+              def __init__(self, ds, sampler, collate_fn=collate):
+                  self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
+
+              def __iter__(self):
+                  for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
+
+        #+END_SRC
+
+        # DataSet
         #+BEGIN_SRC python
           #export
           class Dataset():
@@ -6545,31 +6662,11 @@
               def __getitem__(self, i): return self.x[i],self.y[i]
         #+END_SRC
 
-      - `DataLoader` is from PyTorch, whose implementation is 
-        like 'home-made' `DataLoader` as below
-        #+BEGIN_SRC python
-              def collate(b):
-                  xs,ys = zip(*b)
-                  return torch.stack(xs),torch.stack(ys)
 
-              class DataLoader():
-                  def __init__(self, ds, sampler, collate_fn=collate):
-                      self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
-                      
-                  def __iter__(self):
-                      for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
-        #+END_SRC
-
-      - `get_dls` is as below, note that `DataLoader` is from PyTorch.
-        #+BEGIN_SRC python
-          def get_dls(train_ds, valid_ds, bs, **kwargs):
-              return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
-                      DataLoader(valid_ds, batch_size=bs*2, **kwargs))
-        #+END_SRC
-
+    # `LabeledData::process` overview        
     - `LabeledData::process` clone "processed" version of 
       the passed list item.
-      - `il is an `ItemList` instance, for example.
+      - `il` is an `ItemList` instance, for example.
 
         #+BEGIN_SRC python
         class ItemList(ListContainer):
@@ -6617,18 +6714,34 @@
           return res
       #+END_SRC
 
+    # `LabeledData::process` detail
+    - `il`: an `ItemList` subclass instance
+    - `proc`: an array of functions
+
+    # `LabeledData::__init__` detail
+    - `x`: an `ItemList` subclass instance corresponding to data
+
+    - `y`: an `ItemList` subclass instance corresponding to labels
+
     - `LabeledData::__init__` applys `proc_x` & `proc_y`
       to `x` & `y`, respectively
 
-    - LabeledData::label_by_func is a factory method to create
-      a LabeledData instance which stores "x" & "y", out of 
-      `x`
-      - `il` will be `x`
-      - `_label_by_func(il, f)` will be `y`
-      
-    - `label_fy_func` is a factory method to create an
-      `SplitData` instance from the original `SplitData` 
-      by applying LabeledData::label_fy_func to 
+    - `proc_y` is `CategoryProcessor` instance
+
+    # `LabeledData::label_by_func` overview        
+    - `LabeledData::label_by_func` is a factory method to create
+      a `LabeledData` instance which stores "x" & "y", out of `x`
+
+    # `LabeledData::label_by_func` detail
+    - `cls`: `LabeledData`
+    - `il` will be `x` for `LabeledData::__init__`
+    - `f` will be `parent_labeler`, for exmaple.
+    - `_label_by_func(il, f)` will be `y` for `LabeledData::__init__`
+
+    # `label_by_func` (global function) overview              
+    - a global function `label_fy_func` is a factory method
+      to create a `SplitData` instance from the original
+      `SplitData` instance by applying LabeledData::label_fy_func to 
       `.train` & `.valid` of the original `SplitData` instance
 
 *** Putting SplitData & LabeledData & CategoryProcessor altogether
@@ -6645,7 +6758,7 @@
     #+END_SRC
 
     - `sd` is an instance having `self.train`, `self.valid`
-      which is created by splitting the `il` (ImageList instance)
+      which is created by splitting the `il` instance (e.g. ImageList instance)
       based on if a file is under training folder or validation folder
 
 *** ResizeFixed, to_byte_tensor, to_float_tensor
@@ -6818,7 +6931,6 @@
           f = lambda hook,mod,inp,out: print(f"{mod}\n{out.shape}\n")
           with Hooks(mods, f) as hooks: learn.model(xb)
     #+END_SRC
-
 
 ** 09_optimizers.ipynb
 *** imports
