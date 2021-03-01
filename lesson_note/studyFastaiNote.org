@@ -1,32 +1,44 @@
-* questions 
-*** wha 
-
-* a
-*** a
-  - Network Pruning
-    Hidenori Tanaka
-
-  - Continual Learning
-    - Ekdeep singh
-
-  - Effective learning rate of BatchNorm
-    Zhiyuan Li, Sanjeev Arora
-    
-
-  - Brain-inspired Algorithm SynFlow
-
-  - Lottery Ticket Hypothesis and iterative magnitude Pruning
-
-  - pruning neural networks at initialization
-    Why are we missing the mark?
-
-* things to keep in mind
-** python
+* python (question)
+* python (understood)
 *** packing & unpacking operator (single asterisk)
     - 'list-ify' when used in function definition,
     - 'argument-ify' when used on function call
 
-** pytorch
+*** zip
+    https://realpython.com/python-zip-function/
+    
+    - "Python’s zip() function is defined as zip(*iterables). 
+      The function takes in iterables as arguments and 
+      returns an iterator. This iterator generates a 
+      series of tuples containing elements from each iterable. 
+      zip() can accept any type of iterable, such as
+      files, lists, tuples, dictionaries, sets, and so on."
+    
+*** python > install packages with conda
+    https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
+
+*** python > if not
+
+*** python > return value of `and`, `or`
+
+*** function annotation
+*** yield
+
+*** iter
+
+
+
+* pytorch (question)
+*** auto grad
+    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+    https://towardsdatascience.com/understanding-pytorch-with-an-example-a-step-by-step-tutorial-81fc5f8c4e8e
+*** with torch.no_grad
+*** why do we zero out gradient?  (1:14:58)
+*** zero_grad()
+*** .grad.zero_()
+
+* pytorch (understood)
 *** using `nn` module
     import torch
     from torch import nn
@@ -58,8 +70,6 @@
     the dimension sizes must either be equal, 
     one of them is 1, or one of them does not exist.
 
-
-** deep learning
 *** tensor sum
     - for explanation, think of a tensor below;
 
@@ -133,11 +143,130 @@
       '''
     #+END_SRC    
 
-*** normalization & initialization
-    - what we care is to have "good activations" during the training
-    - normalization is for activations of layers ("input" is considered as the first activation)
-    - initialization is for weight, but results in good activation
+*** tensor broadcasting
+    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
 
+*** tensor related operation (stack, squeeze)
+    https://deeplizard.com/learn/video/kF2AlpykJGY
+    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
+
+*** tensor mean, std
+
+
+* Initialize Network (question)
+*** why good training requires activations of mean of 0 & std of 1
+    - mean of 0 & std of 1 is necessary for gradients not to vanish/explode
+      https://www.youtube.com/watch?v=qhXZsFVxGKo
+      https://colab.research.google.com/github/fastai/course-v3/blob/master/nbs/dl2/02b_initializing.ipynb
+    
+*** why bias should be 0 for kaimin initialization
+
+* Initialize Network (understood)
+*** why initialization matters
+    - "good training" requires  "good activations" during the training,
+      and a "good activation" has;
+      - mean of 0 
+      - std of 1
+
+*** what is normalization & initialization
+    - normalization is for activations of layers
+      ("input" is considered as the first activation)
+
+    - initialization is for weight, but results in good activations
+
+
+
+
+* Design Network Architecture (question)
+** CNN
+*** (CNN) why can a kernel detects edge?
+    - lecture by andres ng
+      https://www.youtube.com/watch?v=XuD4C8vJzEQ&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=101
+*** (CNN) what is pooling for?
+    - lecture by andres ng
+      https://www.youtube.com/watch?v=8oOgPUO-TBY&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=108
+*** (CNN) what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
+
+
+** BatchNorm
+*** (BatchNorm) why does BatchNorm works?
+    # NeurIPS 2018
+    https://www.youtube.com/watch?v=ZOabsYbmBRM
+
+    # paper author lecture
+    https://www.youtube.com/watch?v=EvAVCxZJN2U
+
+    # deep lizard
+    https://www.youtube.com/watch?v=dXB-KQYkzNU
+
+*** (BatchNorm) why is it OK not fo define `backward` on `BatchNorm`
+    # stack overflow
+    https://stackoverflow.com/questions/49594858/how-does-pytorch-module-do-the-back-prop
+
+
+    # my guess
+    - `BatchNorm` inherits `backward` from `nn.Module`,
+      which calls `backwrd` on all the `nn.Parameter` instance
+      
+
+** Dropout
+
+* Design Network Architecture (understood)
+** CNN
+*** what convolution operation means mathmatically
+    - it is equivalent to matrix multiply
+      
+
+*** how does the 'face size' of activation change by convolution
+    https://deepage.net/deep_learning/2016/11/07/convolutional_neural_network.html
+    - determined by the values of padding, stride 
+      - Oh = 1 + (H + 2P - Fh) / S
+      - Ow = 1 + (W + 2P - Fw) / S
+        
+        - Oh: output height
+        - Ow: output width
+        - H: original height
+        - W: original width
+        - P: padding
+        - Fh: Filter height
+        - Fw: Filter width
+        - S: stride
+      
+*** how do we determine the right kernel size for CNN?
+*** meaning of filters & channels
+    - they are used interchangably?
+
+
+* Update Parameter (question)
+** gradient
+*** TODO how to calculate gradient w.r.t weights for a linear layer
+    # 3b1b
+    https://www.youtube.com/watch?v=tIeHLnjs5U8&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=5&t=0s
+
+    # 
+    https://forums.fast.ai/t/understanding-linear-layer-gradient/63491
+
+    # 
+    http://cs231n.stanford.edu/handouts/linear-backprop.pdf
+    https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
+    
+*** TODO how autograd & `loss` method in pytorch works
+    https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
+    https://pytorch.org/docs/stable/autograd.html
+    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
+
+*** does small/large activation lead to small/large gradient ?
+    - (?) gradient is calculated not analytically but numerically,
+      and a small activation leads to small gradient because
+      deltaX cannot be arbitrally small and has a lower limit
+
+** regularization
+*** what is L2 regularlization
+*** what is weight decay
+*** debiasing exponentially weighted moving average
+    https://www.youtube.com/watch?v=lWzo8CajF5s
+
+** ADAM and variations
 *** dampening & debiasing 
     - dampening & debiasing are two different things
 
@@ -153,25 +282,59 @@
 
     - note that without the dampening, the sum of the coefficients
       becomes just a sum of a proportional sequence (等比数列)
+*** momentum
+    https://www.youtube.com/watch?v=k8fTYJPd3_I&t=1s
 
-*** statistics for a parameter are tensors, NOT a scalar
-    - for example, AverageGrad
+*** RMSprop
+    https://www.youtube.com/watch?v=_e-LFe_igno
+*** ADAM
+    https://www.youtube.com/watch?v=JXQT_vxqwIs
+*** LAMB
+    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+    https://arxiv.org/pdf/1904.00962.pdf
+    
 
-*** essential fastai codes
-    - Runner ver1
-    - Optimizer ver2
-    - StatefulOptimizer
-    - Learner ver2
-    - ParamScheduler
-    - BatchNorm
+* Update Parameter (understood)
 
-*** elements of a model
-    - data
-    - model
-    - loss function
-    - optimizer
+* Monitor Learning Process (question)
+*** the relation between the size of the activation std & gradient
+    - (?) gradient is calculated not analytically but numerically,
+      and a small activation leads to small gradient because
+      deltaX cannot be arbitrally small and has a lower limit.
 
-*** components of deep learning
+      ref: "vanishing gradient problem"
+      https://www.youtube.com/watch?v=qhXZsFVxGKo
+
+
+* Monitor Learning Process (understood)
+*** an activation with its standard deviation nearly zero is bad for learning
+    - magnitude of activation propages throuth a network,
+      so if there is an activation with nearly zero standard deviation
+      in the beggining or middle of activation,
+      it will remains to be nearly zero through all
+      the layers up to the final layer,
+      which leas to nearly zero gradient causing
+      slow learning process
+
+*** why is exponential growth of activation a bad sign? (lesson9)
+    - with exponential growing activation std,
+      activation is nearly zero most of the time, 
+      which leads to nearly zero gradient causing
+      slow learning process
+
+
+* Misc (question)
+** handling images
+*** can we flip, resize while a image is still a byte (before byte tensor, float tensor)
+
+** BERT
+*** BERT with fastai 
+    https://mlexplained.com/2019/05/13/a-tutorial-to-fine-tuning-bert-with-fast-ai/
+    https://medium.com/@abhikjha/fastai-integration-with-bert-a0a66b1cecbe
+    https://towardsdatascience.com/fastai-with-transformers-bert-roberta-xlnet-xlm-distilbert-4f41ee18ecb2
+
+* Misc (understood)
+*** _old_components of deep learning
     - techniques to initialize parameters & normalize activations in order to keep activations nice
       - kaiming initialization (weight initialization)
       - lsuv (weight initialization)
@@ -196,166 +359,11 @@
       - res-net
       - Xres-net
 
-* things to understand
-** pyhton
-*** zip
-    https://realpython.com/python-zip-function/
-    
-    - "Python’s zip() function is defined as zip(*iterables). 
-      The function takes in iterables as arguments and 
-      returns an iterator. This iterator generates a 
-      series of tuples containing elements from each iterable. 
-      zip() can accept any type of iterable, such as
-      files, lists, tuples, dictionaries, sets, and so on."
-    
-*** python > install packages with conda
-    https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
 
-*** python > if not
-
-*** python > return value of `and`, `or`
-
-*** function annotation
-*** yield
-
-*** iter
-
-** pyotrch
-*** auto grad
-    https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
-    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
-    https://towardsdatascience.com/understanding-pytorch-with-an-example-a-step-by-step-tutorial-81fc5f8c4e8e
-
-*** with torch.no_grad
-*** why do we zero out gradient?  (1:14:58)
-*** zero_grad()
-*** .grad.zero_()
-
-*** tensor broadcasting
-    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
-
-*** tensor related operation (stack, squeeze)
-    https://deeplizard.com/learn/video/kF2AlpykJGY
-    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
-
-*** tensor mean, std
-
-** DNN misc
-*** the relation between the size of the activation std & gradient
-    - (?) a loss function is a function of activation of the final layer,
-      and
-    - (?) see "vanishing gradient problem"
-      https://www.youtube.com/watch?v=qhXZsFVxGKo
-
-** CNN
-*** why can a kernel detects edge?
-    - lecture by andres ng
-      https://www.youtube.com/watch?v=XuD4C8vJzEQ&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=101
-
-*** what is pooling for?
-    - lecture by andres ng
-      https://www.youtube.com/watch?v=8oOgPUO-TBY&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=108
-*** how does the 'face size' of activation change by convolution
-    https://deepage.net/deep_learning/2016/11/07/convolutional_neural_network.html
-    - determined by the values of padding, stride 
-      - Oh = 1 + (H + 2P - Fh) / S
-      - Ow = 1 + (W + 2P - Fw) / S
-        
-        - Oh: output height
-        - Ow: output width
-        - H: original height
-        - W: original width
-        - P: padding
-        - Fh: Filter height
-        - Fw: Filter width
-        - S: stride
-      
-*** how do we determine the right kernel size for CNN?
-*** meaning of filters & channels
-    - are they used interchangably?
-
-*** what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
-    
-** initialization & normalization
-*** why does initialization work?
-*** why does BatchNorm works?
-    # NeurIPS 2018
-    https://www.youtube.com/watch?v=ZOabsYbmBRM
-
-    # paper author lecture
-    https://www.youtube.com/watch?v=EvAVCxZJN2U
-
-    # deep lizard
-    https://www.youtube.com/watch?v=dXB-KQYkzNU
-
-*** why is it OK not fo define `backward` on `BatchNorm`
-    # stack overflow
-    https://stackoverflow.com/questions/49594858/how-does-pytorch-module-do-the-back-prop
+*** statistics for a parameter are tensors, NOT a scalar
+    - for example, AverageGrad
 
 
-    # my guess
-    - `BatchNorm` inherits `backward` from `nn.Module`,
-      which calls `backwrd` on all the `nn.Parameter` instance
-      
-** regularlization
-*** what is regularlization?
-*** L2 regularlization
-*** weight decay
-
-** optimization
-*** TODO how to calculate gradient w.r.t weights for a linear layer
-    # 3b1b
-    https://www.youtube.com/watch?v=tIeHLnjs5U8&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=5&t=0s
-
-    # 
-    https://forums.fast.ai/t/understanding-linear-layer-gradient/63491
-
-    # 
-    http://cs231n.stanford.edu/handouts/linear-backprop.pdf
-    https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
-    
-*** TODO how autograd in pytorch works
-    https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
-    https://pytorch.org/docs/stable/autograd.html
-
-    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
-
-*** L2 regularlization & weight decay
-*** debiasing exponentially weighted moving average
-    https://www.youtube.com/watch?v=lWzo8CajF5s
-
-*** momentum
-    https://www.youtube.com/watch?v=k8fTYJPd3_I&t=1s
-
-*** RMSprop
-    https://www.youtube.com/watch?v=_e-LFe_igno
-
-*** ADAM
-    https://www.youtube.com/watch?v=JXQT_vxqwIs
-
-*** LAMB
-    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
-    https://arxiv.org/pdf/1904.00962.pdf
-    
-** architecture design
-*** detail of 'bag of tricks' paper which considers
-    - how we can make use of all the input we have
-    - how we can take advantage of computations we are doing
-
-*** Dropout
-
-** misc
-*** average pooling
-*** maximum pooling
-*** concat pooling
-
-** handling images
-*** can we flip, resize while a image is still a byte (before byte tensor, float tensor)
-** BERT
-*** BERT with fastai 
-    https://mlexplained.com/2019/05/13/a-tutorial-to-fine-tuning-bert-with-fast-ai/
-    https://medium.com/@abhikjha/fastai-integration-with-bert-a0a66b1cecbe
-    https://towardsdatascience.com/fastai-with-transformers-bert-roberta-xlnet-xlm-distilbert-4f41ee18ecb2
 
 * lesson8
 ** 00_exports.ipynb
@@ -4689,7 +4697,7 @@
 
     - `DataBunch`, `get_runner` will be implemented later
 
-*** TODO how to determine filter size (the "face size" of "金太郎飴")
+*** DONE how to determine filter size (the "face size" of "金太郎飴")
     https://course19.fast.ai/videos/?lesson=10&t=4120
 
     - first, let's suppose the 1st conv layer is of
@@ -4781,36 +4789,44 @@
       as the model is called and the parameters were updated
       for every single batch.
 
-*** TODO how to interpret "activation mean history" graphs in the Jupyter notebook
+*** DONE how to interpret "activation mean history" graphs in the Jupyter notebook
     https://course19.fast.ai/videos/?lesson=10&t=4353
 
     # helpful reference?
     https://prateekvjoshi.com/2016/03/29/understanding-xavier-initialization-in-deep-neural-networks/
     https://pouannes.github.io/blog/initialization/    
 
-    - look at a specific single batch, and see how activations change through layers
-    - for good training, the means of an activation should be close to 0,
-      but that is not the case for most of the batches.
-      (especially, because of ReLue layer, mean will be close to 0.5)
+    # - for good training, the means of an activation should be close to 0,
+    #   but that is not the case for most of the batches.
+    #   (especially, because of ReLue layer, mean will be close to 0.5)
 
-    - also, the standard deviation of activations should be close to 1,
-      but the standard deviations of activation is getting closer to 0
-      as we go through the layers
-      
-    - [ ] (?) when the activation is small, the gradients of the
-      paramters are also small, and so the model learns only
-      slowly.
+    # - also, the standard deviation of activations should be close to 1,
+    #   but the standard deviations of activation is getting closer to 0
+    #   as we go through the layers
+
+    - if we look at the activation std for the finaly layer,
+      it is close to 0. since a small activation leads to
+      small gradient when calculating a gradient numerically,
+      the gradient for the layer, and also the gradient for 
+      the model, which is calculated through chain rule, 
+      will be also close to 0, leading to slow learning process.
+
+    - on the other hand, for the steps where activation is not zero,
+      activation increases exponentially, which suggests the
+      gradients are too large around that step
 
     # - let's look at one layer, layer5
     # - rapid change of "activation mean" means that
     #   the weights are updated a lot (=big gradient)
     #   and so activation jumps at the next step.
 
-*** TODO why does activation mean dropp off the clif suddenly?
-    - (?) a large gradient of the mean history graph implies a big change in paramters?
+*** DONE why does activation mean dropp off the clif suddenly?
+    # - (?) a large gradient of the mean history graph implies a big change in paramters?
 
     - think of concaved 3 dimensional loss landscape, with only 2 parameters
+
     - steep curves means large gradient,
+
     - when gradient is very big, a parameter will change a lot
       resulting in landing onto a the opposite side of
       loss landscape where the gradient is large in the opposite direction,
@@ -5010,15 +5026,15 @@
     - using `with`, the Hooks instance will be destroyed
       after the code is exceuted.
 
-*** how to interpret mean & std historys for layers with initialization
-    # mean history
-    - for layer 0-3, we do not have exponential grouth & crush
-      although we still have for layer 4&5
-
+*** how to interpret std historys for layers with initialization
     # std history
     - for layers other than layer 4, std for the first 10 steps
-      are much closer to 0, where as they are almost near zero
+      are much closer to 1, whereas they are almost near zero
       without initilization
+
+    - also, for most of the steps, activation std is far from 0,
+      whereas without initialization, activation std is ofren near 0
+      
 
 *** initialize weights 
 
@@ -5249,7 +5265,6 @@
     - `a` 
       https://pytorch.org/docs/stable/nn.init.html
 
-
 *** append_stat ver4
 
     #+BEGIN_SRC python
@@ -5349,14 +5364,26 @@
 
     #+END_SRC
     
-*** why BatchNorm works
+*** DONE why BatchNorm works
+    - think of BatchNorm as DNN's version of 'Repeater' 
+      which makes sure activations remains to be good shape 
+      through the networks
+    
+    - also, considering that the goal of a DNN is to
+      adjust the network parameters so that it produces 
+      desired output, it is reasonable to expect
+      that directly rescaling and shifting activations by
+      γ (x - batch_mean) /batch_std  + α
+      will make it easier to make the entire network
+      to produce the desired output 
+
     # article (2020)
     https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
 
     # forum
     https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
 
-*** BatchNorm
+*** TODO BatchNorm
     # video
     https://course19.fast.ai/videos/?lesson=6?t=2700
     
@@ -12874,8 +12901,23 @@
 *** train GAN with less data
     https://analyticsindiamag.com/can-we-train-gans-with-less-data/
 
-
 *** attention and memory
     https://www.youtube.com/watch?v=AIiwuClvH6k&feature=youtu.be
 
+*** NTT-research
+  - Network Pruning
+    Hidenori Tanaka
 
+  - Continual Learning
+    - Ekdeep singh
+
+  - Effective learning rate of BatchNorm
+    Zhiyuan Li, Sanjeev Arora
+    
+
+  - Brain-inspired Algorithm SynFlow
+
+  - Lottery Ticket Hypothesis and iterative magnitude Pruning
+
+  - pruning neural networks at initialization
+    Why are we missing the mark?
