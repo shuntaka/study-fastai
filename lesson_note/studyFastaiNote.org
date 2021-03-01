@@ -1,4 +1,25 @@
-* 
+* questions 
+*** wha 
+
+* a
+*** a
+  - Network Pruning
+    Hidenori Tanaka
+
+  - Continual Learning
+    - Ekdeep singh
+
+  - Effective learning rate of BatchNorm
+    Zhiyuan Li, Sanjeev Arora
+    
+
+  - Brain-inspired Algorithm SynFlow
+
+  - Lottery Ticket Hypothesis and iterative magnitude Pruning
+
+  - pruning neural networks at initialization
+    Why are we missing the mark?
+
 * things to keep in mind
 ** python
 *** packing & unpacking operator (single asterisk)
@@ -226,7 +247,6 @@
     - (?) see "vanishing gradient problem"
       https://www.youtube.com/watch?v=qhXZsFVxGKo
 
-
 ** CNN
 *** why can a kernel detects edge?
     - lecture by andres ng
@@ -239,10 +259,18 @@
     https://deepage.net/deep_learning/2016/11/07/convolutional_neural_network.html
     - determined by the values of padding, stride 
       - Oh = 1 + (H + 2P - Fh) / S
-      - Ow = 1 + (H + 2P - Fw) / S
+      - Ow = 1 + (W + 2P - Fw) / S
+        
+        - Oh: output height
+        - Ow: output width
+        - H: original height
+        - W: original width
+        - P: padding
+        - Fh: Filter height
+        - Fw: Filter width
+        - S: stride
       
 *** how do we determine the right kernel size for CNN?
-
 *** meaning of filters & channels
     - are they used interchangably?
 
@@ -269,7 +297,6 @@
     - `BatchNorm` inherits `backward` from `nn.Module`,
       which calls `backwrd` on all the `nn.Parameter` instance
       
-
 ** regularlization
 *** what is regularlization?
 *** L2 regularlization
@@ -1664,15 +1691,15 @@
       it will call __setattr__ which registers the property 
       and its value to `self._modules`
 
+    - `DummyModule` also implements `parameters` which yields
+      all the parameters of each of all the layers registered
+      to self._modules through __setattr__, and hence enables
+      us to loop through the parameters.
+
     # DummyModule detail
     - `super().__setattr__(k,v)` calls `__setattr__` of
       the super class of DummyModule, which is 
       Python Object class.
-
-    - `DummyModule` also implements `parameters` which yields
-      all the parameters of each of all the layers registered
-      to self._modules, and hence enables us to loop through
-      the parameters.
 
     - `l.parameters()` calls `parameters` method
       implemented on a PyTorch layer class such as `nn.Linear`
@@ -2327,11 +2354,27 @@
     #+END_SRC
 
     # overview
-    - `get_dls` is just a convinent helper for getting a tuple of 
-      (DL for train_ds, DL for valid_ds)
+    - `get_dls` is just a convinent helper for applyinbg DataLoader
+      to both of train_ds, valid_ds and combine them together
 
     # detail
-    - `DataLoader` is from `PyTorch`, and not the 'home-made' `DataLoader`
+    - `DataLoader` is from `PyTorch`, and not the 'home-made' `DataLoader`,
+      but implementation is idendical to 'home-made' `DataLoader`;
+
+    #+BEGIN_SRC python
+      def collate(b):
+          xs,ys = zip(*b)
+          return torch.stack(xs),torch.stack(ys)
+
+      class DataLoader():
+          def __init__(self, ds, sampler, collate_fn=collate):
+              self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
+
+          def __iter__(self):
+              for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
+
+    #+END_SRC
+
 
     - DL for valid_ds  has bigger batch size than DL for training_ds
       because it is used with torch.no_grad(), and thus
@@ -3207,7 +3250,6 @@
 *** AvgStats & AvgStatsCallback ver1
 
     #+BEGIN_SRC python
-      #memo
       #export
       import sys
       class AvgStats():
@@ -3240,7 +3282,7 @@
               for i,m in enumerate(self.metrics):
                   self.tot_mets[i] += m(run.pred, run.yb) * bn
 
-      class AvgStatsCallback(Callback):
+                  class AvgStatsCallback(Callback):
           def __init__(self, metrics):
               self.train_stats,self.valid_stats = AvgStats(metrics,True),AvgStats(metrics,False)
               
@@ -3256,6 +3298,8 @@
               print(self.train_stats)
               print(self.valid_stats)
 
+
+      # how to use 
       learn = Learner(*get_model(data), loss_func, data)
 
       stats = AvgStatsCallback([accuracy])
@@ -3388,11 +3432,16 @@
       we are still in training phase, but do not
       need gradient calculation for `accumulate` to run
       
-      
-      
-
       https://stackoverflow.com/questions/55627780/evaluating-pytorch-models-with-torch-no-grad-vs-model-eval
 
+    # how to use detail
+    - `accuracy` is as below
+
+        #+BEGIN_SRC python
+      def accuracy(out, yb):
+          return (torch.argmax(out, dim=1)==yb).float().mean()
+    #+END_SRC
+      
 *** using AvgStatsCallback
 
     #+BEGIN_SRC python
@@ -3406,9 +3455,11 @@
       '''
     #+END_SRC
 
-    - using an instance of `AvgStatsCallback` is passed 
+    # overview
+    - an instance of `AvgStatsCallback` is passed 
       to `Runner` instance through the constructor of
-      `AvgStatsCallback`, and the instance of `AvgStatsCallback`
+      `AvgStatsCallback`, i.e., `acc_cbf`, 
+      and the instance of `AvgStatsCallback`
       will be accessible via run.avg_stats
 
       # Runner::__init__
@@ -3859,6 +3910,8 @@
     
 *** Callback ver3, TrainEvalCallback ver2, CancelTrainException, CancelEpochException, CancelBatchException, 
 
+    https://course19.fast.ai/videos/?lesson=10&t=3230
+
     #+BEGIN_SRC python
       #export
       class Callback():
@@ -3901,21 +3954,39 @@
     #+END_SRC
 
     # Callback ver3 overview
-    - with `Callback` ver3, `__call__` is added,
-      and with this, a developer can add any extra behavior
-      by overriding `__call__` method.
+    - `Callback` ver3 is for factoring out, from `Runner` ver2,
+      the logic for finding & calling a callback, and move it inside
+      `Callback` class as its `__call__` method
 
-    - the extra behavior can be made use of as below;
+       https://course19.fast.ai/videos/?lesson=10&t=3230
+
+    # Runner ver1 __call__
+    #+BEGIN_SRC python
+      def __call__(self, cb_name):
+          for cb in sorted(self.cbs, key=lambda x: x._order):
+              f = getattr(cb, cb_name, None)
+              if f and f(): return True
+          return False
+    #+END_SRC
+
+    - with `Callback` ver3, a callback such as 'begin_batch' can be called 
+      from inside an instance of `Runner` ver3 (implemented later), as below
 
       #+BEGIN_SRC python
-        class MyCallback(Callback)
-            def __call__(self, cb_name):
-                super().__call__(self, cb_name);
-                print('this is extra behaviour')
-
-        my_callback_instance = MyCallback()
-        my_callback_instance('begin_batch')
+        # somewhere in Runner ver3
+        SomeCallbckInstance('begin_batch')
       #+END_SRC
+
+    - now that a callback method (such as `begin_batch`) of
+      `Callback` ver3 is called through `__call__` method
+      from inside `Runncer` ver3 instance, a developer can design
+       what happens on calling a callback method (such as `begin_batch`)
+       by overriding `__call__` method of `Callback` ver3
+       in `Callback` ver3 subclass
+
+      https://course19.fast.ai/videos/?lesson=10&t=3330
+
+
 
     # TrainEvalCallback ver2 overview
     - the implementation is exactly the same as `TrainEvalCallback` ver1.
@@ -4017,18 +4088,31 @@
     # - note that callack instances are registered as propeties of
     #   `Runner` instance by `setattr` inside __init__
     
-    - Runner ver2  makes use of Callback ver3, and
+    - `Runner` ver2  makes use of `Callback` ver3, and
       so a specific callback(e.g. begin_batch) of an instance
-      of `Callback` subclass can be called as `cb(cb_name)`,
-      e.g., MyCallback('begin_batch')
+      of `Callback` subclass can be called more succinctly
+      compare to with `Runner` ver1
 
-
+      # with Runner ver2
       #+BEGIN_SRC python
         def __call__(self, cb_name):
             res = False
             for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) or res
             return res
+
+        # e.g., MyCallback('begin_batch') 
       #+END_SRC
+
+
+      # with Runner ver1
+      #+BEGIN_SRC python
+        def __call__(self, cb_name):
+            for cb in sorted(self.cbs, key=lambda x: x._order):
+                f = getattr(cb, cb_name, None)
+                if f and f(): return True
+            return False
+      #+END_SRC
+
 
     - a line of code to throw `CancelTrainException` is
       added to `fit` to catch `CancelTrainException`
@@ -4195,6 +4279,9 @@
     - `**` is exponentiation.
 
 ** 06_cuda_cnn_hooks_init
+*** lesson video
+    https://course19.fast.ai/videos/?lesson=10&t=5390
+
 *** imports
 
     #+BEGIN_SRC python
@@ -4252,7 +4339,7 @@
         def normalize(x, m, s): return (x-m)/s
       #+END_SRC
 
-*** view
+*** `view` 
 
     #+BEGIN_SRC python
       my_x = torch.rand(4,4)
@@ -4602,8 +4689,8 @@
 
     - `DataBunch`, `get_runner` will be implemented later
 
-*** how to determine filter size (the "face size" of "金太郎飴")
-    https://course19.fast.ai/videos/?lesson=10&t=4353
+*** TODO how to determine filter size (the "face size" of "金太郎飴")
+    https://course19.fast.ai/videos/?lesson=10&t=4120
 
     - first, let's suppose the 1st conv layer is of
       conv2d(1, 8, 3)
@@ -4830,7 +4917,7 @@
       and `Hook` instance is created for each of the layers(modules)
       of `model`
 
-** ListContainer
+*** ListContainer
 
     #+BEGIN_SRC python
       #export
@@ -4942,7 +5029,7 @@
               l[0].bias.data.zero_()
     #+END_SRC
 
-    - it the initialization above, l[0]
+    - in the initialization above, l[0]
       corresponds to the Conv2d layer of each Sequential module
 
     - a model consists of several Sequential modules as below;
@@ -5129,11 +5216,10 @@
     #+END_SRC
 
     # get_cnn_layers ver2 overview
-    - `get_cnn_layers` ver2 accepts `layer`, 
-      and a layer function such as
-      `conv2d`, `conv_layer`can be used as a building block
-      of cnn layers whereas `get_cnn_layers` 
-      ver1 always uses `conv2d`
+    - `get_cnn_layers` ver2 accepts `layer`, a function 
+      to create a layer such as `conv_layer`, 
+      whereas `get_cnn_layers` ver1 always uses `conv2d`
+      for creating a layer
 
     - `get_cnn_layers` ver2 takes `**kwags` which will be
       eventually passed to GeneralRelu
@@ -5141,14 +5227,6 @@
     # get_cnn_layers ver2 detail
     - `layer` is a function such as `conv2d`, `conv_layer`
 
-    # get_cnn_model ver3 overview
-    - `get_cnn_model` ver3 accepts `layer` which will be
-      passed along to `get_cnn_layers` ver2 which will be called inside 
-
-    - `get_cnn_model` ver3 takes `**kwags` which will be
-      eventually passed to GeneralRelu
-
-    # layer overview
     - `layer` in `get_cnn_layers(data, nfs, layer, **kwargs)` is
       a function, such as `conv_layer` to create a convolution layer
 
@@ -5159,6 +5237,18 @@
     # GeneralRelu overview
     - with `GeneralRelu`, we can improve the ratio of non-zero
       activation elements in an activation tensor
+
+    # get_cnn_model ver3 overview
+    - `get_cnn_model` ver3 accepts `layer` which will be
+      passed along to `get_cnn_layers` ver2 which will be called inside 
+
+    - `get_cnn_model` ver3 takes `**kwags` which will be
+      eventually passed to GeneralRelu
+
+    # init_cnn detail
+    - `a` 
+      https://pytorch.org/docs/stable/nn.init.html
+
 
 *** append_stat ver4
 
@@ -5176,8 +5266,6 @@
       the activations will be distributed around 0, instead of 0.5,
       so the histogram counts the values between -7 and 7
       instead of 0 and 10
-
-
 
 *** TODO leaky relu
     - why does leaky relu work better ?
@@ -5262,12 +5350,16 @@
     #+END_SRC
     
 *** why BatchNorm works
+    # article (2020)
+    https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
+
     # forum
     https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
 
 *** BatchNorm
     # video
     https://course19.fast.ai/videos/?lesson=6?t=2700
+    
 
     #+BEGIN_SRC python
       class BatchNorm(nn.Module):
@@ -5482,7 +5574,11 @@
 
     #+END_SRC
 
-    # init_cnn_
+    # init_cnn ver2 overview
+    - `init_cnn` ver2 factors out the logic, in `init_cnn` ver1 for
+      recursively initializing a laeyr, as `init_cnn_`
+
+    # init_cnn_ overview
     - the name of `init_cnn_` and `init_cnn` are slightly different!
       look at the last "_"
 
@@ -6530,7 +6626,17 @@
     #+END_SRC
 
     # CategoryProcessor overivew
-    - `CategoryProcessor` "numer-ify" string labels
+    - `CategoryProcessor` "numer-ify" string labels, 
+      and thanks to `_call__` method, it can be used as
+
+    #+BEGIN_SRC python
+      MyCategoryProcessorInstance = CategoryProcessor()
+      MyCategoryProcessorInstance(someItem)
+    #+END_SRC
+
+
+      `MyCategoryProcessorInstance(someItem)`
+
 
     # CategoryProcessor::__call__ detail
     - `__call__` of `CategoryProcessor` will receive
@@ -6664,69 +6770,28 @@
 
 
     # `LabeledData::process` overview        
-    - `LabeledData::process` clone "processed" version of 
-      the passed list item.
-      - `il` is an `ItemList` instance, for example.
-
-        #+BEGIN_SRC python
-        class ItemList(ListContainer):
-            def __init__(self, items, path='.', tfms=None):
-                super().__init__(items)
-                self.path,self.tfms = Path(path),tfms
-
-            def __repr__(self): return f'{super().__repr__()}\nPath: {self.path}'
-            
-            def new(self, items, cls=None):
-                if cls is None: cls=self.__class__
-                return cls(items, self.path, tfms=self.tfms)
-            
-            def  get(self, i): return i
-            def _get(self, i): return compose(self.get(i), self.tfms)
-            
-            def __getitem__(self, idx):
-                res = super().__getitem__(idx)
-                if isinstance(res,list): return [self._get(o) for o in res]
-                return self._get(res)
-
-      #+END_SRC
-
-      - since `ItemList` inherits `ListContainer`, 
-        it has `self.items` which is guaranteed to be 
-        a list by `listify`
-
-        #+BEGIN_SRC python
-          #export
-          class ListContainer():
-          def __init__(self, items): self.items = listify(items)
-          def __getitem__(self, idx):
-          if isinstance(idx, (int,slice)): return self.items[idx]
-          if isinstance(idx[0],bool):
-          assert len(idx)==len(self) # bool mask
-          return [o for m,o in zip(idx,self.items) if m]
-          return [self.items[i] for i in idx]
-          def __len__(self): return len(self.items)
-          def __iter__(self): return iter(self.items)
-          def __setitem__(self, i, o): self.items[i] = o
-          def __delitem__(self, i): del(self.items[i])
-          def __repr__(self):
-          res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
-          if len(self)>10: res = res[:-1]+ '...]'
-          return res
-      #+END_SRC
+    - `LabeledData::process` creates "processed" version of 
+      the passed instance of `ItemList` subclass such as `ImageList`
 
     # `LabeledData::process` detail
-    - `il`: an `ItemList` subclass instance
+    - `il`: an instance of `ItemList` subclass such as `ImageList`
     - `proc`: an array of functions
+    - `il.new` is necessary since the result of `compose(il.items, proc)`
+      may be just a plain list different from the type of the 
+      original instance of a `ItemList` subclass
 
     # `LabeledData::__init__` detail
-    - `x`: an `ItemList` subclass instance corresponding to data
+    - `x`: an instance of `ItemList` subclass such as `ImageList`
 
-    - `y`: an `ItemList` subclass instance corresponding to labels
+    - `y`: an instance of `ItemList` subclass corresponding to labels
+      which was created by `_label_by_func` from the passed instance
+      of a `ItemList` subclass
 
     - `LabeledData::__init__` applys `proc_x` & `proc_y`
       to `x` & `y`, respectively
 
-    - `proc_y` is `CategoryProcessor` instance
+    - `proc_y` is for example, an instance of 
+      `CategoryProcessor` for "numer-ifying" the label strings
 
     # `LabeledData::label_by_func` overview        
     - `LabeledData::label_by_func` is a factory method to create
@@ -6793,17 +6858,22 @@
 
         imga[:10,:10,0]
         '''
-        array([[1, 1, 1, 1, ..., 1, 1, 1, 1],
-               [1, 1, 1, 1, ..., 1, 1, 1, 1],
-               [1, 1, 1, 1, ..., 1, 1, 1, 1],
-               [1, 1, 1, 1, ..., 1, 1, 1, 1],
+        array([[239, 239, 239, 239, ..., 239, 239, 246, 239],
+               [239, 239, 239, 239, ..., 239, 239, 234, 240],
+               [238, 238, 238, 238, ..., 238, 238, 238, 235],
+               [237, 237, 237, 237, ..., 237, 237, 244, 236],
                ...,
-               [1, 1, 1, 1, ..., 1, 1, 1, 1],
-               [1, 1, 1, 1, ..., 1, 1, 1, 1],
-               [1, 1, 1, 1, ..., 1, 1, 1, 1],
-               [1, 1, 1, 1, ..., 1, 1, 1, 1]], dtype=uint8)
+               [235, 235, 235, 235, ..., 235, 235, 239, 233],
+               [235, 235, 235, 235, ..., 235, 235, 233, 241],
+               [239, 238, 235, 232, ..., 238, 234, 236, 239],
+               [234, 236, 235, 233, ..., 236, 232, 230, 235]], dtype=uint8)
         '''
       #+END_SRC
+
+    - `to_byte_tensor` is barrowed from torch vision
+
+    - `to_float_tensor` is for turning the integer values
+      ranging [0,255] into float values ranging [0, 1]
 
 *** show_image
 
@@ -6815,6 +6885,9 @@
           plt.imshow(im.permute(1,2,0))
     #+END_SRC
 
+    - for the detail, watch the lecture video arround '53:42
+      https://course19.fast.ai/videos/?lesson=11
+      
 *** DataBunch ver2
 
     #+BEGIN_SRC python
@@ -6831,6 +6904,11 @@
 
     #+END_SRC
 
+    # overview
+    - `DataBunch` is just a storage to store 
+      - `DataLoader` instance for training
+      - `DataLoader` instance for validation
+
 *** databunchify (SplitData.to_databunchify)
 
     #+BEGIN_SRC python
@@ -6842,7 +6920,35 @@
       SplitData.to_databunch = databunchify
     #+END_SRC
 
-*** TODO normalize_chan
+    
+    # detail
+    - `get_dls` is as below
+
+      #+BEGIN_SRC python
+
+        def get_dls(train_ds, valid_ds, bs, **kwargs):
+        # DataLoader is from pytorch    
+            return (DataLoader(train_ds, batch_size=bs, shuffle=True, **kwargs),
+                    DataLoader(valid_ds, batch_size=bs*2, **kwargs)) 
+
+      #+END_SRC
+
+      # home made DataLoader ver2
+      #+BEGIN_SRC python
+      def collate(b):
+          xs,ys = zip(*b)
+          return torch.stack(xs),torch.stack(ys)
+
+      class DataLoader():
+          def __init__(self, ds, sampler, collate_fn=collate):
+              self.ds,self.sampler,self.collate_fn = ds,sampler,collate_fn
+
+          def __iter__(self):
+              for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
+
+      #+END_SRC
+
+*** DONE normalize_chan
 
     #+BEGIN_SRC python
       #export
@@ -6854,7 +6960,19 @@
       norm_imagenette = partial(normalize_chan, mean=_m.cuda(), std=_s.cuda())
     #+END_SRC
     
-    - [ ] why are we indexing `[...,None,None]` ?
+    - [X] why are we indexing `[...,None,None]` ?
+      => for broadcasting. `mean` is rank1 tensor
+      whereas `x` is a rank4 tensor in the form of
+      torch.Size([64, 3, 128, 128]
+
+      - broadcasting rule:
+        - Each tensor has at least one dimension.
+        - When iterating over the dimension sizes, 
+          starting at the trailing dimension, 
+          the dimension sizes must either
+          - be equal, 
+          - or, one of them is 1
+          - or, one of them does not exist.
 
 ***  get_cnn_layers ver3, get_cnn_model ver4, get_learn_run ver2
 
@@ -6885,6 +7003,8 @@
           return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
     #+END_SRC
 
+
+     # get_cnn_layers ver3 overview
      - `get_cnn_layers` ver3 inserts a preceding 3 layers into 
        a cnn layer, for a better feature representation
 
@@ -6895,7 +7015,7 @@
        - the reson for the kernel size (face size of "金太郎飴") of
          3x3 is also discussed around 1:00:00
          (see "Bag of tricks" paper for more detail)
-
+         
        - note that "1:09:05" & "1:17:05" of lesson10 was
          discussing about the right kernel size
          (face size of "金太郎飴") for the first layer 
@@ -6906,8 +7026,44 @@
          computation is not wasted, and in addition, 
          the right kernel size is also discussed 
 
+     # get_cnn_layers ver3 detail
+     - `l2 = prev_pow_2(l1*3*3)` is based for producing
+       less number of a cells than the number of the
+       cells to which 3x3xc_in kernel is applied
+       
+       https://course19.fast.ai/videos/?lesson=11&t=3500
+
+       - think of 128*128*3 image where `c_in` = 3.
+         For 3*3*3 kernel with stride 1,
+         we have originally have roughly 128 groups of 3*3*3 cells
+         to each which the kernel is applied, and to produce less
+         numberof the cells, number of the kernel (=filter)
+         should be less than 3x3x3
+
+     - `f` is a function to create conv2d layer with stride 2,
+       kernel size 3, and `layer` is like `nn.Conv2d`
+
+
+     # get_cnn_model ver4 overview
      - `get_cnn_model` ver4 is same as ver3, but refering to `get_cnn_layers` ver3
+
+     # get_learn_run ver2 overview
      - `get_learn_run` ver2 is same as ver1, but refering to `get_cnn_model` ver4
+
+     # get_learn_run ver2 detail
+     - `init_cnn` is `init_cnn` ver2 and as below
+
+       #+BEGIN_SRC python
+         def init_cnn_(m, f):
+             if isinstance(m, nn.Conv2d):
+                 f(m.weight, a=0.1)
+                 if getattr(m, 'bias', None) is not None: m.bias.data.zero_()
+             for l in m.children(): init_cnn_(l, f)
+
+         def init_cnn(m, uniform=False):
+             f = init.kaiming_uniform_ if uniform else init.kaiming_normal_
+             init_cnn_(m, f)
+       #+END_SRC
 
 *** putting get_cnn_layers ver3, get_cnn_model ver4, get_learn_run ver2 all together       
 
@@ -7209,7 +7365,6 @@
       [{'lr': 0.5, 'mom':0.1 ...}, {'lr': 0.4, 'mom':0.1...}]
     #+END_SRC
 
-      
 *** using Optimizer ver2
 
     #+BEGIN_SRC python
@@ -7232,7 +7387,7 @@
 
     #+END_SRC
 
-*** weight decay & l2 regularization
+*** TODO weight decay & l2 regularization
     - "l2 regularization" refers to add extra wd*weight to `weight.grad`
       to the gradient 
 
@@ -8425,7 +8580,6 @@
       creating a batch before we move a batch to GPU
 
     - fastai v1 is not equipped with data augumentation for batch
-
 
 * lesson12
 ** 10b_mixup_label_smoothing.ipynb
