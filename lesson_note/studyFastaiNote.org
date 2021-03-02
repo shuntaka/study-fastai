@@ -17,7 +17,56 @@
 *** python > install packages with conda
     https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
 
-*** python > if not
+*** python > if
+
+    # examples
+
+    #+BEGIN_SRC python
+      # with list construction
+      #export
+      class ListContainer():
+          def __init__(self, items): self.items = listify(items)
+          def __getitem__(self, idx):
+              if isinstance(idx, (int,slice)): return self.items[idx]
+              if isinstance(idx[0],bool):
+                  assert len(idx)==len(self) # bool mask
+                  return [o for m,o in zip(idx,self.items) if m]
+              return [self.items[i] for i in idx]
+          def __len__(self): return len(self.items)
+          def __iter__(self): return iter(self.items)
+          def __setitem__(self, i, o): self.items[i] = o
+          def __delitem__(self, i): del(self.items[i])
+          def __repr__(self):
+              res = f'{self.__class__.__name__} ({len(self)} items)\n{self.items[:10]}'
+              if len(self)>10: res = res[:-1]+ '...]'
+              return res
+
+      # if else
+      class GeneralRelu(nn.Module):
+          def __init__(self, leak=None, sub=None, maxv=None):
+              super().__init__()
+              self.leak,self.sub,self.maxv = leak,sub,maxv
+
+          def forward(self, x): 
+              x = F.leaky_relu(x,self.leak) if self.leak is not None else F.relu(x)
+              if self.sub is not None: x.sub_(self.sub)
+              if self.maxv is not None: x.clamp_max_(self.maxv)
+              return x
+    #+END_SRC
+
+
+*** python > not
+    - think of `not` as boolean negation `!` in javascript
+
+    # examples
+    #+BEGIN_SRC python
+      if not k.startswith("_"): self._modules[k] = v
+
+      if self.sub is not None: x.sub_(self.sub)
+
+    #+END_SRC
+
+    
 
 *** python > return value of `and`, `or`
 
@@ -37,6 +86,9 @@
 *** why do we zero out gradient?  (1:14:58)
 *** zero_grad()
 *** .grad.zero_()
+
+*** how to save a model
+*** which part of a model is saved on GPU when moving a model to GPU
 
 * pytorch (understood)
 *** using `nn` module
@@ -152,27 +204,45 @@
 
 *** tensor mean, std
 
+*** how to move a model to GPU
+    lesson10 1:43:20
+
+    - a model can be moved to cuda by calling `cuda`
+
+    #+BEGIN_SRC python
+      # Somewhat less flexible, but quite convenient
+      torch.cuda.set_device(device)
+
+      class CudaCallback(Callback):
+          def begin_fit(self): self.model.cuda()
+          def begin_batch(self): self.run.xb,self.run.yb = self.xb.cuda(),self.yb.cuda()
+    #+END_SRC
+
+
 
 * Initialize Network (question)
+*** why training set and validation set should use different mean & std
+
+*** why bias should be 0 for kaimin initialization
+
+* Initialize Network (understood)
 *** why good training requires activations of mean of 0 & std of 1
     - mean of 0 & std of 1 is necessary for gradients not to vanish/explode
       https://www.youtube.com/watch?v=qhXZsFVxGKo
       https://colab.research.google.com/github/fastai/course-v3/blob/master/nbs/dl2/02b_initializing.ipynb
     
-*** why bias should be 0 for kaimin initialization
-
-* Initialize Network (understood)
 *** why initialization matters
-    - "good training" requires  "good activations" during the training,
-      and a "good activation" has;
-      - mean of 0 
-      - std of 1
+    - "good training" requires "good activations" during the training,
+      and initialization matters since it helps getting good activations
+
+    - a "good activation" has mean of 0 & std of 1
 
 *** what is normalization & initialization
     - normalization is for activations of layers
       ("input" is considered as the first activation)
 
     - initialization is for weight, but results in good activations
+
 
 
 
@@ -187,19 +257,8 @@
       https://www.youtube.com/watch?v=8oOgPUO-TBY&list=PLpFsSf5Dm-pd5d3rjNtIXUHT-v7bdaEIe&index=108
 *** (CNN) what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
 
-
 ** BatchNorm
-*** (BatchNorm) why does BatchNorm works?
-    # NeurIPS 2018
-    https://www.youtube.com/watch?v=ZOabsYbmBRM
-
-    # paper author lecture
-    https://www.youtube.com/watch?v=EvAVCxZJN2U
-
-    # deep lizard
-    https://www.youtube.com/watch?v=dXB-KQYkzNU
-
-*** (BatchNorm) why is it OK not fo define `backward` on `BatchNorm`
+*** why is it OK not fo define `backward` on `BatchNorm`
     # stack overflow
     https://stackoverflow.com/questions/49594858/how-does-pytorch-module-do-the-back-prop
 
@@ -208,15 +267,14 @@
     - `BatchNorm` inherits `backward` from `nn.Module`,
       which calls `backwrd` on all the `nn.Parameter` instance
       
-
 ** Dropout
+
 
 * Design Network Architecture (understood)
 ** CNN
 *** what convolution operation means mathmatically
     - it is equivalent to matrix multiply
       
-
 *** how does the 'face size' of activation change by convolution
     https://deepage.net/deep_learning/2016/11/07/convolutional_neural_network.html
     - determined by the values of padding, stride 
@@ -237,6 +295,78 @@
     - they are used interchangably?
 
 
+** BatchNorm
+*** why BatchNorm works
+    - think of BatchNorm as DNN's version of 'Repeater' 
+      which makes sure activations remains to be good shape 
+      through the networks
+    
+    - also, considering that the goal of a DNN is to
+      adjust the network parameters so that it produces 
+      desired output, it is reasonable to expect
+      that directly rescaling and shifting activations by
+      γ (x - b_h_w_mean) /√(b_h_w_var+ε)  + α
+      will make it easier to make the entire network
+      to produce the desired output 
+
+    - for BatchNorm, distribution is normalized across a batch
+      since the normalized activation is calculated by
+      x - b_h_w_mean / √(b_h_w_var + ε)
+      where 
+      `b_h_w_mean` & `b_h_w_var` is in the form of
+      torch.Size([1, 3, 1, 1]), and each of which
+      broadcasts along batch axis preserving the richness
+      of data across batch
+
+      whereas 
+      - for layer norm, normalized activation is calculated by
+        γ (x - c_h_w_mean) /√(c_h_w_var+ε)  + α
+        where 
+        `c_h_w_mean` and `c_h_w_var` is in the form of
+        torch.Size([64, 1, 1, 1]) each of which
+        broadcasts along (channel, horizontal, vertical) 
+        axis of EACH of a batch, making all the data in
+        a batch similar, to loose the richness of
+        data across the batch
+
+      - for instance norm, normalized activation is calculated by
+        γ (x - h_w_mean) /√(h_w_var+ε)  + α        
+        where
+        `h_w_mean` & `h_w_var` is in the form of
+        torch.Size([64, 3, 1, 1]) each of which
+        broadcasts along  (horizontal, vertical)
+        axis of EACH channel of EACH data of a batch,
+        making all the channels in a data same,
+        and also all the data in the batch same,
+        to loose the richness of data across the batch
+
+    - for more intuitive understanding, 
+      assign a different color for each entry of a mean tensor,
+      and see how the 'color' spreads on broadcasting.
+
+    - for example, in the case of BatchNorm,
+      use red, blue, yellow for each of the 3 values 
+      in the mean tensor in the form of torch.Size([1,3,1,1),
+      and imagine how the 'color' spreads on broadcasting.
+      an activation is normalized within the area where
+      the same color spreads
+
+      # article (2020)
+      https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
+        
+      # forum
+      https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
+
+      # NeurIPS 2018
+      https://www.youtube.com/watch?v=ZOabsYbmBRM
+
+      # paper author lecture
+      https://www.youtube.com/watch?v=EvAVCxZJN2U
+
+      # deep lizard
+      https://www.youtube.com/watch?v=dXB-KQYkzNU
+
+
 * Update Parameter (question)
 ** gradient
 *** TODO how to calculate gradient w.r.t weights for a linear layer
@@ -255,10 +385,9 @@
     https://pytorch.org/docs/stable/autograd.html
     https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
 
-*** does small/large activation lead to small/large gradient ?
-    - (?) gradient is calculated not analytically but numerically,
-      and a small activation leads to small gradient because
-      deltaX cannot be arbitrally small and has a lower limit
+*** why changing the value of the learning rate is good
+*** what a good changing schedule for the learning rate looks like
+    - (?) gradual warm up & gradual cool down
 
 ** regularization
 *** what is L2 regularlization
@@ -293,31 +422,31 @@
     https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
     https://arxiv.org/pdf/1904.00962.pdf
     
-
 * Update Parameter (understood)
 
+
 * Monitor Learning Process (question)
-*** the relation between the size of the activation std & gradient
+*** TODO why nearly zero activation leads to nearly zero gradient
     - (?) gradient is calculated not analytically but numerically,
       and a small activation leads to small gradient because
-      deltaX cannot be arbitrally small and has a lower limit.
-
-      ref: "vanishing gradient problem"
-      https://www.youtube.com/watch?v=qhXZsFVxGKo
+      deltaX cannot be arbitrally small and has a lower limit
 
 
 * Monitor Learning Process (understood)
-*** an activation with its standard deviation nearly zero is bad for learning
+*** why nearly zero activation STD means nearly zero activation 
+    - when the mean is nearly zero, nearly zero activation STD 
+      implies nearly zero activation
+*** why a nearly zero activation is a sign of slow learning process
     - magnitude of activation propages throuth a network,
-      so if there is an activation with nearly zero standard deviation
+      so if there is an activation nearly zero 
       in the beggining or middle of activation,
       it will remains to be nearly zero through all
       the layers up to the final layer,
       which leas to nearly zero gradient causing
       slow learning process
 
-*** why is exponential growth of activation a bad sign? (lesson9)
-    - with exponential growing activation std,
+*** why exponential growth of activation STD is a sign of bad learning process (lesson9)
+    - with exponential growing activation STD,
       activation is nearly zero most of the time, 
       which leads to nearly zero gradient causing
       slow learning process
@@ -334,6 +463,51 @@
     https://towardsdatascience.com/fastai-with-transformers-bert-roberta-xlnet-xlm-distilbert-4f41ee18ecb2
 
 * Misc (understood)
+*** standard deviation
+    - 35:30
+    - the data type of variance is not a row number.
+      instead, it is a rank0 tensor like;
+
+      #+BEGIN_SRC python
+        tensor(6.8693)
+      #+END_SRC
+
+    - "standard deviation" is used over
+      "mean absolute deviation" 
+      because math proof will be easier
+
+      #+BEGIN_SRC python
+        # mean absolute deviation
+        (t-m).abs().mean()
+
+        # standard deviation
+        (t-m).pow(2).mean().sqrt      
+      #+END_SRC
+*** variance
+    - standard deviation is the square root of the variance
+
+      #+BEGIN_SRC python
+        # variance
+        (t-m).pow(2).mean()
+
+        # standard deviation
+        (t-m).pow(2).mean().sqrt
+      #+END_SRC
+*** 2 ways to calculate variance
+
+    #+BEGIN_SRC python
+      # 1st way (intuitive, but hard to calculate)
+      (t-m).pow(2).mean(),
+
+      # 2nd way (efficient to calculate)
+      (t*t).mean() - (m*m)
+    #+END_SRC
+
+
+*** statistics for a parameter are tensors, NOT a scalar
+    - for example, AverageGrad
+
+
 *** _old_components of deep learning
     - techniques to initialize parameters & normalize activations in order to keep activations nice
       - kaiming initialization (weight initialization)
@@ -359,9 +533,6 @@
       - res-net
       - Xres-net
 
-
-*** statistics for a parameter are tensors, NOT a scalar
-    - for example, AverageGrad
 
 
 
@@ -2097,7 +2268,7 @@
       class Sampler():
           def __init__(self, ds, bs, shuffle=False):
               self.n,self.bs,self.shuffle = len(ds),bs,shuffle
-              
+
           def __iter__(self):
               self.idxs = torch.randperm(self.n) if self.shuffle else torch.arange(self.n)
               for i in range(0, self.n, self.bs): yield self.idxs[i:i+self.bs]
@@ -5282,8 +5453,25 @@
       so the histogram counts the values between -7 and 7
       instead of 0 and 10
 
-*** TODO leaky relu
-    - why does leaky relu work better ?
+*** DONE why GeneralRelu works better
+    - `GeneralRelu` works better since
+      - it fixes nearly zero standard deviation of activations
+      - it shifts mean close to zero
+
+    - `GeneralRelu` allows negative values NOT forced to be zero
+      by 'leaky' part, which leads to wider range of values
+      and hence bigger standard deviation
+
+    - `GeneralRelu` subtracts some amount from activations,
+      which shifts the activation mean to nealy zero
+
+*** how to use get_cnn_model ver3 and GeneralRelu
+
+    #+BEGIN_SRC python
+      model =  get_cnn_model(data, nfs, conv_layer, leak=0.1, sub=0.4, maxv=6.)
+      init_cnn(model)
+      learn,run = get_runner(model, data, lr=0.9, cbs=cbfs)
+    #+END_SRC
 
 *** get_min ver2
 
@@ -5373,17 +5561,56 @@
       adjust the network parameters so that it produces 
       desired output, it is reasonable to expect
       that directly rescaling and shifting activations by
-      γ (x - batch_mean) /batch_std  + α
+      γ (x - b_h_w_mean) /√(b_h_w_var+ε)  + α
       will make it easier to make the entire network
       to produce the desired output 
 
-    # article (2020)
-    https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
+    - for BatchNorm, distribution is normalized across a batch
+      since the normalized activation is calculated by
+      x - b_h_w_mean / √(b_h_w_var + ε)
+      where 
+      `b_h_w_mean` & `b_h_w_var` is in the form of
+      torch.Size([1, 3, 1, 1]), and each of which
+      broadcasts along batch axis preserving the richness
+      of data across batch
 
-    # forum
-    https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
+      whereas 
+      - for layer norm, normalized activation is calculated by
+        γ (x - c_h_w_mean) /√(c_h_w_var+ε)  + α
+        where 
+        `c_h_w_mean` and `c_h_w_var` is in the form of
+        torch.Size([64, 1, 1, 1]) each of which
+        broadcasts along (channel, horizontal, vertical) 
+        axis of EACH of a batch, making all the data in
+        a batch similar, to loose the richness of
+        data across the batch
 
-*** TODO BatchNorm
+      - for instance norm, normalized activation is calculated by
+        γ (x - h_w_mean) /√(h_w_var+ε)  + α        
+        where
+        `h_w_mean` & `h_w_var` is in the form of
+        torch.Size([64, 3, 1, 1]) each of which
+        broadcasts along  (horizontal, vertical)
+        axis of EACH channel of EACH data of a batch,
+        making all the channels in a data same,
+        and also all the data in the batch same,
+        to loose the richness of data across the batch
+
+        # article (2020)
+        https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
+        
+        # forum
+        https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
+
+        # NeurIPS 2018
+        https://www.youtube.com/watch?v=ZOabsYbmBRM
+
+        # paper author lecture
+        https://www.youtube.com/watch?v=EvAVCxZJN2U
+
+        # deep lizard
+        https://www.youtube.com/watch?v=dXB-KQYkzNU
+*** DONE BatchNorm
     # video
     https://course19.fast.ai/videos/?lesson=6?t=2700
     
@@ -5467,8 +5694,8 @@
       these variables must be on GPU too because we
       can't add things on GPU with things on CPU
 
-      also, when we save a trained model, variable 
-      defined with register_buffer will also be saved.
+      also, when we save a trained model, the variables
+      `vars` & `means` defined with register_buffer will also be saved.
 
     - [ ] `self.eps`, and `self.mom` are scalars, 
       and different from tensors, they will go to GPU automatically
@@ -5553,6 +5780,21 @@
         - one of them is 1
         - or one of them does not exist.
 
+*** TODO what torch.no_grad does in BatchNorm::forward
+
+    #+BEGIN_SRC python
+      def forward(self, x):
+          if self.training:
+              with torch.no_grad(): m,v = self.update_stats(x)
+          else: m,v = self.means,self.vars
+          x = (x-m) / (v+self.eps).sqrt()
+          return x*self.mults + self.adds
+    #+END_SRC
+
+    - [ ] (?) `with torch.no_grad()` is necessary because
+      `self.update_stats(x)` involves `x` but does not 
+      contribute to the calculation of the gradients    
+
 *** conv_layer ver2
 
     #+BEGIN_SRC python
@@ -5608,6 +5850,16 @@
     # init_cnn_ overview
     - the name of `init_cnn_` and `init_cnn` are slightly different!
       look at the last "_"
+
+    # init_cnn_ detail
+    - `a` in `f(m.weight, a=0.1)` is for using with leaky relu
+
+      see `torch.nn.init.kaiming_uniform`
+      https://pytorch.org/docs/stable/nn.init.html
+
+      a – the negative slope of the rectifier used after this 
+      layer (only used with 'leaky_relu')
+
 
     # get_learn_run ver2 overview
     - `get_learn_run` ver2 makes use of `get_cnn_model` ver3
@@ -5669,8 +5921,14 @@
 
     #+END_SRC
 
+    # overview
     - `get_learn_run` ver2 makes use of `conv_layer` ver2
       which contains batchnorm layer
+
+    - since we are not passing `leak` parameter to `get_learn_run` ver2,
+      `get_cnn_model` ver3 inside `get_learn_run` ver2
+      does not pass `leak` parameter to `get_cnn_layers` ver2
+      which calls `conv_layer` ver2
 
 *** conv_layer ver3
 
@@ -9113,7 +9371,6 @@
                   for param in pg: param.requires_grad_(True)
           return model_pgs, master_pgs
     #+END_SRC
-
 
 *** to_master_grads ver2
 
@@ -12859,17 +13116,21 @@
 * fastai 2020 courses
   https://course.fast.ai/
 
-* andres ng lecture videos on youtube
+* Andrew Ng lecture videos on youtube
 ** playlists
    https://www.youtube.com/channel/UCcIXc5mJsHVYTZR1maL5l9w/playlists
 
+** course1
+*** playlists
+    https://www.youtube.com/watch?v=CS4cs9xVecg&list=PLkDaE6sCZn6Ec-XTbcX1uRg2_u4xOEky0
+
 ** course2 
 *** playlists
-    https://www.youtube.com/watch?v=tNIpEZLv_eg&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=27
+    https://www.youtube.com/watch?v=1waHlpKiNyY&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc
 
 *** BatchNorm 
-
-
+    https://www.youtube.com/watch?v=tNIpEZLv_eg&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=27
+    
 *** regularization (C2W1L04)
     https://www.youtube.com/watch?v=6g0t3Phly2M&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=4 
 
@@ -12878,14 +13139,23 @@
 
     https://www.youtube.com/watch?v=qO_NLVjD6zE
 
-
 *** exponentially weighted average (C2W2L03)
     https://www.youtube.com/watch?v=lAq96T8FkTw&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=17
-
 
 *** debiasing (bias correction) (C2W2L05)
     https://www.youtube.com/watch?v=lWzo8CajF5s&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=19
 
+** course3
+*** playlists
+    https://www.youtube.com/watch?v=dFX8k1kXhOw&list=PLkDaE6sCZn6E7jZ9sN_xHwSHOdjUxUW_b
+    
+** course4
+*** playlists   
+    https://www.youtube.com/watch?v=ArPaAX_PhIs&list=PLkDaE6sCZn6Gl29AoE31iwdVwSG-KnDzF
+
+** course5
+*** playlists
+    https://www.youtube.com/watch?v=_i3aqgKVNQI&list=PLkDaE6sCZn6F6wUI9tvS_Gw1vaFAx6rd6
 
 
 * misc resource    
