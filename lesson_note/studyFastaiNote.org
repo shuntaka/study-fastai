@@ -4,6 +4,10 @@
     - 'list-ify' when used in function definition,
     - 'argument-ify' when used on function call
 
+*** packing & unpacking operator (single asterisk)
+    https://stackoverflow.com/questions/36901/what-does-double-star-asterisk-and-star-asterisk-do-for-parameters
+   
+
 *** zip
     https://realpython.com/python-zip-function/
     
@@ -220,32 +224,9 @@
 
 
 
-* Initialize Network (question)
-*** why training set and validation set should use different mean & std
 
-*** why bias should be 0 for kaimin initialization
-
-* Initialize Network (understood)
-*** why good training requires activations of mean of 0 & std of 1
-    - mean of 0 & std of 1 is necessary for gradients not to vanish/explode
-      https://www.youtube.com/watch?v=qhXZsFVxGKo
-      https://colab.research.google.com/github/fastai/course-v3/blob/master/nbs/dl2/02b_initializing.ipynb
-    
-*** why initialization matters
-    - "good training" requires "good activations" during the training,
-      and initialization matters since it helps getting good activations
-
-    - a "good activation" has mean of 0 & std of 1
-
-*** what is normalization & initialization
-    - normalization is for activations of layers
-      ("input" is considered as the first activation)
-
-    - initialization is for weight, but results in good activations
-
-
-
-
+* Grab Data (question)
+*** why use mini batch
 
 * Design Network Architecture (question)
 ** CNN
@@ -258,7 +239,10 @@
 *** (CNN) what does AdaptiveAvgPool2d & AdaptiveMaxPool2d do?
 
 ** BatchNorm
-*** why is it OK not fo define `backward` on `BatchNorm`
+*** why use moving average of batch mean & batch var for inference time
+    
+    lesson10 1:42:00
+*** why it is OK not fo define `backward` on `BatchNorm`
     # stack overflow
     https://stackoverflow.com/questions/49594858/how-does-pytorch-module-do-the-back-prop
 
@@ -268,7 +252,6 @@
       which calls `backwrd` on all the `nn.Parameter` instance
       
 ** Dropout
-
 
 * Design Network Architecture (understood)
 ** CNN
@@ -293,7 +276,6 @@
 *** how do we determine the right kernel size for CNN?
 *** meaning of filters & channels
     - they are used interchangably?
-
 
 ** BatchNorm
 *** why BatchNorm works
@@ -326,19 +308,18 @@
         torch.Size([64, 1, 1, 1]) each of which
         broadcasts along (channel, horizontal, vertical) 
         axis of EACH of a batch, making all the data in
-        a batch similar, to loose the richness of
-        data across the batch
+        a batch similar, in terms of mean & std
 
       - for instance norm, normalized activation is calculated by
         γ (x - h_w_mean) /√(h_w_var+ε)  + α        
         where
         `h_w_mean` & `h_w_var` is in the form of
-        torch.Size([64, 3, 1, 1]) each of which
+        torch.Size([bs, 3, 1, 1]) each of which
         broadcasts along  (horizontal, vertical)
         axis of EACH channel of EACH data of a batch,
         making all the channels in a data same,
         and also all the data in the batch same,
-        to loose the richness of data across the batch
+        in terms of mean & std
 
     - for more intuitive understanding, 
       assign a different color for each entry of a mean tensor,
@@ -348,8 +329,14 @@
       use red, blue, yellow for each of the 3 values 
       in the mean tensor in the form of torch.Size([1,3,1,1),
       and imagine how the 'color' spreads on broadcasting.
-      an activation is normalized within the area where
-      the same color spreads
+      an activation is normalized across the area where
+      the same color covers
+
+    - an area covered by the same color has same mean&std
+      as another area covered by a different color
+
+
+    - reference
 
       # article (2020)
       https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
@@ -367,9 +354,35 @@
       https://www.youtube.com/watch?v=dXB-KQYkzNU
 
 
+* Initialize Network (question)
+*** why training set and validation set should use different mean & std
+*** why bias should be 0 for kaimin initialization
+* Initialize Network (understood)
+*** why good training requires activations of mean of 0 & std of 1
+    - mean of 0 & std of 1 is necessary for gradients not to vanish/explode
+      https://www.youtube.com/watch?v=qhXZsFVxGKo
+      https://colab.research.google.com/github/fastai/course-v3/blob/master/nbs/dl2/02b_initializing.ipynb
+    
+*** why initialization matters
+    - "good training" requires "good activations" during the training,
+      and initialization matters since it helps getting good activations
+
+    - a "good activation" has mean of 0 & std of 1
+
+*** what is normalization & initialization
+    - normalization is for activations of layers
+      ("input" is considered as the first activation)
+
+    - initialization is for weight, but results in good activations
+
+
+
+
+
+
 * Update Parameter (question)
 ** gradient
-*** TODO how to calculate gradient w.r.t weights for a linear layer
+*** TODO how to calculate gradient w.r.t a weight parameter in a linear layer
     # 3b1b
     https://www.youtube.com/watch?v=tIeHLnjs5U8&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=5&t=0s
 
@@ -380,23 +393,74 @@
     http://cs231n.stanford.edu/handouts/linear-backprop.pdf
     https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
     
-*** TODO how autograd & `loss` method in pytorch works
+*** TODO how pytorch autograd & `loss` method works
     https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
     https://pytorch.org/docs/stable/autograd.html
     https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
 
-*** why changing the value of the learning rate is good
-*** what a good changing schedule for the learning rate looks like
+
     - (?) gradual warm up & gradual cool down
 
+** hyper parameters
+*** why changing the value of the learning rate is good
+
+    - tuning process
+    https://www.youtube.com/watch?v=AXDByU3D1hA&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=25
+
+    - learning rate decay
+    https://www.youtube.com/watch?v=QzulmoOg2JE
+
+*** what a good changing schedule for the learning rate looks like
 ** regularization
 *** what is L2 regularlization
 *** what is weight decay
-*** debiasing exponentially weighted moving average
-    https://www.youtube.com/watch?v=lWzo8CajF5s
 
+** debiasing
+*** why use avg=0 for exponentially weighted moving average
 ** ADAM and variations
-*** dampening & debiasing 
+*** how momentum works
+    https://www.youtube.com/watch?v=k8fTYJPd3_I&t=1s
+
+*** how RMSprop works
+    https://www.youtube.com/watch?v=_e-LFe_igno
+
+*** how ADAM works
+    https://www.youtube.com/watch?v=JXQT_vxqwIs
+
+*** LAMB
+    https://medium.com/nvidia-ai/a-guide-to-optimizer-implementation-for-bert-at-scale-8338cc7f45fd
+    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+    
+    https://krishansubudhi.github.io/deeplearning/2019/09/21/LambPaperDisected.html
+    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
+    
+    https://arxiv.org/pdf/1904.00962.pdf
+    
+* Update Parameter (understood)
+** gradient
+*** gradient with respect to a weight parameter
+    - gradient with respect to a weight parameter of a certain layer "i"
+      is a cumulative multiplication ;
+
+      (grad for layer N) * (grad of layer N-1) * 
+      ... * (grad of layer i+1 ) * (grad of layer i) 
+          * (gradient of the linear layer  w.r.t the weight parameter)
+
+** debiasing
+*** what debiasing does
+    https://www.youtube.com/watch?v=lWzo8CajF5s
+    - debiasing is for solving the probelem of wrong data
+      in the earlier steps affecting the value of
+      the exponentially weighted moving average too long,
+      by making the contributions of these data
+      in the earlier steps smaller by deviding the 
+      exponentially weighted moving average by (1-beta)^t
+      
+    - note that since (1-beta)^t approaches 1,
+      the correction by debiasing essensitally does 
+      nothing in the later steps
+
+*** debiasing with/without dampening
     - dampening & debiasing are two different things
 
     - dampening is to multiply the current value by (1-beta)
@@ -411,18 +475,6 @@
 
     - note that without the dampening, the sum of the coefficients
       becomes just a sum of a proportional sequence (等比数列)
-*** momentum
-    https://www.youtube.com/watch?v=k8fTYJPd3_I&t=1s
-
-*** RMSprop
-    https://www.youtube.com/watch?v=_e-LFe_igno
-*** ADAM
-    https://www.youtube.com/watch?v=JXQT_vxqwIs
-*** LAMB
-    https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
-    https://arxiv.org/pdf/1904.00962.pdf
-    
-* Update Parameter (understood)
 
 
 * Monitor Learning Process (question)
@@ -430,7 +482,6 @@
     - (?) gradient is calculated not analytically but numerically,
       and a small activation leads to small gradient because
       deltaX cannot be arbitrally small and has a lower limit
-
 
 * Monitor Learning Process (understood)
 *** why nearly zero activation STD means nearly zero activation 
@@ -3835,9 +3886,20 @@
       #+END_SRC
 
     # after_batch detail
-    - `param_groups` is groups of HYPER PARAMETERS in the form of
+    - `param_groups` refers to the weights & bias tensor for a "layer group"
+      consisting of several layers.
 
-      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+      #+BEGIN_SRC python
+        # the 1st param group is for layer 1 to m (main body)
+        # the 2nd param group is for layer m+1 to n (last few layers)
+        [
+            [W1, B1, ..., Wm, Bm],
+            [Wm+1, Bm+1 ..., Wn, Bn]
+        ]
+      #+END_SRC
+
+    - hyper parameter (e.g. lr) is defined as a property on
+      each param group
 
     - `lrs` is an history array for `lr` of the last parameter group
 
@@ -3872,22 +3934,25 @@
       in the beggining of every batch
 
     # set_param detail
-    - as with `Recorder` ver1, `param_groups` is groups of HYPER PARAMETERS in the form of
+    - as with `Recorder` ver1,`param_groups` refers to the 
+      weights & bias tensor for a "layer group"
 
-      [{lr: 0.3, mom:0.1}, {lr: 0.4, mom:0.1}, {lr: 0.2, mom:0.1}]
+      #+BEGIN_SRC python
+        # the 1st param group is for layer 1 to m (main body)
+        # the 2nd param group is for layer m+1 to n (last few layers)
+        [
+            [W1, B1, ..., Wm, Bm],
+            [Wm+1, Bm+1 ..., Wn, Bn]
+        ]
+      #+END_SRC
 
-    - note that the "group" refers to group of LAYERS, i.e., 
-      - the 1st param group is for layer 1 to m (main body)
-      - the 2nd param group is for layer m+1 to n (last few layers)
+    - `pg` is a param group such as `[W1, B1, ..., Wm, Bm]`
 
-      # #+BEGIN_SRC python
-      #   # the 1st param group is for layer 1 to m (main body)
-      #   # the 2nd param group is for layer m+1 to n (last few layers)
-      #   [
-      #       [W1, B1, ..., Wm, Bm],
-      #       [Wm+1, Bm+1 ..., Wn, Bn]
-      #   ]
-      # #+END_SRC
+    - `self.pname` is a hyper parameter's name such as `lr`
+
+    - each param group `pg` keeps the value of hyper parameter
+      as a property `pg[self.pname]`
+
 
 *** sched_lin (that does currying)
 
@@ -5552,64 +5617,6 @@
 
     #+END_SRC
     
-*** DONE why BatchNorm works
-    - think of BatchNorm as DNN's version of 'Repeater' 
-      which makes sure activations remains to be good shape 
-      through the networks
-    
-    - also, considering that the goal of a DNN is to
-      adjust the network parameters so that it produces 
-      desired output, it is reasonable to expect
-      that directly rescaling and shifting activations by
-      γ (x - b_h_w_mean) /√(b_h_w_var+ε)  + α
-      will make it easier to make the entire network
-      to produce the desired output 
-
-    - for BatchNorm, distribution is normalized across a batch
-      since the normalized activation is calculated by
-      x - b_h_w_mean / √(b_h_w_var + ε)
-      where 
-      `b_h_w_mean` & `b_h_w_var` is in the form of
-      torch.Size([1, 3, 1, 1]), and each of which
-      broadcasts along batch axis preserving the richness
-      of data across batch
-
-      whereas 
-      - for layer norm, normalized activation is calculated by
-        γ (x - c_h_w_mean) /√(c_h_w_var+ε)  + α
-        where 
-        `c_h_w_mean` and `c_h_w_var` is in the form of
-        torch.Size([64, 1, 1, 1]) each of which
-        broadcasts along (channel, horizontal, vertical) 
-        axis of EACH of a batch, making all the data in
-        a batch similar, to loose the richness of
-        data across the batch
-
-      - for instance norm, normalized activation is calculated by
-        γ (x - h_w_mean) /√(h_w_var+ε)  + α        
-        where
-        `h_w_mean` & `h_w_var` is in the form of
-        torch.Size([64, 3, 1, 1]) each of which
-        broadcasts along  (horizontal, vertical)
-        axis of EACH channel of EACH data of a batch,
-        making all the channels in a data same,
-        and also all the data in the batch same,
-        to loose the richness of data across the batch
-
-        # article (2020)
-        https://towardsdatascience.com/batch-normalization-in-3-levels-of-understanding-14c2da90a338
-        
-        # forum
-        https://forums.fast.ai/t/why-0-mean-and-1-std/57211/4    
-
-        # NeurIPS 2018
-        https://www.youtube.com/watch?v=ZOabsYbmBRM
-
-        # paper author lecture
-        https://www.youtube.com/watch?v=EvAVCxZJN2U
-
-        # deep lizard
-        https://www.youtube.com/watch?v=dXB-KQYkzNU
 *** DONE BatchNorm
     # video
     https://course19.fast.ai/videos/?lesson=6?t=2700
@@ -5780,6 +5787,11 @@
         - one of them is 1
         - or one of them does not exist.
 
+*** TODO why use moving average of batch mean & batch var at inference time
+    lesson10 1:42:00
+
+    - (?) if normalized by batch mean & batch var at inference time,
+      
 *** TODO what torch.no_grad does in BatchNorm::forward
 
     #+BEGIN_SRC python
@@ -6086,7 +6098,7 @@
 
     # overview
     - with `RunningBatchNorm` addresses the issue of 
-      varying batch size
+      small batch, and varying batch size
 
     - with `RunningBatchNorm`, moving aveage version of
       batch mean and variance are used for training time as well
@@ -6098,19 +6110,35 @@
       to the moving average should be weighted according to 
       its batch size (=the number of the elements in a batch)
 
-    - however, with the original definiton of the variance
-      var = (xi-mean)^2 / N,
-      mean is already included in the calculation before taking
-      the moving average
+    - (?) "true" batch variance may be the one calculated
+      across the entire data, and running batch norm try to
+      estimates the 'true' batch variance. 
+      simply taking the weighted average of the individual 
+      batch variance does not give the good estimate of
+      'true' batch variance, since the definition of 
+      batch contains 'mean' which varies depending on
+      
 
-    - so, the following formula is used instead
+
+    # - however, with the original definiton of the variance
+    #   var = (xi-mean)^2 / N,
+    #   mean is already included in the calculation before taking
+    #   the moving average
+
+    - the following formula is used to calculate
+      moving average of variance
       variance  = E(X^2) - (E(x))^2 
       variance  = x*x / c  - (x/c)^2
+
+      => 
+      (moving average of variance) = 
+        (moving average of `x*x`) / (moving average of `c`)
+          - (moving average of `x`)^2
 
       where the moving average, weighted by the batch size, is 
       calculated for `x*x`, `x`, and `c` using the weighting factor
 
-      (`mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)`)
+      `mom1 = 1 - (1-self.mom)/math.sqrt(bs-1)`
 
 
     # update_stats detail
@@ -6143,7 +6171,8 @@
 
       # forward
       - as `sums` and `sqrs` are the weighted moving average version of `s` and `s*s`,
-        `count` is the weighted moving average version of 
+        `count` is the weighted moving average version of the number of 
+        the elements
 
 *** conv_rnb
 
@@ -7155,7 +7184,10 @@
         '''
       #+END_SRC
 
-    - `to_byte_tensor` is barrowed from torch vision
+    - `to_byte_tensor` is barrowed from torch vision,
+      and it will turn an image data
+      (3-dimenssional array consisting of
+      unsigned integer between 0-255)
 
     - `to_float_tensor` is for turning the integer values
       ranging [0,255] into float values ranging [0, 1]
@@ -7452,9 +7484,11 @@
               for p,hyper in self.grad_params(): compose(p, self.steppers, **hyper)
     #+END_SRC
 
+    # Optimizer detail
+    - `params` refers to the weights & bias tensor for a "layer group"
+      consisting of several layers.
 
-    - params refers to the weights & bias tensor for each layer.
-      param groups looks like below
+    - `param_groups` looks like below (2 param groups)
 
       #+BEGIN_SRC python
         # the 1st param group is for layer 1 to m (main body)
@@ -7534,6 +7568,7 @@
         ]
       #+END_SRC
 
+    # grad_params detail
     - `grad_params` has double for-loops. The outer for-loop
       is looped through `zip(self.param_groups,self.hypers)` and
       the inner for-loop is looped through `pg`, and the
@@ -7565,18 +7600,22 @@
     - `step` applys each stepper inside `steppers` one by one
       to `p` in a "pip-line" way
 
+    # zero_grad detail
     - [ ] what `p.grad.detach_()` does 
       - 1:09:00
       - `detach` removes any gradient computational history
 
       http://www.bnikolic.co.uk/blog/pytorch-detach.html
 
-
       https://discuss.pytorch.org/t/detach-no-grad-and-requires-grad/16915/2
 
-      "detach() detaches the output from the computationnal graph. So no gradient will be backproped along this variable.
+      "detach() detaches the output from the computationnal graph.
+      So no gradient will be backproped along this variable.
       torch.no_grad says that no operation should build the graph.
-      The difference is that one refers to only a given variable on which it’s called. The other affects all operations taking place within the with statement."
+      The difference is that one refers to only a given variable 
+      on which it’s called. 
+      The other affects all operations taking place within the 
+      with statement."
 
 *** sgd_step
 
@@ -7672,11 +7711,11 @@
 
     #+END_SRC
 
-*** TODO weight decay & l2 regularization
+*** DONE the relationship between l2 regularization & weight decay
     - "l2 regularization" refers to add extra wd*weight to `weight.grad`
-      to the gradient 
+      to the gradient (differential form)
 
-    - "weight decay" refers to add extra term '-lr*wd*weight' 
+    - "weight decay" refers to adding an extra term '-lr*wd*weight' 
       when updating weight
 
       #+BEGIN_SRC python
@@ -7718,7 +7757,7 @@
     - modifying the equation for updating gradient is done by
       adding `weight_decay` as a stepper
 
-*** TODO l2_reg
+*** DONE l2_reg
 
     #+BEGIN_SRC python
       #export
@@ -7729,7 +7768,8 @@
     #+END_SRC
 
     - `add_` adds up `p.data` after multiplying it by `wd`
-    - [ ] how to use `l2_reg`?
+    - [ ] we can use `l2_reg` by passing it as the first 
+      stepper of `steppers` argument of `__init__` of `Optimizer`
 
 *** maybe_update
 
@@ -7743,8 +7783,31 @@
       def get_defaults(d): return getattr(d,'_defaults',{})
     #+END_SRC
 
-    - `getattr`
+    # maybe_update overview
+    - the motivation for `maybe_update` is as follows;
+      it is hard to provide the default in advance for all the
+      hyper parameters since a different stepper 
+      may require different set of hyper parameters
+      and providing the defaults requires looking through
+      all the steppers. so instead of providing 
+      the defaults for hyper parameters required by
+      steppers, we let them provide the default by themselves
+
+    - `maybe_update` may replace a provided hyper parameter
+       with the one defined on steppers
+
+    # maybe_update detail
+    - `os` is expected to be `steppers` for updating hyper parameters
+    - `dest` is expected to be `defaults` for hyper parameters
+    - `f` will be `get_defaults`
     - `items()` returns tuples of key&value pairs
+
+    # get_defaults detail
+    - `getattr(d, '_defaults', {})` returns
+      `d._defaults` if `_defaults` is defined on `d`,
+      and if not, `{}` will be returned
+
+      https://docs.python.org/3/library/functions.html#getattr
 
 *** Optimizer ver3
 
@@ -7773,7 +7836,8 @@
               for p,hyper in self.grad_params(): compose(p, self.steppers, **hyper)
     #+END_SRC
 
-    - `defaults` provides a dictionary of hyper parameters used as default
+    # Optimizer detail
+    - `defaults` provides a dictionary of hyper parameters used as the default
       #+BEGIN_SRC python
         Optimizer(..., lr=0.6, mom=0.1, ...)
 
@@ -7783,11 +7847,28 @@
 
     - `maybe_update` populates `defaults` with a default 
       value of a hyper parameter that is stored on the 
-      stepper that uses the hyper parameter 
+      stepper that uses the hyper parameter for updating
+      weights & biases
       (if the default is missing)
 
       e.g., 
       {'wd': 0.} is stored on `_defaults` of `weight_decay` or `l2_reg`
+
+      #+BEGIN_SRC python
+        #export
+        def weight_decay(p, lr, wd, **kwargs):
+            p.data.mul_(1 - lr*wd)
+            return p
+        weight_decay._defaults = dict(wd=0.)
+      #+END_SRC
+
+      #+BEGIN_SRC python
+          #export
+        def l2_reg(p, lr, wd, **kwargs):
+            p.grad.data.add_(wd, p.data)
+            return p
+        l2_reg._defaults = dict(wd=0.)
+      #+END_SRC
 
     - thanks to this, we do not have to think about 
       for which hyper parameters we have to provide default values
@@ -7822,6 +7903,16 @@
           def update(self, p, state, mom, **kwargs):
               state['grad_avg'].mul_(mom).add_(p.grad.data)
               return state
+    #+END_SRC
+
+    - note that state['grad_avg'] is NOT a scalar, 
+    but a tensor which looks like
+
+    #+BEGIN_SRC python
+      [[g11, g12, g13]
+       [g21, g22, g23],
+       [g31, g32, g33]]
+
     #+END_SRC
 
     - `torch.zeros_like` returns a tensor, filled with 0, 
@@ -7864,14 +7955,30 @@
                  
     #+END_SRC
 
+    # StatefulOptimizer overview
+    - `StatefulOptimizer` updates hyper paremters (`defaults`)
+      used by a stat by `_defaults` of the stat 
+      (e.g., hyper parameter `mom` used by `AvgGrad`),
+
+      and initialize self.state[0] with `init_state` of a stat
+      (e.g., state `grad_avg` used by `AverageGrad`)
+
+      and also, it updates hyper parameters (`defaults`)
+      by `_defaults` of a stepper
+
+
+    # StatefulOptimizer::__init__ detail
     - a single stat in `stats` are, for example, `AverageGrad()`.
 
-    - stat is used for each single parameter to create some statistics
-      for it.
+    - `stat` is used for each single parameter to create some 
+      statistics for it.
 
     - `super().__init__(params, steppers, **defaults)` does
       `__init__` of Optimizer ver3 which is to set
       `self.param_groups`, `self.hypers` and `self.steppers`
+
+    # StatefulOptimizer::step detail
+    - `o` in the lambda function is a stat inside `self.stats`
 
     - for each single parameter such as 
       `W1`(the weight tensor of the 1st layer),
@@ -7884,7 +7991,7 @@
 
       - note `p.__repr__` is called when using `p` as an indexing key.
 
-    - for better readability, `self.state[p]` is stored on `state`
+    - the current value of `self.state[p]` is stored on `state`
       inside `step`
 
     - for each step, `self.state[p]` (=`state`) is updated by `stat.update`.
@@ -7900,11 +8007,15 @@
             return state
       #+END_SRC
 
-    - and then `p` is updated by `self.steppers` utilizing 
-      `self.state[p]` (=`state`)
+    - and then `p` is updated by 
+      by `compose(p, self.steppers, **state, **hyper)`
+      passing the current value of self.state[p] (=`state`)
 
       #+BEGIN_SRC python
-        compose(p, self.steppers, **state, **hyper)
+        def compose(x, funcs, *args, order_key='_order', **kwargs):
+            key = lambda o: getattr(o, order_key, 0)
+            for f in sorted(listify(funcs), key=key): x = f(x, **kwargs)
+            return x
       #+END_SRC
 
     - for example, `momentum_step` utilizes `grad_avg` in `state`
@@ -7915,16 +8026,67 @@
             p.data.add_(-lr, grad_avg)
             return p
       #+END_SRC
-
+      
 *** how to use StatefulOptimizer
 
     #+BEGIN_SRC python
       # how to use
       sgd_mom_opt = partial(StatefulOptimizer, steppers=[momentum_step,weight_decay],
                         stats=AverageGrad(), wd=0.01)
+
+      learn,run = get_learn_run(nfs, data, 0.3, conv_layer, cbs=cbfs, opt_func=sgd_mom_opt)
     #+END_SRC
 
-*** TODO L2 Regularrization vs BatchNorm
+    # how to use StatefulOptimizer overview
+    - `StatefulOptimizer` is partially initialized by `partial`
+      where `steppers`, `stats`, and the default for a
+      hyper parameter (wd) is provided.
+
+    - `params`, and the default for a remaining hyper parameter (lr)
+      are passed when `__init__` of `sgd_mom_opt` is called
+      inside `get_runner` as `opt_func(model.parameter(), lr=lr)
+      
+      # get_learn_run ver3
+      #+BEGIN_SRC python
+        def get_learn_run(nfs, data, lr, layer, cbs=None, opt_func=None, **kwargs):
+                  model = get_cnn_model(data, nfs, layer, **kwargs)
+                  init_cnn(model)
+                  return get_runner(model, data, lr=lr, cbs=cbs, opt_func=opt_func)
+      #+END_SRC
+
+      # get_runner 
+      #+BEGIN_SRC python
+        def get_runner(model, data, lr=0.6, cbs=None, opt_func=None, loss_func = F.cross_entropy):
+            if opt_func is None: opt_func = optim.SGD
+            opt = opt_func(model.parameters(), lr=lr)
+            learn = Learner(model, opt, loss_func, data)
+            return learn, Runner(cb_funcs=listify(cbs))
+
+      #+END_SRC
+
+
+    - the default for some of the hyper parameters such as `mom`,
+      and the default for stat such as `AverageGrad` are provided
+      when creating `sgd_mom_opt` by `partial`,
+      and the remaining hyper parameter, `lr`(=0.3) is provided
+      on calling `get_learn_run` 
+
+*** DONE what happens L2 Regularrization and BatchNorm used together
+    - inserting BathNorm layers modifies the loss landscape of a neural network
+      in such a way that scaling weights parameters does not essentially change the value
+      of loss since the output of a BathNorm layer does not change essentially
+      when the activation coming into the BathNorm layer is scaled,
+      hence l2 regularization which has effect of scaling weights 
+      does not contribute to the learning process
+
+    - batch norm layers make the neural net output approximately 
+      invariant to the scale of the activations of the
+      previous layers. Any such scaling will simply be
+      normalized away, except for the tiny effect of the ϵ
+
+      https://vitalab.github.io/article/2020/01/24/L2-reg-vs-BN.html
+
+
     - Suppose we set a very large weight decay of 1e6.
       Now doing following gives us the same activation, making the weight penalty term negligible
       which is calculated by `wd * Σw^2`
@@ -7932,6 +8094,7 @@
       - devide all the weight parameter by 1e6
 
     - ref
+      https://arxiv.org/abs/1706.05350
       https://vitalab.github.io/article/2020/01/24/L2-reg-vs-BN.html
       https://blog.janestreet.com/l2-regularization-and-batch-norm/
       https://www.semion.io/doc/l2-regularization-versus-batch-and-weight-normalization
@@ -8005,32 +8168,43 @@
       plot_mom(mom3)
     #+END_SRC
 
-    - mom3 is "debiased exponentially weighted moving average"
-    - `(1-beta**(i+1))` is the correction term
+    # mom3 overview
+    - weighted moving average has an issue that
+      the data in possibly noisy initial phase is weighted
 
-    - note that different from mom2, `avg` is set to 0 instead of y0,
-      and "avg0" will be equal to (1-beta) * y0, and
+    - `mom3` calculates "debiased" version of 
+      exponentially weighted moving average
+      by debiding 1-beta**(i+1),
+      where 
+      - average values in possibly noisy initial phase get more correction,
+      - average values in the later phase get essentially no correction
+      since 1-beta**(i+1) approaches to zero
+      https://www.youtube.com/watch?v=lWzo8CajF5s&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=19
+
+    - note that different from `mom2`, `avg` is set to 0 instead of `y0`,
+      and so "avg0" will be equal to (1-beta) * y0, and
       debiased "avg0" will be "y0"
 
-    - avg0 = beta*avg + (1-beta) * y0
-           = (1-beta) * y0
+      - avg0 = beta*avg + (1-beta) * y0
+             = (1-beta) * y0
 
-    - debiased avg0 = (1-beta) * y0 / (1-beta)^(0+1)
-                    = y0
+      - debiased avg0 = (1-beta) * y0 / (1-beta)^(0+1)
+                      = y0
+    # mom3 detail
+    - mom3 returns both `avg` and `avg/(1-beta**(i+1))`,
+      because we need 
+      - `avg` to calculate the the average for the next step
+      - `avg/(1-beta**(i+1))` to plot the debiased value of the average
 
-    - note that 
-      - debiased exponentially weighted moving average"
-        still uses `avg` to calculates the next value of `avg`
+    - what we plot in the end is the debiased version of `avg`, 
+      and so `avg` is just a "by-product"
 
-      - however, what we plot in the end is the debiased version of `avg`, 
-        and so `avg` is just a "by-product"
-      
-*** Adam
-    - Adam is
+*** Adam equation
+    - the parameter update equation for Adam is as below;
 
-      (dampened debiased momentum)
+      debiased dampened momentum
       ---------------------------------------------
-      (dampened debiased root sum of square gradient)
+      √(debiased dampened square gradient) + epsilon
 
 *** AverageGrad ver2
 
@@ -8116,6 +8290,7 @@
       def debias(mom, damp, step): return damp * (1 - mom**step) / (1-mom)
     #+END_SRC
 
+    # overview
     - keep in mind that dampening and debiasing are two 
       different things, so it is possible to apply debiasing
       to no-dampening momentum.
@@ -8124,35 +8299,44 @@
       - with dampening    : damp = (1-mom), so debias is (1 - mom**step)
       - without dampening : damp=1, so debias is (1 - mom**step) / (1-mom)
 
-    - inside `StatefulOptimizer`, when the first time `step` is called, 
-      `stat.update` is called before any steppers.
+    # detail
+    - `debias` is called for step >=1, and for step=1,
+      `debias` returns 
+       damp * (1-mom) / (1-mom) = damp  (=1-mom, e.g. 1-0.9)
+       which is as we expect
+       
+       https://www.youtube.com/watch?v=lWzo8CajF5s
+    
+    # - inside `StatefulOptimizer`, when the first time `step` is called, 
+    #   `stat.update` is called before any steppers.
 
-    - especially, `StepCount` is called to increment `step` by 1.
+    # - especially, `StepCount` is called to increment `step` by 1.
 
-    - so by the time a stepper that refers to `step`
-      (e.g. adam_stepper) is called for the first time,
-      `step` is already 1.
+    # - so by the time a stepper(e.g. adam_stepper) that refers
+    #   to `step` is called for the first time, `step` is already 1.
 
-    - for step=1 to calculate EWMA of grad,
-      avg1 = beta*avg0 + (1-beta)*grad1, 
-      where avg0(=initial value of grad_avg') is defined to be zero
+    # - for step=1 to calculate EWMA of grad,
+    #   avg1 = beta*avg0 + (1-beta)*grad1, 
+    #        = (1-beta)*grad1
 
-      debiasing term is defined to be 1-beta^i according to 
-      Andrew Ng's lecture
-      https://www.youtube.com/watch?v=lWzo8CajF5s
+    #   where avg0(=initial value of grad_avg') is defined to be zero
 
-      # this means, exponentially weighted moving averate is now indexed
-      # such that the index starts from 1, and the very first term is avg1,
-      # and so the equation for debiasing now becomes 1-beta^step
-      # intead of 1-beta^(step+1)
+    #   debiasing term is defined to be 1-beta^i according to 
+    #   Andrew Ng's lecture
+    #   https://www.youtube.com/watch?v=lWzo8CajF5s
+
+    #   # this means, exponentially weighted moving averate is now indexed
+    #   # such that the index starts from 1, and the very first term is avg1,
+    #   # and so the equation for debiasing now becomes 1-beta^step
+    #   # intead of 1-beta^(step+1)
       
-      avg0 = beta*grad_avg + (1-beta)*grad
-      = (1-beta) * grad
+    #   avg0 = beta*grad_avg + (1-beta)*grad
+    #   = (1-beta) * grad
 
-      debiased avg0 = avg0/(1-beta)^(0+1) = avg0/(1-beta)^step
+    #   debiased avg0 = avg0/(1-beta)^(0+1) = avg0/(1-beta)^step
 
-      so, debias function should contain `1 - mom**step`
-      instead of `1-mom**(step+1)`
+    #   so, debias function should contain `1 - mom**step`
+    #   instead of `1-mom**(step+1)`
 
 *** adam_step
 
@@ -8165,6 +8349,13 @@
           return p
       adam_step._defaults = dict(eps=1e-5)
     #+END_SRC
+
+    # detail
+    - inside `StatefulOptimizer`, when the first time `step` is called, 
+      `stat.update` is called before any steppers, and especially,
+      `StepCount` is called to increment `step` by 1, 
+      so when `adam_step` is called for the first time,
+      `step` is 1
     
     - note again that `grad_avg` and `sqr_avg` are tensor, not a scalar,
       so each single element of p (= Wij of a weight tensor W )
@@ -8177,7 +8368,7 @@
       - devide `grad_avg` by `(sqr_avg/debias2).sqrt() + eps)`
       - multiply by `-lr / debias1`
 
-*** adap_opt
+*** adam_opt
 
     #+BEGIN_SRC python
       #export
@@ -8186,7 +8377,7 @@
                          stats=[AverageGrad(dampening=True), AverageSqrGrad(), StepCount()], **kwargs)
     #+END_SRC
 
-*** TODO lamb_step
+*** DONE lamb_step
 
     #+BEGIN_SRC python
       def lamb_step(p, lr, mom, mom_damp, step, sqr_mom, sqr_damp, grad_avg, sqr_avg, eps, wd, **kwargs):
@@ -8199,6 +8390,13 @@
           return p
       lamb_step._defaults = dict(eps=1e-6, wd=0.)
     #+END_SRC
+
+    # overview
+    - lamb explanation
+      https://medium.com/nvidia-ai/a-guide-to-optimizer-implementation-for-bert-at-scale-8338cc7f45fd
+
+    # detail
+    - 
 
     - note that r1, r2 are scalar, NOT a tensor
 
@@ -8838,7 +9036,6 @@
               src_corners = tuple([(int(o[0].item()), int(o[1].item())) for o in src_corners])
               return warp(x, self.size, src_corners, resample=self.resample)
     #+END_SRC
-
 
 *** faster conversion to float_tensor
 
@@ -10769,6 +10966,9 @@
 
     #+END_SRC
 
+*** intuitive understanding of LSTM
+    https://towardsdatascience.com/illustrated-guide-to-lstms-and-gru-s-a-step-by-step-explanation-44e9eb85bf21
+
 *** LSTMCell
 
     #+BEGIN_SRC python
@@ -11186,8 +11386,8 @@
           "Detaches `h` from its history."
           return h.detach() if type(h) == torch.Tensor else tuple(to_detach(v) for v in h)
     #+END_SRC
-
 *** AWD_LSTM
+
 
     #+BEGIN_SRC python
       #export
@@ -13145,6 +13345,7 @@
 *** debiasing (bias correction) (C2W2L05)
     https://www.youtube.com/watch?v=lWzo8CajF5s&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=19
 
+*** (C2W3L)
 ** course3
 *** playlists
     https://www.youtube.com/watch?v=dFX8k1kXhOw&list=PLkDaE6sCZn6E7jZ9sN_xHwSHOdjUxUW_b
@@ -13159,6 +13360,121 @@
 
 
 * misc resource    
+*** isntall pytorch on windows10
+    # visual studio
+    https://www.aist-riss.jp/column/43394/
+    https://itips.krsw.biz/windows10-cuda-pytorch-preparation/
+    
+    # cuda, cuDNN
+    https://dev.infohub.cc/install-cuda-toolkit-10/    
+
+    # ubuntu
+    https://qiita.com/k_ikasumipowder/items/e711186c329b36f53833
+
+    - install Anaconda for Windows
+      https://docs.anaconda.com/anaconda/install/windows/
+      https://www.python.jp/install/anaconda/windows/install.html
+
+    - install visual studio 2019 (Build Tools for Visual Studio)
+
+    - install NVIDIA GPU driver via GeForce Experience
+      - currently, with RTX3080, driver version is 461.72
+
+    # - install a version of CUDA toolkit refering to pytorch support matrix page
+    #   https://pytorch.org/
+    #   https://developer.nvidia.com/cuda-toolkit-archive
+
+    #   e.g. for PyTorch 1.7.1, CUDA 10.2
+
+    - uninstall old CUDA if any 
+      https://dev.infohub.cc/install-cuda-toolkit-10/
+      https://qiita.com/kmtk49/items/8c6113af1cc403b0587a
+      https://dev.infohub.cc/install-cuda-toolkit-10/
+
+      - via windows unintall program, delete, for example
+        NVIDIA CUDA xxx 10.2 
+        NVIDIA Nsight Visual Studio Edition 
+
+      - manually remove 
+        Program Files > NVIDIA GPU Computing Toolkit
+
+    - install CUDA toolkit compatible with GPU & CUDA driver
+      # support matrix
+      https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html
+      https://docs.nvidia.com/cuda/archive/11.1.1/cuda-toolkit-release-notes/index.html
+
+      # download page
+      https://developer.nvidia.com/cuda-toolkit-archive
+
+      # GPU compatibility
+      for RTX 3080, >= 11.1 is necessary
+
+      # driver compatibility
+      CUDA 11.2.1 Update 1	>=461.09 (Windows x86_64 Driver Version)
+      CUDA 11.1.1 Update 1	>=456.81 (Windows x86_64 Driver Version)
+
+    - install a version of cuDNN refering to cuDNN support matrix page
+      # support matrix
+      https://docs.nvidia.com/deeplearning/cudnn/support-matrix/index.html
+
+      CUDA 11.1, cudnn-11.2
+
+      # download
+      https://developer.nvidia.com/cudnn
+
+    - move "bin", "include", "lib" folders of cuDNN under 
+      NVIDIA Computing Toolkit > CUDA > v11.1 
+
+    - set path to
+      C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\10.2\bin
+      C:\Users\shun\anaconda3
+      C:\Users\shun\anaconda3\scripts
+
+    - create a virtual environment in Anaconda navigator
+
+    - install pytorch to the virtual environment created above
+      by running the install command from conda console for the
+      virtual environment
+
+      https://fmorenovr.medium.com/set-up-conda-environment-pytorch-1-7-cuda-11-1-96a8e93014cc
+      https://pytorch.org/
+
+      conda install pytorch torchvision torchaudio cudatoolkit=11.0 -c pytorch
+      
+      - note that conda package cudatoolkit=11.0 works fine even though
+        NVIDIA CUDA toolkit on the computer is 11.1
+
+    - install jupyter notebook via Anaconda Navigator
+
+    - launch jupyter notebook for the virtual environment
+
+    - create a new notebook in jupyter notebook, 
+      and run the code below 
+
+      #+BEGIN_SRC python
+        import torch
+        torch.cuda.is_available()
+      #+END_SRC
+
+
+    - jupyter notebook auto complete
+      https://unikina.com/jupyternotebook-nbextentions/
+
+*** install fastai2
+    https://github.com/fastai/fastai
+
+    - (assumed) NVIDIA driver, CUDA toolkit, cuDNN installed 
+    
+    - create a virtual environment, and install pytorch following 
+      the official doc
+
+      conda install pytorch torchvision torchaudio cudatoolkit=11.0 -c pytorch
+
+    - in the virtual environment, install fastai by pip
+      pip install fastai
+      
+
+
 *** how you should read research papers
     https://link.medium.com/JPM8q4SSN7
 
