@@ -9562,6 +9562,16 @@
     - `self.run.xb = lin_comb(self.xb, xb1, self.λ)` sets
       a batch of mixed up images to `xb` property  of the `Learner` instance
 
+    # loss_func overview
+    - `loss_func` is for using the loss function for the model
+      with its reduction mode none only during calculating
+      the loss for mixed data.
+
+    - since the values of the weight `t` & `1-t` vary
+      across a batch of mixed data, we do not want the loss function
+      to mean or average out the loss for each individual mixed data 
+      
+
     # losss_func detail
     - `yb` is a batch of the labels for the corresponding 
       batch of 'base' images
