@@ -1,5 +1,10 @@
 * python (question)
+
 * python (understood)
+*** tuple
+    https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
+
+
 *** packing & unpacking operator (single asterisk)
     - 'list-ify' when used in function definition,
     - 'argument-ify' when used on function call
@@ -58,7 +63,6 @@
               return x
     #+END_SRC
 
-
 *** python > not
     - think of `not` as boolean negation `!` in javascript
 
@@ -102,8 +106,79 @@
 *** mean
     - `torch.mean` is 'fusion' inside the specified axis
 
+*** squeeze
+
+    # batch size=3
+    #+BEGIN_SRC python
+      import torch
+      myTensor1 = torch.tensor([[1], [2],[3]])
+      myTensor2 = torch.tensor([[1], [2],[3]])
+
+      myTensor1.squeeze(), myTensor2.squeeze(-1)
+      '''
+      (tensor([1, 2, 3]), tensor([1, 2, 3]))
+      '''
+    #+END_SRC
+
+    # batch size =1
+    #+BEGIN_SRC python
+      myTensor1 = torch.tensor([[3]])
+      myTensor2 = torch.tensor([[3]])
+      myTensor1.squeeze(), myTensor2.squeeze(-1)
+
+      '''
+      (tensor(3), tensor([3]))
+      '''
+
+    #+END_SRC
+
+    - squeeze Returns a tensor with all the dimensions of input of size 1 removed.
+      For example, if input is of shape:(A×1×B×C×1×D) 
+      then the out tensor will be of shape: (A×B×C×D) .
+
+      When dim is given, a squeeze operation is done only in the given dimension. 
+      If input is of shape: (A×1×B) , squeeze(input, 0) 
+      leaves the tensor unchanged, but squeeze(input, 1) 
+      will squeeze the tensor to the shape (A×B) .
+
+      # torch documents
+      https://pytorch.org/docs/master/generated/torch.squeeze.html
+
+
+    - `myTensor1` is of shape: (3x1), so `myTensor1.squeeze()` will be of 
+      shape (3)
+    - `myTensor2.squeeze(-1)` will do squeeze operation on the last dimension
+      since the shape of the input is (3x1), and the size for the last dimension 
+      is 1, shape will be (3)
+      
+*** unsqueeze
+    # 4:49
+    https://youtu.be/fCVuiW9AFzY
+    https://deeplizard.com/learn/video/fCVuiW9AFzY
+    
+
+    #+BEGIN_SRC python
+      c = tensor([10., 20, 30])
+      '''
+      tensor([10., 20., 30.])
+      '''
+
+      c.unsqueeze(0)
+      '''
+      tensor([[10., 20., 30.]])
+      '''
+
+      c.unsqueeze(1)
+      '''
+      tensor([[10.],
+              [20.],
+              [30.]])
+      ''' 
+    #+END_SRC
 *** stack
-    - `torch.stack` "tensor-ify" an array or tuple;
+    - Concatenates a sequence of tensors along a new dimension.
+      All tensors need to be of the same size.
+      (default for the dimension axis is dim=0)
  
       #+BEGIN_SRC python
         my_tuple = (torch.tensor([1,2,3]), torch.tensor([4,5,6]), torch.tensor([7,8,9]))
@@ -111,9 +186,29 @@
         my_stacked
 
         '''
-        tensor([[1,2,3,], [4,5,6], [7,8,9]])
+        tensor([[1,2,3], [4,5,6], [7,8,9]])
         '''
       #+END_SRC
+
+      https://pytorch.org/docs/stable/generated/torch.stack.html
+
+*** max
+    Returns a namedtuple (values, indices) where values is the
+    maximum value of each row of the input tensor in the given 
+    dimension dim. And indices is the index location of each 
+    maximum value found (argmax).
+
+    https://pytorch.org/docs/stable/generated/torch.max.html
+
+    If keepdim is True, the output tensors are of the same size 
+    as input except in the dimension dim where they are of size 1. 
+    Otherwise, dim is squeezed (see torch.squeeze()), 
+    resulting in the output tensors having 1 fewer 
+    dimension than input.
+
+    (the dimension axis specified will be removed after
+    choosing the max value along the chosen axis)
+    
 
 *** broadcast
     https://pytorch.org/docs/stable/notes/broadcasting.html
@@ -227,6 +322,7 @@
 
 * Grab Data (question)
 *** why use mini batch
+    https://datascience.stackexchange.com/questions/16807/why-mini-batch-size-is-better-than-one-single-batch-with-all-training-data
 
 * Design Network Architecture (question)
 ** CNN
@@ -402,13 +498,14 @@
     - (?) gradual warm up & gradual cool down
 
 ** hyper parameters
-*** why changing the value of the learning rate is good
-
+*** how to tune hyper parameters
     - tuning process
     https://www.youtube.com/watch?v=AXDByU3D1hA&list=PLkDaE6sCZn6Hn0vK8co82zjQtt3T2Nkqc&index=25
 
+*** why changing the value of the learning rate is good
     - learning rate decay
     https://www.youtube.com/watch?v=QzulmoOg2JE
+
 
 *** what a good changing schedule for the learning rate looks like
 ** regularization
@@ -417,7 +514,7 @@
 
 ** debiasing
 *** why use avg=0 for exponentially weighted moving average
-** ADAM and variations
+** optimization algorithms
 *** how momentum works
     https://www.youtube.com/watch?v=k8fTYJPd3_I&t=1s
 
@@ -427,7 +524,7 @@
 *** how ADAM works
     https://www.youtube.com/watch?v=JXQT_vxqwIs
 
-*** LAMB
+*** how LAMB works
     https://medium.com/nvidia-ai/a-guide-to-optimizer-implementation-for-bert-at-scale-8338cc7f45fd
     https://towardsdatascience.com/an-intuitive-understanding-of-the-lamb-optimizer-46f8c0ae4866
     
@@ -502,6 +599,9 @@
       which leads to nearly zero gradient causing
       slow learning process
 
+
+* Refactoring (understood)
+*** the 
 
 * Misc (question)
 ** handling images
@@ -638,7 +738,6 @@
 *** unsqueeze
     # 4:49
     https://youtu.be/fCVuiW9AFzY
-
     https://deeplizard.com/learn/video/fCVuiW9AFzY
     
 
@@ -5431,7 +5530,7 @@
     - `hooks[:4]` retrieves the `Hook` instances for the first 
       4 layers(modules)
 
-*** get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1, GeneralRelu, init_cnn ver1
+*** TODO get_cnn_layers ver2,  get_cnn_model ver3, conv_layer ver1, GeneralRelu, init_cnn ver1
 
     #+BEGIN_SRC python
       #export
@@ -5456,6 +5555,7 @@
               if self.maxv is not None: x.clamp_max_(self.maxv)
               return x
 
+      # init_cnn ver1
       def init_cnn(m, uniform=False):
           f = init.kaiming_uniform_ if uniform else init.kaiming_normal_
           for l in m:
@@ -5497,9 +5597,42 @@
     - `get_cnn_model` ver3 takes `**kwags` which will be
       eventually passed to GeneralRelu
 
+    # init_cnn ver1 overview
+    - `init_cnn` ver1 initialize weight and bias of 
+      each single layer of a model
+
     # init_cnn detail
-    - `a` 
+    - `init` is `torch.init` imported from "02_fully_connected"
+      
+      #+BEGIN_SRC python
+        #export
+        from torch.nn import init
+      #+END_SRC
+
+    - `a` in `f(m.weight, a=0.1)` is for using with leaky relu
+
+      see `torch.nn.init.kaiming_uniform`
       https://pytorch.org/docs/stable/nn.init.html
+
+      a – the negative slope of the rectifier used after this 
+      layer (only used with 'leaky_relu')
+
+    - if `l` is yet a sequence layers, we expect that
+      it consists of (linear layer, activation layer),
+      and `l[0]` is the linear layer to be initialized,
+      so we apply `f` to `l[0]`
+
+    - [ ] (?) since `mode` of `init_kaiming_uniform_` or `init_kaiming_normal`
+      is default to be `fan_in`, we are assuming `l` is
+      `nn.Linear` or its subclass where 
+      `torch.nn.Linear(m,nh).weight.shape` is `torch.Size([50,784])`
+      and `init_kaiming_uniform_` or `init_kaiming_normal` works
+      with `mode=fan_in` 
+      
+      whereas for a weight matrix created by `torch.zeros(m,nh)`,
+      `torch.zeros(m,nh).shape` is `torch.Size([784,50])`
+      and `mode` is required to be `fan_out`
+
 
 *** append_stat ver4
 
@@ -5840,6 +5973,7 @@
               if getattr(m, 'bias', None) is not None: m.bias.data.zero_()
           for l in m.children(): init_cnn_(l, f)
 
+      # init_cnn ver2
       def init_cnn(m, uniform=False):
           f = init.kaiming_uniform_ if uniform else init.kaiming_normal_
           init_cnn_(m, f)
@@ -5855,15 +5989,17 @@
 
     #+END_SRC
 
-    # init_cnn ver2 overview
-    - `init_cnn` ver2 factors out the logic, in `init_cnn` ver1 for
-      recursively initializing a laeyr, as `init_cnn_`
 
     # init_cnn_ overview
     - the name of `init_cnn_` and `init_cnn` are slightly different!
       look at the last "_"
 
+    - `init_cnn_` accepts a model, and initialize all the
+      linear layer by recursively calling it
+
     # init_cnn_ detail
+    - `m` is a model
+    - `f` is either  `init.kaiming_uniform_` or `init.kaiming_normal_`
     - `a` in `f(m.weight, a=0.1)` is for using with leaky relu
 
       see `torch.nn.init.kaiming_uniform`
@@ -5871,6 +6007,34 @@
 
       a – the negative slope of the rectifier used after this 
       layer (only used with 'leaky_relu')
+
+    - `init_cnn_` works in the following way;
+      - for simplicity, imagine a simple model consisting of
+        (nn.Conv2d, nn.ReLu)
+
+      - when it is called for the first time, `m` is a model,
+        and is an instance of nn.Sequential which consists 
+        of layers, so `if isinstance(m, nn.Conv2d)` block is skipped
+        and call itself passing each single layer of the nn.Sequential 
+        instance by `for l in m.children(): init_cnn_(l, f)`
+
+      - when `init_cnn_` is called for the second time,
+        `m` is either `nn.Conv2d` or `nn.ReLu`,
+        and `f` is applied if `m` is `nn.Conv2d` and otherwise
+        nothing happens
+
+    # init_cnn ver2 overview
+    - `init_cnn` ver2 factors out the logic, in `init_cnn` ver1 for
+      recursively initializing a laeyr, as `init_cnn_`
+
+
+    # init_cnn ver2 detail
+    - `init` is `torch.init` imported from "02_fully_connected"
+      
+      #+BEGIN_SRC python
+        #export
+        from torch.nn import init
+      #+END_SRC
 
 
     # get_learn_run ver2 overview
@@ -7226,7 +7390,7 @@
       - `DataLoader` instance for training
       - `DataLoader` instance for validation
 
-*** databunchify (SplitData.to_databunchify)
+*** databunchify (SplitData.to_databunch)
 
     #+BEGIN_SRC python
       #export
@@ -7239,6 +7403,11 @@
 
     
     # detail
+    - when `databunchify` is called as a class method of `SplitData`, 
+      like `my_split_data.to_databunch(...)`, the first argument `sd` 
+      is already set to be `self` (=`my_split_data`), so
+      we pass arguments other than `sd`
+
     - `get_dls` is as below
 
       #+BEGIN_SRC python
@@ -7298,6 +7467,7 @@
       import math
       def prev_pow_2(x): return 2**math.floor(math.log2(x))
 
+      # get_cnn_layers ver3
       def get_cnn_layers(data, nfs, layer, **kwargs):
           def f(ni, nf, stride=2): return layer(ni, nf, 3, stride=stride, **kwargs)
           l1 = data.c_in
@@ -7310,10 +7480,12 @@
           layers += [nn.AdaptiveAvgPool2d(1), Lambda(flatten), 
                      nn.Linear(nfs[-1], data.c_out)]
           return layers
-
+      
+      # get_cnn_model ver4
       def get_cnn_model(data, nfs, layer, **kwargs):
           return nn.Sequential(*get_cnn_layers(data, nfs, layer, **kwargs))
 
+      # get_learn_run ver2
       def get_learn_run(nfs, data, lr, layer, cbs=None, opt_func=None, **kwargs):
           model = get_cnn_model(data, nfs, layer, **kwargs)
           init_cnn(model)
@@ -7360,7 +7532,6 @@
      - `f` is a function to create conv2d layer with stride 2,
        kernel size 3, and `layer` is like `nn.Conv2d`
 
-
      # get_cnn_model ver4 overview
      - `get_cnn_model` ver4 is same as ver3, but refering to `get_cnn_layers` ver3
 
@@ -7368,7 +7539,7 @@
      - `get_learn_run` ver2 is same as ver1, but refering to `get_cnn_model` ver4
 
      # get_learn_run ver2 detail
-     - `init_cnn` is `init_cnn` ver2 and as below
+     - `init_cnn_` is `init_cnn` ver2 and as below
 
        #+BEGIN_SRC python
          def init_cnn_(m, f):
@@ -8030,7 +8201,10 @@
 *** how to use StatefulOptimizer
 
     #+BEGIN_SRC python
-      # how to use
+      cbfs = [partial(AvgStatsCallback,accuracy),
+              CudaCallback, Recorder,
+              partial(ParamScheduler, 'lr', sched)]
+
       sgd_mom_opt = partial(StatefulOptimizer, steppers=[momentum_step,weight_decay],
                         stats=AverageGrad(), wd=0.01)
 
@@ -8561,48 +8735,56 @@
              for cb in sorted(self.cbs, key=lambda x: x._order): res = cb(cb_name) and res
              return res
    #+END_SRC
-    - note that callack instances are registered as propeties of `Runner` instance    
-      by `setattr` inside `add_cb`
 
-      #+BEGIN_SRC python
-        cb.set_runner(self)
-        setattr(self, cb.name, cb)
-        self.cbs.append(cb)
-      #+END_SRC
+   # overview
+   - with `Learner` ver2, optimizer is not pass
 
-    - `Leaner` ver2 is a slightly different verwion of `Runner` ver2 with 
-      every property of `Learner` ver1 moved into `Runner` ver2
+   - note that callack instances are registered as propeties of `Runner` instance    
+     by `setattr` inside `add_cb`
 
-      #+BEGIN_SRC python
-        class Learner():
-            def __init__(self, model, opt, loss_func, data):
-                self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
-      #+END_SRC
+     #+BEGIN_SRC python
+       cb.set_runner(self)
+       setattr(self, cb.name, cb)
+       self.cbs.append(cb)
+     #+END_SRC
 
-    - so, properties `model`, `loss_func`, `data` 
-      defined with `@property` becomes unnecessary and are removed.
+   - `Leaner` ver2 is a slightly different verwion of `Runner` ver2 with 
+     every property of `Learner` ver1 moved into `Runner` ver2
 
-    - also, in `Runner` ver2, we used to call `set_runner` in `fit`
-      to set on each callback a reference to `Runner` object,
-      whereas in `Learner` ver2 (=`Runner` ver3), that part is 
-      factored out as `add_cbs` & `add_cb` which are called
-      in two places in `__init__` and `fit`
+     #+BEGIN_SRC python
+       class Learner():
+           def __init__(self, model, opt, loss_func, data):
+               self.model,self.opt,self.loss_func,self.data = model,opt,loss_func,data
+     #+END_SRC
 
-    - in `Runner` ver2, we can pass callbacks only to `__init__`,
-      whereas with `Learner` ver2 (=`Runner` ver3), 
-      there is a chance to pass callbacks when calling `fit`
+   - so, properties `model`, `loss_func`, `data` 
+     defined with `@property` becomes unnecessary and are removed.
 
-    - in `Runner` ver2, optimizer object is stored in `Learner`
-      object which is passed on calling `fit`,
-      whereas in `Learner` ver2 (=`Runner` ver3), 
-      a CONSTRUCTOR to create optimizer is passed on calling `__init__`
-      and an optimizer object is created and set to `self.opt`
-      on the fly in `fit`
+   - also, in `Runner` ver2, we used to call `set_runner` in `fit`
+     to set on each callback a reference to `Runner` object,
+     whereas in `Learner` ver2 (=`Runner` ver3), that part is 
+     factored out as `add_cbs` & `add_cb` which are called
+     in two places in `__init__` and `fit`
 
-    - note that the default for `splitter` is `param_getter`
-      #+BEGIN_SRC python
-        def param_getter(m): return m.parameters()
-      #+END_SRC
+   - in `Runner` ver2, we can pass callbacks only to `__init__`,
+     whereas with `Learner` ver2 (=`Runner` ver3), 
+     there is a chance to pass callbacks when calling `fit`
+
+   - in `Runner` ver2, optimizer object is stored in `Learner`
+     object which is passed on calling `fit`,
+     whereas in `Learner` ver2 (=`Runner` ver3), 
+     a CONSTRUCTOR to create optimizer is passed on calling `__init__`
+     and an optimizer object is created and set to `self.opt`
+     on the fly in `fit`
+
+   - this way, model parameters can be passed to an optimizer
+     after grouping them by `splitter` which enables 
+     discriminative learning rate
+
+   - note that the default for `splitter` is `param_getter`
+     #+BEGIN_SRC python
+       def param_getter(m): return m.parameters()
+     #+END_SRC
 
 *** get_learner ver1
 
@@ -9131,6 +9313,24 @@
     #+END_SRC
 
 *** loss function for mixup
+    - suppose a single mixed up image is made of
+      0.7 of image1 with target1 (1, 0, 0, 0, ..., 0) and
+      0.3 of image2 with target2 (0, 1, 0, 0, ..., 0)
+
+      then, the target for the mixed up image is defined to be
+      0.7 * (1,0,0,0,...,0) + 0.3 * (0,1,0,0,...,0) 
+      = (0.7, 0.3, 0, 0, ..., 0)
+
+      so, it appearetly seems that we somehow have to change 
+      the way we express a batch of labels 
+
+      however, since the cross entropy loss for the target is
+
+      0.7*(-logP1) + 0.3*(-logP2) 
+      = 0.7*loss(output, target1) + 0.3*loss(output, target2)
+
+
+    # _old
     - the loss function for mixup is defined to be just a cross-entropy loss
       where target is in the form of (0.7, 0.3, 0, 0, 0).
 
@@ -9143,24 +9343,28 @@
       #+END_SRC
 
     - why does cross-entropy loss make sense for mixup?
-    - 
-    - for simplicity, think of a case where there are only 2 labels (such as dog or cat), and t = 0.7
+      for simplicity, think of a case where there are only 
+      2 labels (such as dog or cat), and t = 0.7
 
-    - keep in mind that cross-entropy loss is calculated for a batch of image
+      keep in mind that cross-entropy loss is calculated for 
+      a batch of image
 
-    - for a specific mixedup image, cross entropy loss is 0.7*(-logP1) + 0.3*(-logP2) where P1+P2=1
+      for a specific mixedup image, cross entropy loss is 
+      0.7*(-logP1) + 0.3*(-logP2) where P1+P2=1
 
-    - when will it be smallest?
-
-    - naive guess is that we may choose a value close to 1 for P1, since it makes 0.7*(-logP1) small
-      but since P1+P2 must add up to 1, P1 getting closer to 1 means P2 getting closer to 0, which
+      when will it be smallest?
+      naive guess is that we may choose a value close to 1 for P1,
+      since it makes 0.7*(-logP1) small
+      but since P1+P2 must add up to 1, P1 getting closer to 1 
+      means P2 getting closer to 0, which
       makes (-logP2) goes to inifnity!
 
-    - P1 should be not too close to 1, but somewhat bigger than P2, 
+      P1 should be not too close to 1, but somewhat bigger than P2, 
       reflecting how much the coefficient of "-logP1" (0.7) is
       bigger than that of "-logP2" (0.3)
 
-    - this means, the neural net will be trained to predict label(i)-ishness properly
+      this means, the neural net will be trained to 
+      predict label(i)-ishness properly
 
     - _old
 
@@ -9204,6 +9408,12 @@
               if self.old_red is not None: setattr(self.loss_func, 'reduction', self.old_red)    
     #+END_SRC
 
+    # overview
+    - 
+
+
+    # detail
+
 *** unsqueeze, reduce_loss
 
     #+BEGIN_SRC python
@@ -9218,7 +9428,9 @@
           return loss.mean() if reduction=='mean' else loss.sum() if reduction=='sum' else loss    
     #+END_SRC
 
-    - reduce loss 
+    - `unsqueeze`
+
+    - `reduce_loss`
 
 *** MixUp
 
@@ -9250,16 +9462,99 @@
               return reduce_loss(loss, getattr(self.old_loss_func, 'reduction', 'mean'))
     #+END_SRC
 
+    # overview
     - define 'base' and 'mixing pair' to be the image corresponding to
       x1 and x2 respectively where
       x(mixup) = t * x1 + (1-t) * x2
 
+    # __init__ detail
+    - `Beta` is from pytorch
+      
+      https://pytorch.org/docs/stable/distributions.html
+
+    # begin_fit detail
     - Although `Runner` ver3 is actually called `Learner`, 
       `Callback` ver3 still uses term `run` in `self.run` or
       `set_runner`.
 
+    - `self.loss_func` is `loss_func` method defined on `MixUp` class
+
+    # begin_batch detail
+    - `sample` in `self.distrib.sample((self.yb.size(0),))` 
+      is from `sample` method from pytorch `Distribution` class,
+      and it generates a `sample_shape` shaped sample or
+      `sample_shape` shaped batch of samples
+      if the distribution parameters are batched.
+
+      https://pytorch.org/docs/stable/distributions.html#torch.distributions.distribution.Distribution
+
+      (`sample_shape` is a tuple)
+
+    - `self.yb.size()` is a rank1 tensor of torch.Size([64])
+    - `self.yb.size(0)` is 64
+
+    - `(self.yb.size(0),) is a singleton (a tuple with one element),
+      and looks like `(64,)`
+      https://stackoverflow.com/questions/3750632/why-does-adding-a-trailing-comma-after-a-variable-name-make-it-a-tuple
+
+    - the size of `self.distrib.sample((self.yb.size(0),))` is
+      a tensor of torch.Size([64,1])
+
+      #+BEGIN_SRC python
+        import torch
+        import sys
+        from torch.distributions.beta import Beta
+        distrib = Beta(torch.tensor([0.5]), torch.tensor([0.5]))
+        distrib.sample((64,))
+
+        '''
+        tensor([[0.5203],
+                [0.8970],
+                [0.0329],
+                [0.0020],
+                ...
+                [0.4666],
+                [0.7349],
+                [0.0874]])
+        '''
+      #+END_SRC
+    
+    - `self.distrib.sample((self.yb.size(0),)).squeeze()` is a rank1
+      tensor of torch.Size([64])
+
+    - `torch.stack([λ, 1-λ], 1)` is a rank2 tensor of
+      torch.Size([64,2])
+
+    #+BEGIN_SRC python
+      tensor([[9.9987e-01, 1.3345e-04],
+              [1.6631e-01, 8.3369e-01],
+              [9.8163e-01, 1.8369e-02],
+              ...
+              [4.1730e-03, 9.9583e-01],
+              [7.0258e-01, 2.9742e-01]])
+    #+END_SRC
+
+    - `λ.max(1)`　returns a tuple consist of (values, indices)
+      where values is a rank1 tensor of torch.Size([64]) consisting
+      of the max elements along dim=1 
+
+    #+BEGIN_SRC python
+      torch.return_types.max(
+      values=tensor([0.6909, 0.9872, 0.9108, 0.9491, 0.8457, 0.7356, 0.6516, 0.9934, 0.9847,
+              0.9952, 0.8495, 0.9962, 0.8601, 0.6686, 0.8294, 0.6769, 0.8455, 0.8906,
+              0.8881, 0.5759, 0.9765, 0.7991, 0.9811, 0.9990, 0.5541, 0.5125, 0.6283,
+              0.9996, 0.9622, 0.5862, 0.5809, 0.9654, 0.8001, 0.8444, 0.9939, 0.8789,
+              0.7058, 0.7448, 0.5221, 0.7822, 0.9130, 0.7865, 0.7596, 0.9809, 0.9997,
+              0.7765, 0.5093, 0.9620, 0.6685, 0.9999, 0.6759, 0.7677, 0.8179, 0.9861,
+              0.7029, 0.7108, 0.6768, 0.7020, 0.9278, 0.7123, 0.9694, 0.9543, 0.6341,
+              0.8977]),
+      indices=tensor([1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0,
+              0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0,
+              1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1]))
+    #+END_SRC
+
     - for a batch of 'base' images, a batch of 'mixing pair' images
-      is created just by randomly permiting the batch of 'base' images
+      is created just by randomly permute the batch of 'base' images
 
     - `self.yb` is a batch of the labels for the corresponding
       batch of `mixing-pair` images
@@ -9267,30 +9562,30 @@
     - `self.run.xb = lin_comb(self.xb, xb1, self.λ)` sets
       a batch of mixed up images to `xb` property  of the `Learner` instance
 
-    - in `loss_func`, 
-      - `yb` is a batch of the labels for the corresponding 
-        batch of 'base' images
+    # losss_func detail
+    - `yb` is a batch of the labels for the corresponding 
+      batch of 'base' images
 
-      - `self.yb1` is a batch of the labels for the corresponding
-        batch of `mixing pair` images
+    - `self.yb1` is a batch of the labels for the corresponding
+      batch of `mixing pair` images
 
-      - a loss function such as F.cross_entropy returns 
-        the reduced version of the rank1 tensor consisting 
-        of losses for a batch in the form of either sum or mean.
+    - a loss function such as F.cross_entropy returns 
+      the reduced version of the rank1 tensor consisting 
+      of losses for a batch in the form of either sum or mean.
 
-      - However, while calculating the loss for each of
-        'base', or 'mixing pair' to calculate the loss
-        for mixedup image, we would like to keep the result
-        before reduction.
+    - However, while calculating the loss for each of
+      'base', or 'mixing pair' to calculate the loss
+      for mixedup image, we would like to keep the result
+      before reduction.
 
-      - In order to do that, we apply a context manager 
-        NoneReduce to self.old_loss_func (= F.cross_entropy ), 
-        which sets to self.loss_func  the non-reduction
-        version of self.old_loss_func
+    - In order to do that, we apply a context manager 
+      NoneReduce to self.old_loss_func (= F.cross_entropy ), 
+      which sets to self.loss_func  the non-reduction
+      version of self.old_loss_func
 
-      - in the end of `MixUp::loss_func`, we reduce the 
-        rank1 tensor for the loss for a batch of mixedup images
-        by `reduce_loss` and return.
+    - in the end of `MixUp::loss_func`, we reduce the 
+      rank1 tensor for the loss for a batch of mixedup images
+      by `reduce_loss` and return.
 
 *** get_learner ver2
 
@@ -9622,14 +9917,23 @@
               to_model_params(self.model_pgs, self.master_pgs, self.flat_master)
     #+END_SRC
 
-*** get_learner
-#+BEGIN_SRC python
-  def get_learner(nfs, data, lr, layer, loss_func=F.cross_entropy,
-                  cb_funcs=None, opt_func=adam_opt(), **kwargs):
-      model = get_cnn_model(data, nfs, layer, **kwargs)
-      init_cnn(model)
-      return Learner(model, data, loss_func, lr=lr, cb_funcs=cb_funcs, opt_func=opt_func)
-#+END_SRC
+*** get_learner ver3 
+
+    #+BEGIN_SRC python
+      def get_learner(nfs, data, lr, layer, loss_func=F.cross_entropy,
+                      cb_funcs=None, opt_func=adam_opt(), **kwargs):
+          model = get_cnn_model(data, nfs, layer, **kwargs)
+          init_cnn(model)
+          return Learner(model, data, loss_func, lr=lr, cb_funcs=cb_funcs, opt_func=opt_func)
+    #+END_SRC
+
+    # overview
+    - `get_learner` ver3 uses `adam_opt` as its default `opt_func`
+
+
+    # detail
+    - `get_cnn_model` is `get_cnn_model` ver4
+
 
 *** test_overflow
 #+BEGIN_SRC python
@@ -9792,17 +10096,19 @@
           return nn.Conv2d(ni, nf, kernel_size=ks, stride=stride, padding=ks//2, bias=bias)
     #+END_SRC
 
-*** init_cnn, conv_layer ver4
+*** init_cnn ver3, conv_layer ver4
 
     #+BEGIN_SRC python
       #export
       act_fn = nn.ReLU(inplace=True)
 
+      # init_cnn ver3
       def init_cnn(m):
           if getattr(m, 'bias', None) is not None: nn.init.constant_(m.bias, 0)
           if isinstance(m, (nn.Conv2d,nn.Linear)): nn.init.kaiming_normal_(m.weight)
           for l in m.children(): init_cnn(l)
 
+      # conv_layer ver4
       def conv_layer(ni, nf, ks=3, stride=1, zero_bn=False, act=True):
           bn = nn.BatchNorm2d(nf)
           nn.init.constant_(bn.weight, 0. if zero_bn else 1.)
@@ -9810,6 +10116,9 @@
           if act: layers.append(act_fn)
           return nn.Sequential(*layers)
     #+END_SRC
+
+    # init_cnn ver3 detail
+    - `init_cnn` ver3 works in a similar way as `init_cnn_`
 
 *** ResBlock
 
@@ -10020,8 +10329,6 @@
       def xresnet152(**kwargs): return XResNet.create(4, [3, 8, 36, 3], **kwargs)
     #+END_SRC
 
-
-    
 *** get_batch ver2
 
     #+BEGIN_SRC python
@@ -13358,6 +13665,9 @@
 *** playlists
     https://www.youtube.com/watch?v=_i3aqgKVNQI&list=PLkDaE6sCZn6F6wUI9tvS_Gw1vaFAx6rd6
 
+* Yan LeCun lectures
+  https://cds.nyu.edu/deep-learning/
+  
 
 * misc resource    
 *** isntall pytorch on windows10
