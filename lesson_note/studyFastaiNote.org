@@ -1,6 +1,9 @@
 * python (question)
 
 * python (understood)
+*** python > install packages with conda
+    https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
+
 *** tuple
     https://docs.python.org/3/tutorial/datastructures.html#tuples-and-sequences
 
@@ -12,7 +15,6 @@
 *** packing & unpacking operator (single asterisk)
     https://stackoverflow.com/questions/36901/what-does-double-star-asterisk-and-star-asterisk-do-for-parameters
    
-
 *** zip
     https://realpython.com/python-zip-function/
     
@@ -23,8 +25,6 @@
       zip() can accept any type of iterable, such as
       files, lists, tuples, dictionaries, sets, and so on."
     
-*** python > install packages with conda
-    https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533#5193
 
 *** python > if
 
@@ -75,21 +75,54 @@
     #+END_SRC
 
     
-
 *** python > return value of `and`, `or`
 
 *** function annotation
-*** yield
+*** enumerate
+    - `enumerate` 
+      https://www.programiz.com/python-programming/methods/built-in/enumerate#:~:text=from%20enumerate()-,enumerate()%20method%20adds%20counter%20to%20an%20iterable%20and%20returns,and%20tuple()%20method%20respectively.
+      https://www.geeksforgeeks.org/enumerate-in-python/
+      https://realpython.com/python-enumerate/
 
 *** iter
+    - `iter`
+      https://docs.python.org/3/c-api/iter.html
+      https://docs.python.org/3.4/library/itertools.html?highlight=iter
+      https://www.programiz.com/python-programming/methods/built-in/iter
+      https://realpython.com/python-for-loop/
+
+*** yield
+    - `yield` 
+    https://www.programiz.com/python-programming/generator    
+
+    
+*** sorted
+    - `sorted` sorts iterables accepting optional parameters
+      `key` and `reverse`
+      https://docs.python.org/3/howto/sorting.html
+      https://www.programiz.com/python-programming/methods/built-in/sorted
+      https://realpython.com/python-sort/
 
 
 
 * pytorch (question)
-*** auto grad
+*** how auto grad works
+    
+    # pytorch doc
+    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html
+    https://pytorch.org/docs/stable/notes/autograd.html
+    https://pytorch.org/docs/stable/autograd.html
+
+    # others
+    https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
     https://towardsdatascience.com/getting-started-with-pytorch-part-1-understanding-how-automatic-differentiation-works-5008282073ec
+
+
     https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
     https://towardsdatascience.com/understanding-pytorch-with-an-example-a-step-by-step-tutorial-81fc5f8c4e8e
+
+    https://medium.com/@ODSC/automatic-differentiation-in-pytorch-6131b4581cdf
+
 *** with torch.no_grad
 *** why do we zero out gradient?  (1:14:58)
 *** zero_grad()
@@ -103,9 +136,115 @@
     import torch
     from torch import nn
 
+*** tensor broadcasting
+    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
+*** broadcast
+    https://pytorch.org/docs/stable/notes/broadcasting.html
+    two tensors are “broadcastable” if the following rules hold:
+
+    Each tensor has at least one dimension.
+
+    When iterating over the dimension sizes, 
+    starting at the trailing dimension, 
+    the dimension sizes must either be equal, 
+    one of them is 1, or one of them does not exist.
+
+*** tensor mean, std
 *** mean
     - `torch.mean` is 'fusion' inside the specified axis
 
+*** sum
+    
+    https://pytorch.org/docs/stable/generated/torch.sum.html
+    - for explanation, think of a tensor below;
+
+      #+BEGIN_SRC python
+        my_tensor = torch.tensor(
+            [[[1,2],
+              [3,4],
+              [5,6]],
+             
+            [[11,12],
+             [13,14],
+             [15,16]],
+             
+            [[21,22],
+             [23,24],
+             [25,26]]]
+        )
+      #+END_SRC
+
+    - `my_tensor.sum(dim=0)` does summation over dim0
+      and remove the axis on dim0, keeping the shape of dim1 & dim2
+
+    - `my_tensor.sum(dim=1)` does summation over dim1
+      and remove the axis on dim1, keeping the shape of dim0 & dim2
+
+    - `my_tensor.sum(dim=2)` does summation over dim2
+      and remove the axis on dim2, keeping the shape of dim0 & dim1
+
+    #+BEGIN_SRC python
+      #memo
+      import torch
+      my_tensor = torch.tensor([[[1,2],[3,4],[5,6]],
+                   [[11,12],[13,14],[15,16]],
+                   [[21,22],[23,24],[25,26]]])
+      my_tensor_dim0 = my_tensor.sum(dim=0)
+      my_tensor_dim1 = my_tensor.sum(dim=1)
+      my_tensor_dim2 = my_tensor.sum(dim=2)
+      my_tensor, my_tensor_dim0, my_tensor_dim1, my_tensor_dim2
+
+      '''
+      # my_tensor
+      tensor([[[ 1,  2],
+               [ 3,  4],
+               [ 5,  6]],
+
+              [[11, 12],
+               [13, 14],
+               [15, 16]],
+
+              [[21, 22],
+               [23, 24],
+               [25, 26]]])
+
+      # my_tensor_dim0
+      tensor([[33, 36],
+              [39, 42],
+              [45, 48]])
+
+      # my_tensor_dim1
+      tensor([[ 9, 12],
+              [39, 42],
+              [69, 72]])
+
+      # my_tensor_dim2
+      tensor([[ 3,  7, 11],
+              [23, 27, 31],
+              [43, 47, 51]])
+
+      '''
+    #+END_SRC    
+
+*** tensor related operation (stack, squeeze)
+    https://deeplizard.com/learn/video/kF2AlpykJGY
+    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
+*** stack
+    - Concatenates a sequence of tensors along a new dimension.
+      All tensors need to be of the same size.
+      (default for the dimension axis is dim=0)
+ 
+      #+BEGIN_SRC python
+        my_tuple = (torch.tensor([1,2,3]), torch.tensor([4,5,6]), torch.tensor([7,8,9]))
+        my_stacked = torch.stack(my_tuple)
+        my_stacked
+
+        '''
+        tensor([[1,2,3], [4,5,6], [7,8,9]])
+        '''
+      #+END_SRC
+
+      https://pytorch.org/docs/stable/generated/torch.stack.html
 *** squeeze
 
     # batch size=3
@@ -175,22 +314,6 @@
               [30.]])
       ''' 
     #+END_SRC
-*** stack
-    - Concatenates a sequence of tensors along a new dimension.
-      All tensors need to be of the same size.
-      (default for the dimension axis is dim=0)
- 
-      #+BEGIN_SRC python
-        my_tuple = (torch.tensor([1,2,3]), torch.tensor([4,5,6]), torch.tensor([7,8,9]))
-        my_stacked = torch.stack(my_tuple)
-        my_stacked
-
-        '''
-        tensor([[1,2,3], [4,5,6], [7,8,9]])
-        '''
-      #+END_SRC
-
-      https://pytorch.org/docs/stable/generated/torch.stack.html
 
 *** max
     Returns a namedtuple (values, indices) where values is the
@@ -209,99 +332,59 @@
     (the dimension axis specified will be removed after
     choosing the max value along the chosen axis)
     
-
-*** broadcast
-    https://pytorch.org/docs/stable/notes/broadcasting.html
-    two tensors are “broadcastable” if the following rules hold:
-
-    Each tensor has at least one dimension.
-
-    When iterating over the dimension sizes, 
-    starting at the trailing dimension, 
-    the dimension sizes must either be equal, 
-    one of them is 1, or one of them does not exist.
-
-*** tensor sum
-    - for explanation, think of a tensor below;
-
-      #+BEGIN_SRC python
-        my_tensor = torch.tensor(
-            [[[1,2],
-              [3,4],
-              [5,6]],
-             
-            [[11,12],
-             [13,14],
-             [15,16]],
-             
-            [[21,22],
-             [23,24],
-             [25,26]]]
-        )
-      #+END_SRC
-
-    - `my_tensor.sum(dim=0)` does summation over dim0
-      and remove the axis on dim0, keeping the shape of dim1 & dim2
-
-    - `my_tensor.sum(dim=1)` does summation over dim1
-      and remove the axis on dim1, keeping the shape of dim0 & dim2
-
-    - `my_tensor.sum(dim=2)` does summation over dim2
-      and remove the axis on dim2, keeping the shape of dim0 & dim1
-
-[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200629_155156_40670bu.png]]
+*** view
 
     #+BEGIN_SRC python
-      #memo
-      import torch
-      my_tensor = torch.tensor([[[1,2],[3,4],[5,6]],
-                   [[11,12],[13,14],[15,16]],
-                   [[21,22],[23,24],[25,26]]])
-      my_tensor_dim0 = my_tensor.sum(dim=0)
-      my_tensor_dim1 = my_tensor.sum(dim=1)
-      my_tensor_dim2 = my_tensor.sum(dim=2)
-      my_tensor, my_tensor_dim0, my_tensor_dim1, my_tensor_dim2
+      my_x = torch.rand(4,4)
+      my_x.view(16, -1)
 
       '''
-      # my_tensor
-      tensor([[[ 1,  2],
-               [ 3,  4],
-               [ 5,  6]],
-
-              [[11, 12],
-               [13, 14],
-               [15, 16]],
-
-              [[21, 22],
-               [23, 24],
-               [25, 26]]])
-
-      # my_tensor_dim0
-      tensor([[33, 36],
-              [39, 42],
-              [45, 48]])
-
-      # my_tensor_dim1
-      tensor([[ 9, 12],
-              [39, 42],
-              [69, 72]])
-
-      # my_tensor_dim2
-      tensor([[ 3,  7, 11],
-              [23, 27, 31],
-              [43, 47, 51]])
-
+      tensor([[0.4376],
+              [0.4770],
+              [0.5197],
+              [0.3822],
+              [0.1813],
+              [0.7772],
+              [0.2852],
+              [0.0907],
+              [0.5914],
+              [0.8817],
+              [0.1719],
+              [0.0896],
+              [0.6135],
+              [0.2030],
+              [0.4816],
+              [0.1274]])
       '''
-    #+END_SRC    
+    #+END_SRC
 
-*** tensor broadcasting
-    https://pytorch.org/docs/master/notes/broadcasting.html#broadcasting-semantics
+    # overview
+    - `view` reshapes a tensor in the way that total numbe of 
+      the elements does not change. This is as if reshaping
+      a rectangle so that the area of the rectangle is preserved
+      https://stackoverflow.com/questions/42479902/how-does-the-view-method-work-in-pytorch
+      https://pytorch.org/docs/stable/tensor_view.html
 
-*** tensor related operation (stack, squeeze)
-    https://deeplizard.com/learn/video/kF2AlpykJGY
-    https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
+      |   |   |   |
+      |   |   |   |
+      |   |   |   |
+      |   |   |   |
 
-*** tensor mean, std
+      =>
+
+      |   |   |
+      |   |   |
+      |   |   |
+      |   |   |
+      |   |   |
+      |   |   |
+
+    - [ ] x.shape(16, -1) gives the same result as x.shape(16, 1)
+      as `-1` means "whatever possible after specifying 16"
+
+*** randperm
+    https://pytorch.org/docs/stable/generated/torch.randperm.html
+
 
 *** how to move a model to GPU
     lesson10 1:43:20
@@ -323,6 +406,7 @@
 * Grab Data (question)
 *** why use mini batch
     https://datascience.stackexchange.com/questions/16807/why-mini-batch-size-is-better-than-one-single-batch-with-all-training-data
+
 
 * Design Network Architecture (question)
 ** CNN
@@ -348,6 +432,10 @@
       which calls `backwrd` on all the `nn.Parameter` instance
       
 ** Dropout
+
+** LSTM
+*** intuitive understanding of LSTM
+    https://towardsdatascience.com/illustrated-guide-to-lstms-and-gru-s-a-step-by-step-explanation-44e9eb85bf21
 
 * Design Network Architecture (understood)
 ** CNN
@@ -478,17 +566,21 @@
 
 * Update Parameter (question)
 ** gradient
-*** TODO how to calculate gradient w.r.t a weight parameter in a linear layer
+*** how to calculate gradient w.r.t weights for a linear layer
+
+    # fast.ai
+    https://explained.ai/matrix-calculus/
+    https://www.educative.io/edpresso/the-basics-of-matrix-calculus-for-deep-learning
+
+
+
     # 3b1b
     https://www.youtube.com/watch?v=tIeHLnjs5U8&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=5&t=0s
 
-    # 
     https://forums.fast.ai/t/understanding-linear-layer-gradient/63491
-
-    # 
     http://cs231n.stanford.edu/handouts/linear-backprop.pdf
     https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
-    
+
 *** TODO how pytorch autograd & `loss` method works
     https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
     https://pytorch.org/docs/stable/autograd.html
@@ -603,6 +695,7 @@
 * Refactoring (understood)
 *** the 
 
+
 * Misc (question)
 ** handling images
 *** can we flip, resize while a image is still a byte (before byte tensor, float tensor)
@@ -653,7 +746,6 @@
       # 2nd way (efficient to calculate)
       (t*t).mean() - (m*m)
     #+END_SRC
-
 
 *** statistics for a parameter are tensors, NOT a scalar
     - for example, AverageGrad
@@ -1012,17 +1104,6 @@
             
       #+END_SRC
 
-*** TODO how to calculate gradient w.r.t weights for a linear layer
-    https://forums.fast.ai/t/understanding-linear-layer-gradient/63491
-    http://cs231n.stanford.edu/handouts/linear-backprop.pdf
-    https://modelpredict.com/batched-backpropagation-connecting-math-and-code/
-    
-*** TODO how autograd in pytorch works
-    https://towardsdatascience.com/pytorch-autograd-understanding-the-heart-of-pytorchs-magic-2686cd94ec95
-    https://pytorch.org/docs/stable/autograd.html
-
-    https://blog.paperspace.com/pytorch-101-understanding-graphs-and-automatic-differentiation/
-
 *** lin
 
     #+BEGIN_SRC python
@@ -1115,9 +1196,7 @@
           lin_grad(inp, l1, w1, b1)    
     #+END_SRC
 
-    - illustration
-[[[[/Users/shun/Development/study-fastai/lesson_note/figures/studyFastaiNote.org_20200604_141232_34024h7r.png]]]]
-
+    # lin_grad detail
     - `out.g` is in the form of `torch.Size([50000, 50])`
     - `sum(0)` takes sum over the 1st axis, i.e., the batch axis
     - hence, the size of `b.g` is `torch.Size([50])`
@@ -1141,8 +1220,18 @@
         '''
         shape of inp.g is torch.Size([50000,1])
         '''
-            
+        
       #+END_SRC
+
+     - `w.g` is the gradient with respect to the weight matrix,
+       and by the chain rule, it is a product between
+       (∂mse/∂out) * (∂lin/∂w)
+
+       where
+       - (∂mse/∂out) is equal to `out.g`
+       - (∂lin/∂w) is `input` transposed
+
+       https://explained.ai/matrix-calculus/
 
 *** forward & backward ver1 with `print` to check the shape of grads
 
@@ -1675,18 +1764,21 @@
     - `input` is (-1)*cross-entropy for a batch of prediction
       and is in the form of
 
-       [[log(P11), log(P12), ..., log(P1m)],
+       [[[[log(P11), log(P12), ..., log(P1m)],
        [log(P21), log(P22), ..., log(P2m)],
        ...,
-       [log(Pn1), log(Pn2), ..., log(Pnm)]]
+       [log(Pn1), log(Pn2), ..., log(Pnm)]]]]
 
-    - `target` is the label which is in the form of
-      [0, 0, ..., 1, ..., 0] 
+    - `target` is in the form of
+      [3,2,...,1,4]
 
-    - since `target` (the label) is one-hot encoded, 
-      we can utilize numpy integer indexing.
+    # - (?) `target` is the label which is in the form of
+    #   [0, 0, ..., 1, ..., 0] 
 
-    - `target.shape[0]` is same as the number of data
+    # - (?) since `target` (the label) is one-hot encoded, 
+    #   we can utilize numpy integer indexing.
+
+    - `target.shape[0]` is batch size
 
     - `range(target.shape[0])` returns a "range object"
       where `n` is the number of data
@@ -2352,7 +2444,7 @@
       `__getitem__` such as `Dataset` instance, or `ListItem`
 
     - `DataLoader` is for removing for-loop in fit ver3 by
-      returning a part of `DataSet` instance on calling `__iter__`
+      returning a part of `Dataset` instance on calling `__iter__`
 
       # fit ver3
       #+BEGIN_SRC python
@@ -2367,7 +2459,7 @@
                 opt.zero_grad()
       #+END_SRC
       
-    - `DataLoader` accepts an instance of `DataSet` implemented above,
+    - `DataLoader` accepts an instance of `Dataset` implemented above,
       and it will return a part of `Dataset` instance through
       `__iter__` which is called in the following way
 
@@ -2378,9 +2470,14 @@
 
       #+END_SRC
 
-    # detail
-    - `ds` is an `DataSet` instance
+    # DataLoader::__init__()` detail
+    - `ds` is an `Dataset` instance
     - `bs` is  batch size
+
+    # DataLoader::__iter__() detail
+    - `__iter__()` itself will be called when `DataLoader` instance
+      is passed to `iter()`
+
     - `for i in range(0, len(self.ds), self.bs)` 
       is equivalent to
       `for i in range((n-1)//bs + 1)`
@@ -2423,23 +2520,11 @@
               self.idxs = torch.randperm(self.n) if self.shuffle else torch.arange(self.n)
               for i in range(0, self.n, self.bs): yield self.idxs[i:i+self.bs]
 
-      # how to use
-      x_train,y_train,x_valid,y_valid = get_data()
-      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
-
-      small_ds = Dataset(*train_ds[:10])
-      s = Sampler(small_ds,3,False)
-      [o for o in s]
-
-      ''''
-      [tensor([0, 1, 2]), tensor([3, 4, 5]), tensor([6, 7, 8]), tensor([9])]
-      ''''
     #+END_SRC
 
-
-    # overview
+    # Sampler overview
     - `Sampler` is for factoring out & generalizing the logic
-      in `DataLoader` to specify indexes for slicing a `DataSet` instance
+      in `DataLoader` to specify indexes for slicing a `Dataset` instance
       
       # logic for creating indexes in fit ver3
       #+BEGIN_SRC python
@@ -2447,7 +2532,22 @@
             xb,yb = train_ds[i*bs : i*bs+bs]
       #+END_SRC
 
-    - `Sampler` retunrs an array of indexes (more strictly, rank1 tensor) on calling `__iter__`
+    # __iter__() overview
+    - `__iter__()` is a generator which returns a
+      subset of `self.idxs` every time it is called
+
+    # __iter__() detail
+    - `__iter__()` is a generator which returns an iterator
+
+    -  When `Sampler` instance is used in `for...in` loop,
+      internally  `__iter__()` method will be 
+      called to return an iterator, and `next()` will be 
+      implicitly called with the iterator at the every
+      step of for-in loop
+      https://www.programiz.com/python-programming/generator
+
+    - at every step of the for-in loop, `__iter()` 
+      retunrs an array of indexes (more strictly, rank1 tensor) 
 
     - note that this 'home-made Sampler' will be used
       only with 'home-made DataLoader'
@@ -2457,8 +2557,8 @@
     #   - 'home-made' version returns a list of list of indexes
     #   - PyTorch version returnsa a list of indexed
 
-    # detail
-    - torch.randperm generates an array of integers from an integers
+    - `torch.randperm()` generates an array of integers from 
+      integers
 
       #+BEGIN_SRC python
         my_n = 10000
@@ -2472,6 +2572,22 @@
 
     - `for i in range(0, self.n, self.bs)` is equivalent to
       `for i in range((n-1)//bs + 1)`
+
+*** how to use Sampler
+
+    #+BEGIN_SRC python
+      # how to use
+      x_train,y_train,x_valid,y_valid = get_data()
+      train_ds,valid_ds = Dataset(x_train, y_train),Dataset(x_valid, y_valid)
+
+      small_ds = Dataset(*train_ds[:10])
+      s = Sampler(small_ds,3,False)
+      [o for o in s]
+
+      ''''
+      [tensor([0, 1, 2]), tensor([3, 4, 5]), tensor([6, 7, 8]), tensor([9])]
+      ''''
+    #+END_SRC
 
     - `train_ds[:10]` returns a tuple (x[0:10], y[0:10])
 
@@ -2494,14 +2610,11 @@
     #+END_SRC
 
     # home-made DataLoader ver2 overview
-    - `home-made DataLoader` ver2 picks up a part of data set
-      randomly making use of `Sampler` instance whereas
-      `home-made DataLoader ver1` picks up a part of data set
-      in order
-
     - 'home-made DataLoader ver2' is just for showing the 
       idea of the implementation of PyTorch version of `DataLoader`,
       and will not be used later in the course.
+
+      https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
 
     - PyTorch version of `DataLoader` is different 
       from the 'home-made DataLoader ver2 in that
@@ -2510,8 +2623,7 @@
 
       - `batch_size` must be passed to `DataLoader`
 
-
-    # home-made DataLoader ver2 > __iter__ detail
+    # home-made DataLoader ver2::__init__ detail
     - `ds` is a `Dataset` instance,
       and so `self.ds[i]` is a tuple
       
@@ -2523,14 +2635,25 @@
               def __getitem__(self, i): return self.x[i],self.y[i]
       #+END_SRC
 
-    - `sampler` is a `Sampler` instance which yields
-      an array of indexes(rank1 tensor) on calling its `__iter__`
-      method by `for...in` syntax
+    - `sampler` is a `Sampler` instance which implements
+      `__iter__`, an generator, which returns an
+      array of indexes(rank1 tensor) when called 
+      through `for...in` syntax
 
     - `collate_fn` is a function like `collate` implmented above,
       and it combines the tuples in the list
       `[self.ds[i] for i in s]` and returns
       a tuple of 2 tensors (one is for x, and the other is for y)
+
+    # home-made DataLoader ver2::__iter__() overview
+    - `__iter__()` picks up elements of the passed `DataSet`
+      instance where `sampler` determines how to pick up 
+      and `collate_fn` determines how to merge the picked up
+      elements
+
+    # home-made DataLoader ver2::__iter__() detail
+    - `__iter__()` itself will be called when `DataLoader` 
+      instance is passed to `iter()`
 
     - `[self.ds[i] for i in s]` as in `collate_fn([self.ds[i] for i in s])`
       is a python syntax called "list construction"
@@ -2538,7 +2661,7 @@
     - note that `DataLoader` itself does not do transform.
       it is `ds` passed that could do transform.
       especially, `ItemList`, `ImageItemList` does transform, 
-      and `DataSet` does NOT do transform
+      and `Dataset` does NOT do transform
 
     # collate overview
     - `collate` 'batch-ify' a list of tuples;
@@ -4731,7 +4854,6 @@
 
     - [ ] x.shape(16, -1) gives the same result as x.shape(16, 1)
       as `-1` means "whatever possible after specifying 16"
-
 *** mnist_resize
 
     #+BEGIN_SRC python
@@ -6801,10 +6923,10 @@
     #+END_SRC
 
     # overview
-    - `get_files` grabs the names of the files unders the specified directory path,
-      and creates a list of file paths by prefixing 
-      the path to the file names for the file names 
-      with the specified extension
+    - `get_files` grabs the names of the files under the specified
+      directory path, and creates a list of file paths by prefixing 
+      the path to the file names, for the file names with the
+      specified extension
 
 *** compose, ItemList, ImageList
 
@@ -6858,8 +6980,9 @@
     - `ItemList` inherits `ListContainer`, and overwrites
       `__getitem__`
 
-    - notice that so far, an `ItemList` subclass instance  that `ItemList` expcets 
-      is just an array of file names, and not yet associates with a label;
+    - notice that so far, an `ItemList` subclass instance  
+      that `ItemList` expcets is just an array of file names, 
+      and not yet associates with a label;
       label will be given by `CategoryProcessor`
 
     # ItemList::__init__ overview
@@ -6982,11 +7105,12 @@
 
     # overview
     - `SplitData` is just a storage to store a pair of 
-      training & validation data each of which is a `Dataset` instance
+      training & validation data each of which is an instance of
+      `Dataset` 
 
     # split_by_func detail
     - `SplitData::split_by_func` is a factory method to create a
-      `SplitData` instance out of a `ItemList` subclass instance
+      `SplitData` instance out of an `ItemList` subclass instance
 
     - `split_by_func` is a global function previously defined, 
         which returns two lists created out of one list
@@ -7079,7 +7203,7 @@
 
     #+END_SRC
 
-*** Processor, CategoryProcessor
+*** TODO Processor, CategoryProcessor
 
     #+BEGIN_SRC python
       #export
@@ -7103,8 +7227,13 @@
           def deproc1(self, idx): return self.vocab[idx]
     #+END_SRC
 
-    # CategoryProcessor overivew
-    - `CategoryProcessor` "numer-ify" string labels, 
+    # Processor overview
+    - [ ] what's the point of defining `Processor` class
+      who has a single method which just returns the passed 
+      argument
+
+    # CategoryProcessor::__call__() overivew
+    - `__call()__` "numer-ify" string labels, 
       and thanks to `_call__` method, it can be used as
 
     #+BEGIN_SRC python
@@ -7237,7 +7366,7 @@
 
         #+END_SRC
 
-        # DataSet
+        # Dataset
         #+BEGIN_SRC python
           #export
           class Dataset():
@@ -7282,10 +7411,24 @@
     - `_label_by_func(il, f)` will be `y` for `LabeledData::__init__`
 
     # `label_by_func` (global function) overview              
+    - `label_by_func` accepts `SplitData` instance, 
+      which is a pair of instances of `ItemList` (or its subclass),
+      and out of each instance of `ItemList` (or its subclass), 
+      it creates `LabeledData` instance where
+      - `self.x` is obtained by processing
+        the instance of `ItemList` (or its subclass) by `proc_x`
+      
+      - `self.y` is obtained by first creating labels
+        making use of `f` and applying `proc_y`
+
+      and pair up the two `LabeledData` instances as
+      a new `SplitData` instance
+        
+
     - a global function `label_fy_func` is a factory method
       to create a `SplitData` instance from the original
-      `SplitData` instance by applying LabeledData::label_fy_func to 
-      `.train` & `.valid` of the original `SplitData` instance
+      `SplitData` instance by applying LabeledData::label_fy_func 
+      to `.train` & `.valid` of the original `SplitData` instance
 
 *** Putting SplitData & LabeledData & CategoryProcessor altogether
 
@@ -9238,7 +9381,7 @@
       that is, after calling x.cuda(), we would like to
       have a batch of image without applying any transform yet.
 
-    - For that purpose, we need to store images in `DataSet` 
+    - For that purpose, we need to store images in `Dataset` 
       instead of `ImageItemList` when passing to `DataLoader` object
       since otherwise `ImageItemList` would do transform on
       creating a batch before we move a batch to GPU
@@ -9430,7 +9573,11 @@
 
     - `unsqueeze`
 
-    - `reduce_loss`
+    - `reduce_loss` is expected to be used from inside 
+      `loss_func` defined on `MixUp` class to reduce
+      the loss calculated by `loss_func` method of `MixUp` 
+      in the same way as the original loss function 
+      for the model
 
 *** MixUp
 
@@ -9563,9 +9710,9 @@
       a batch of mixed up images to `xb` property  of the `Learner` instance
 
     # loss_func overview
-    - `loss_func` is for using the loss function for the model
-      with its reduction mode none only during calculating
-      the loss for mixed data.
+    - `loss_func` is for using  the loss function for the model
+      making its reduction mode none temporarily only 
+      during calculating the loss for mixed data.
 
     - since the values of the weight `t` & `1-t` vary
       across a batch of mixed data, we do not want the loss function
@@ -9607,6 +9754,9 @@
           return Learner(model, data, loss_func, lr=lr, cb_funcs=cb_funcs, opt_func=opt_func)
     #+END_SRC
 
+    - get_learner ver2 uses `optim.SGD` as the default for `opt_func` 
+      instead of home made `sgd_opt`
+
 *** what is Label smoothing
     - label smoothing is technique to handle data with noisy label.
       with this technique, we can skip all the cleaning task
@@ -9628,6 +9778,7 @@
               return lin_comb(loss/c, nll, self.ε)
     #+END_SRC
 
+    # LabelSmoothingCrossEntropy overview
     - `LabelSmoothing` works well with MixUp and substitutes
       the calculation of cross-entropy loss for the label of
       `base` iamge and label of `mixing-up` image.
@@ -9647,31 +9798,79 @@
       two terms, it is ok to take the average over the batch
       independently and add them up together in the end.
 
-    - `c` is number of the labels
+    # forward detail
+    - `c` is the number of the labels
+    - `output` is a rank2 tensor of torch.Size([<batch size>, <classes>])
+      like torch.Size([64,10])
 
-    - `-log_preds` is a rank2 tensor.
+    - `F.log_softmax` is from pytorch, and calculate 
+      the soft-maxed-log probatilities
+      https://pytorch.org/docs/master/nn.functional.html#torch.nn.functional.log_softmax
+      https://pytorch.org/docs/master/generated/torch.nn.LogSoftmax.html#torch.nn.LogSoftmax
+
+    - since we would like to apply softmax across the probabilities
+      for the classes, we pass `dim=-1` to `F.log_softmax`
+
+    - `log_preds` returned by `F.log_softmax` contains 
+      a rank2 tensor where
       - each row corresponds to a single image in a batch
-      - each row contains the cros entropies for corresponding labels
-
-    - `loss` is sum of cross entropies
+      - each row contains the soft-maxed-log probatilities
         
-    - `log_preds.sum(dim=-1)` is a rank1 tensor
-      with each row containing the sum of the cross-entropies 
-      for the labels
+    - `-log_preds.sum(dim=-1)` calculate the sum of 
+      the soft-maxed log probabilities for each entry of a batch
 
-    - `reduce_loss(-log_preds.sum(dim=-1), self.reduction)`
-      takes the average (over a batch) of the sum of the
-      cross-entropies, which corresponds to taking the average
-      over a batch for the 2nd term of the definition of
-      the loss for `LabelSmoothing`
+    - `reduce_loss` is as below and used to reduce
+      batch of the sum of the soft-maxed log probabilities
+      by the method  specified by `self.reduction` (='mean')
+
+      #+BEGIN_SRC python
+          def reduce_loss(loss, reduction='mean'):
+              return loss.mean() if reduction=='mean' else loss.sum() if reduction=='sum' else loss        
+      #+END_SRC
+
+    - `loss` looks like
+
+     [   { (-logP1_1) + (-logP1_2) + ... + (-logP1_c) }
+      +  { (-logP2_1) + (-logP2_2) + ... + (-logP2_c) } 
+      +  ...
+      +  { (-logP64_1) + (-logP64_2) + ... + (-logP64_c) } ] / 64
+
+    # - `reduce_loss(-log_preds.sum(dim=-1), self.reduction)`
+    #   takes the average (over a batch) of the sum of the
+    #   cross-entropies, which corresponds to taking the average
+    #   over a batch for the 2nd term of the definition of
+    #   the loss for `LabelSmoothing`
+
+    - `F.nll_loss` is from pytorch, and calculate
+      a batch of cross entropy losses from a batch of
+      soft-maxed log probabilities, and reduce it 
+      by the method specified by `self.reduce` (=mean)
       
+      https://pytorch.org/cppdocs/api/function_namespacetorch_1_1nn_1_1functional_1a184d5fa95f2d4ba36538f3da6b10a7be.html
+      https://pytorch.org/docs/stable/generated/torch.nn.NLLLoss.html
 
-    - `F.nll_loss(log_preds, target, reduction=self.reduction)` 
-      calculates cross-entropy LOSS for each row, and then
-      takes the average of the cross-entropy losses over the batch
+    - `nll` looks like
+      [   (-logP1_3) 
+        + (-logP2_7)
+        + ...
+        + (-logP64_5) ] / 64
+      
+    - "加重平均の不等式"
 
-    - 
+    - `lin_comb(loss/c, nll, self.ε)`　returns 
 
+  ε/c[  { (-logP1_1) + (-logP1_2) + ... + (-logP1_c) }
+      +  { (-logP2_1) + (-logP2_2) + ... + (-logP2_c) } 
+      +  ...
+      +  { (-logP64_1) + (-logP64_2) + ... + (-logP64_c) } ] / 64
+
++
+     
+(1-ε)[ (-logP1_3) 
+      + (-logP2_7)
+      + ...
+      + (-logP64_5) ] / 64
+      
 ** 10c_fp16.ipynb
 *** imports
 
@@ -10442,6 +10641,48 @@
 
     #+END_SRC
 
+    # cnn_learner overview
+
+
+    # cnn_learner detail
+    - `arch` is for example, `arch = partial(xresnet34, c_out=10)`
+      where `xresnet34` is 
+      
+    #+BEGIN_SRC python
+      def xresnet34 (**kwargs): return XResNet.create(1, [3, 4,  6, 3], **kwargs)
+
+      class XResNet(nn.Sequential):
+          @classmethod
+          def create(cls, expansion, layers, c_in=3, c_out=1000):
+              nfs = [c_in, (c_in+1)*8, 64, 64]
+              stem = [conv_layer(nfs[i], nfs[i+1], stride=2 if i==0 else 1)
+                  for i in range(3)]
+
+              nfs = [64//expansion,64,128,256,512]
+              res_layers = [cls._make_layer(expansion, nfs[i], nfs[i+1],
+                                            n_blocks=l, stride=1 if i==0 else 2)
+                        for i,l in enumerate(layers)]
+              res = cls(
+                  ,*stem,
+                  nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+                  ,*res_layers,
+                  nn.AdaptiveAvgPool2d(1), Flatten(),
+                  nn.Linear(nfs[-1]*expansion, c_out),
+              )
+              init_cnn(res)
+              return res
+
+          @staticmethod
+          def _make_layer(expansion, ni, nf, n_blocks, stride):
+              return nn.Sequential(
+                  ,*[ResBlock(expansion, ni if i==0 else nf, nf, stride if i==0 else 1)
+                    for i in range(n_blocks)])
+
+    #+END_SRC
+
+
+
+
 ** 11a_transfer_learning.ipynb
 *** imports
 
@@ -10688,6 +10929,7 @@
                   ParamScheduler('mom', sched_mom)]
     #+END_SRC
 
+
 ** 12_text.ipynb
 *** imports
 
@@ -10788,6 +11030,96 @@
               return i
     #+END_SRC
 
+    # TextList::from_files overview
+    - `from_files` returns `TextList` instance with
+      `self.items` being a list of file paths (`Path` instances)
+      `self.path` being the passed `path`
+
+    # TextList::from_files detail
+    - `get_files` is as below and it returns a list of file paths
+      (`Path` instances)
+
+       #+BEGIN_SRC python
+         #export
+         def get_files(path, extensions=None, recurse=False, include=None):
+             path = Path(path)
+             extensions = setify(extensions)
+             extensions = {e.lower() for e in extensions}
+             if recurse:
+                 res = []
+                 for i,(p,d,f) in enumerate(os.walk(path)): # returns (dirpath, dirnames, filenames)
+                     if include is not None and i==0: d[:] = [o for o in d if o in include]
+                     else:                            d[:] = [o for o in d if not o.startswith('.')]
+                     res += _get_files(p, f, extensions)
+                 return res
+             else:
+                 f = [o.name for o in os.scandir(path) if o.is_file()]
+                 return _get_files(path, f, extensions)
+        #+END_SRC
+
+    - `cls(get_files(...), path, **kwargs)` call `__init__` of
+      `ItemList` which is as below
+
+      #+BEGIN_SRC python
+        class ItemList(ListContainer):
+            def __init__(self, items, path='.', tfms=None):
+                super().__init__(items)
+                self.path,self.tfms = Path(path),tfms
+
+
+        class ListContainer():
+            def __init__(self, items): self.items = listify(items)
+      #+END_SRC
+
+*** default_pre_rules, default_post_rules
+
+    #+BEGIN_SRC python
+      #export
+      #special tokens
+      UNK, PAD, BOS, EOS, TK_REP, TK_WREP, TK_UP, TK_MAJ = "xxunk xxpad xxbos xxeos xxrep xxwrep xxup xxmaj".split()
+
+      def sub_br(t):
+          "Replaces the <br /> by \n"
+          re_br = re.compile(r'<\s*br\s*/?>', re.IGNORECASE)
+          return re_br.sub("\n", t)
+
+      def spec_add_spaces(t):
+          "Add spaces around / and #"
+          return re.sub(r'([/#])', r' \1 ', t)
+
+      def rm_useless_spaces(t):
+          "Remove multiple spaces"
+          return re.sub(' {2,}', ' ', t)
+
+      def replace_rep(t):
+          "Replace repetitions at the character level: cccc -> TK_REP 4 c"
+          def _replace_rep(m:Collection[str]) -> str:
+              c,cc = m.groups()
+              return f' {TK_REP} {len(cc)+1} {c} '
+          re_rep = re.compile(r'(\S)(\1{3,})')
+          return re_rep.sub(_replace_rep, t)
+    
+      def replace_wrep(t):
+          "Replace word repetitions: word word word -> TK_WREP 3 word"
+          def _replace_wrep(m:Collection[str]) -> str:
+              c,cc = m.groups()
+              return f' {TK_WREP} {len(cc.split())+1} {c} '
+          re_wrep = re.compile(r'(\b\w+\W+)(\1{3,})')
+          return re_wrep.sub(_replace_wrep, t)
+
+      def fixup_text(x):
+          "Various messy things we've seen in documents"
+          re1 = re.compile(r'  +')
+          x = x.replace('#39;', "'").replace('amp;', '&').replace('#146;', "'").replace(
+              'nbsp;', ' ').replace('#36;', '$').replace('\\n', "\n").replace('quot;', "'").replace(
+              '<br />', "\n").replace('\\"', '"').replace('<unk>',UNK).replace(' @.@ ','.').replace(
+              ' @-@ ','-').replace('\\', ' \\ ')
+          return re1.sub(' ', html.unescape(x))
+    
+      default_pre_rules = [fixup_text, replace_rep, replace_wrep, spec_add_spaces, rm_useless_spaces, sub_br]
+      default_spec_tok = [UNK, PAD, BOS, EOS, TK_REP, TK_WREP, TK_UP, TK_MAJ]
+    #+END_SRC
+
 *** replace_all_caps, deal_caps, add_eos_bos
 
     #+BEGIN_SRC python
@@ -10831,93 +11163,162 @@
 
 *** TokenizeProcessor
 
-#+BEGIN_SRC python
-  #export
-  class TokenizeProcessor(Processor):
-      def __init__(self, lang="en", chunksize=2000, pre_rules=None, post_rules=None, max_workers=4): 
-          self.chunksize,self.max_workers = chunksize,max_workers
-          self.tokenizer = spacy.blank(lang).tokenizer
-          for w in default_spec_tok:
-              self.tokenizer.add_special_case(w, [{ORTH: w}])
-          self.pre_rules  = default_pre_rules  if pre_rules  is None else pre_rules
-          self.post_rules = default_post_rules if post_rules is None else post_rules
+    #+BEGIN_SRC python
+      #export
+      class TokenizeProcessor(Processor):
+          def __init__(self, lang="en", chunksize=2000, pre_rules=None, post_rules=None, max_workers=4): 
+              self.chunksize,self.max_workers = chunksize,max_workers
+              self.tokenizer = spacy.blank(lang).tokenizer
+              for w in default_spec_tok:
+                  self.tokenizer.add_special_case(w, [{ORTH: w}])
+              self.pre_rules  = default_pre_rules  if pre_rules  is None else pre_rules
+              self.post_rules = default_post_rules if post_rules is None else post_rules
 
-      def proc_chunk(self, args):
-          i,chunk = args
-          chunk = [compose(t, self.pre_rules) for t in chunk]
-          docs = [[d.text for d in doc] for doc in self.tokenizer.pipe(chunk)]
-          docs = [compose(t, self.post_rules) for t in docs]
-          return docs
+          def proc_chunk(self, args):
+              i,chunk = args
+              chunk = [compose(t, self.pre_rules) for t in chunk]
+              docs = [[d.text for d in doc] for doc in self.tokenizer.pipe(chunk)]
+              docs = [compose(t, self.post_rules) for t in docs]
+              return docs
 
-      def __call__(self, items): 
-          toks = []
-          if isinstance(items[0], Path): items = [read_file(i) for i in items]
-          chunks = [items[i: i+self.chunksize] for i in (range(0, len(items), self.chunksize))]
-          toks = parallel(self.proc_chunk, chunks, max_workers=self.max_workers)
-          return sum(toks, [])
-      
-      def proc1(self, item): return self.proc_chunk([item])[0]
-      
-      def deprocess(self, toks): return [self.deproc1(tok) for tok in toks]
-      def deproc1(self, tok):    return " ".join(tok)
-#+END_SRC
+          def __call__(self, items): 
+              toks = []
+              if isinstance(items[0], Path): items = [read_file(i) for i in items]
+              chunks = [items[i: i+self.chunksize] for i in (range(0, len(items), self.chunksize))]
+              toks = parallel(self.proc_chunk, chunks, max_workers=self.max_workers)
+              return sum(toks, [])
+
+          def proc1(self, item): return self.proc_chunk([item])[0]
+
+          def deprocess(self, toks): return [self.deproc1(tok) for tok in toks]
+          def deproc1(self, tok):    return " ".join(tok)
+    #+END_SRC
+
+
+    # TokenizeProcessor::proc_chunk overview
+    - `proc_chunk` accepts a list of texts,
+      and retunrs a list of lists of tokens,
+      each of which corresponding to 
+      a single text in the passed list of texts
+
+    # TokenizeProcessor::proc_chunk detail
+    - `chunk` is a group of texts (a list of texts)
+    - `self.pre_rules` defaults to be `default_post_rules` if not specified
+    - `self.tokenizer` is `spacy.blank(lang).tokenizer`
+    - `doc` is a tokenized text
+    - `d` is a single token contained in `doc`
+    - `docs` is a list of lists of tokens
+
+    # TokenizeProcessor::proc_chunk detail
+
+
+    # TokenizeProcessor::__call__ overview
+    - `__call__` accepts a giant list of text file paths,
+      and turn it into a giant list of texts,
+      then divide it into groups, each of which is a list of texts, 
+      and for each group, apply `proc_chunk` making
+      use of `parallel`, and merge the results in the end
+
+    # TokenizeProcessor::__call__ detail
+    - `items` in the arguments is a list of file paths 
+      (`Path` instances)
+
+    - `items` will be a list of texts
+
+    - `for i in (range(0, len(items), self.chunksize))` 
+      means "grab integers from 0 to `len(items)`
+      incrementing by `self.chunksize` at each step
+
+    - `chunks` is a list of groups of texts each of which
+      contains `self.chunksize` texts
 
 *** NumericalizeProcessor
-#+BEGIN_SRC python
-  #export
-  import collections
 
-  class NumericalizeProcessor(Processor):
-      def __init__(self, vocab=None, max_vocab=60000, min_freq=2): 
-          self.vocab,self.max_vocab,self.min_freq = vocab,max_vocab,min_freq
-      
-      def __call__(self, items):
-          #The vocab is defined on the first use.
-          if self.vocab is None:
-              freq = Counter(p for o in items for p in o)
-              self.vocab = [o for o,c in freq.most_common(self.max_vocab) if c >= self.min_freq]
-              for o in reversed(default_spec_tok):
-                  if o in self.vocab: self.vocab.remove(o)
-                  self.vocab.insert(0, o)
-          if getattr(self, 'otoi', None) is None:
-              self.otoi = collections.defaultdict(int,{v:k for k,v in enumerate(self.vocab)}) 
-          return [self.proc1(o) for o in items]
-      def proc1(self, item):  return [self.otoi[o] for o in item]
-      
-      def deprocess(self, idxs):
-          assert self.vocab is not None
-          return [self.deproc1(idx) for idx in idxs]
-      def deproc1(self, idx): return [self.vocab[i] for i in idx]
-#+END_SRC
+    #+BEGIN_SRC python
+      #export
+      import collections
+
+      class NumericalizeProcessor(Processor):
+          def __init__(self, vocab=None, max_vocab=60000, min_freq=2): 
+              self.vocab,self.max_vocab,self.min_freq = vocab,max_vocab,min_freq
+
+          def __call__(self, items):
+              #The vocab is defined on the first use.
+              if self.vocab is None:
+                  freq = Counter(p for o in items for p in o)
+                  self.vocab = [o for o,c in freq.most_common(self.max_vocab) if c >= self.min_freq]
+                  for o in reversed(default_spec_tok):
+                      if o in self.vocab: self.vocab.remove(o)
+                      self.vocab.insert(0, o)
+              if getattr(self, 'otoi', None) is None:
+                  self.otoi = collections.defaultdict(int,{v:k for k,v in enumerate(self.vocab)}) 
+              return [self.proc1(o) for o in items]
+          def proc1(self, item):  return [self.otoi[o] for o in item]
+
+          def deprocess(self, idxs):
+              assert self.vocab is not None
+              return [self.deproc1(idx) for idx in idxs]
+          def deproc1(self, idx): return [self.vocab[i] for i in idx]
+    #+END_SRC
+
+    # __call__ overview
+    - `__call__` accepts a list of lists of tokens,
+      each of which corresponds to a single text,
+      and returns a list of lits of numbers
+
+    # __call__ detail
+    - `items` is a list of lists of tokens
 
 *** using TokenizeProcessor & NumericalizeProcessor creating LabeledData
 
     #+BEGIN_SRC python
+      path = datasets.untar_data(datasets.URLs.IMDB)
+
+      il = TextList.from_files(path, include=['train', 'test', 'unsup'])
+
+      sd = SplitData.split_by_func(il, partial(random_splitter, p_valid=0.1))
+
+      proc_tok,proc_num = TokenizeProcessor(max_workers=8),NumericalizeProcessor()
+
       %time ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
     #+END_SRC
 
-*** FOR language modeling, how to create batches from documents
+*** [language modeling], how to create batches from documents
     - for example, batch-size=6, bptt=5
+      (keep in mind that batch-size is how many of
+      the things a single batch contains)
 
     - FOR language modeling, we concatnate the whole documents
       into single giant document,
 
-    - then create a grid with 
-      height = batch-size = 6, 
-      width = Math.floor(length//height)
+    - then create a matrix with 
+      height = batch-size = 6
+      width_giant = Math.floor(length//height)
       
-    - store the single giant document in the grid
+    - store the single giant document in the matrix,
+      and then group cells to form a little bit bigger cell
+      so that each bigger cell contains bptt(=5) small cells
 
-      | xxbos | \n | xxmaj | in | this | noteook | , | we | ... |
-      | ...   |    |       |    |      |         |   |    |     |
-      |       |    |       |    |      |         |   |    |     |
-      |       |    |       |    |      |         |   |    |     |
-      |       |    |       |    |      |         |   |    |     |
-      |       |    |       |    |      |         |   |    |     |
+      | batch1 |    |       |    |      | batch2  |   |    |     |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
+      | xxbos  | \n | xxmaj | in | this | noteook | , | we | ... |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
+      | ...    |    |       |    |      |         |   |    |     |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
+      |        |    |       |    |      |         |   |    |     |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
+      |        |    |       |    |      |         |   |    |     |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
+      |        |    |       |    |      |         |   |    |     |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
+      |        |    |       |    |      |         |   |    |     |   |
+      |--------+----+-------+----+------+---------+---+----+-----+---|
 
-    - slice the grid into smaller grids with width=bptt(=5)
+    - each column consisting of 6(=batch-size) bigger cells
+      is a single batch
 
-    - each small grid is the batch.
+    - the NUMBER of the batches is 
+      Math.floor(length//batch-size) / bptt
 
 *** LM_PreLoader (LM_Dataset)
 
@@ -10945,36 +11346,43 @@
     #+END_SRC
 
     # an overview of LM_PreLoader
-    - `LM_PreLoader` is a data set similar to `DataSet`,
-      which will be passed to `DataLoader` later.
+    # - `LM_PreLoader` is a data set similar to `Dataset`,
+    #   which will be passed to `DataLoader` later.
 
-    - to understand the behavior of `LM_PreLoader`, imagine
-      a grid with the number of its row&column equal to
-      `bs` & `total_len/bs/bptt`
-      (for simplicity, suppose `total_len/bs/bptt` is an integer)
+    # - to understand the behavior of `LM_PreLoader`, imagine
+    #   a grid with the number of its row&column equal to
+    #   `bs` & `total_len/bs/bptt`
+    #   (for simplicity, suppose `total_len/bs/bptt` is an integer)
       
-    - each cell of the grid is an element that `LM_PreLoader`
-      returns, and is a list which contains `bptt` numericalized
-      words.
+    # - each cell of the grid is an element that `LM_PreLoader`
+    #   returns, and is a list which contains `bptt` numericalized
+    #   words.
 
-    - for  some number `i`, it will determine the indexes for
-      row & columns such that for consecuitive numbers 
-      it returns two consecuitive cells in the same column
+    # - for  some number `i`, it will determine the indexes for
+    #   row & columns such that for consecuitive numbers 
+    #   it returns two consecuitive cells in the same column
 
-    - as the label, `LM_PreLoader` returns a list
-      of the elements that are contained in the
-      the 'cell' when it is shifted to the right by 1
+    # - as the label, `LM_PreLoader` returns a list
+    #   of the elements that are contained in the
+    #   the 'cell' when it is shifted to the right by 1
 
-    # __init__
+    # LM_PreLoader overview
+    - `LM_PreLoader` is equivalent of `Dataset` for language modeling
+
+    # __init__ detail
     - `data` will be an instance of `LabeledData` instance
-      that contains a list of texts and a list of dummy labels
+      that contains a list of list of numerified tokens
+      each of which corresponds to a single text
 
-    - `total_len` is the total length of all the texts 
-      contained in `data`
+    - `total_len` is same as the sum of the number of the tokens
+      for each text
 
     - `n_batch` is the maximum integer less than `total_len/bs`
 
-    # batchify
+    # batchify detail
+    - `texts` is a list of lists of numerified tokens
+      each of which corresponds to a single text
+
     - `torch.cat` and `tensor(t)` works as below
 
       #+BEGIN_SRC python
@@ -10991,7 +11399,7 @@
 
     - `stream = torch.cat([tensor(t) for t in texts])` creates
       a huge tensor made by concatnating all the individual
-      numericalized texts in `data`
+      list of numericalized tokens
 
     - `stream[:self.n_batch * self.bs]` grabs the elements 
       up to `self.n_batch * self.bs`, and throw away the remaining.
@@ -11000,23 +11408,53 @@
       into a rectangular shaped tensor whose 'height' is `self.bs`,
       and 'width' is `n_batch`
 
-    # __getitem__
-    - recall the explanation of how `LM_PreLoader` behaves above.
+    # __getitem__ overview
+    - `__getitem__` accepts an index (=`idx`) and returns
+      a pair of data and its label, which will be feed into
+      a batch
 
-    - `__getitem__` chooses the indexes for 'row' & 'column'
-      of the grid, and returns the 'cell' (a list)
+    - because an instance of `LM_PreLoader` will be
+      fed into a `DataLoader` instance, 
+      `__getitem__` should behave in the same way as
+      that of `Dataset`
 
-    - the index for the row of the 'grid' is determined by
+    - in concrete, `__getitem__` should return data and its label 
+      in such a way that for some value "i", 
+      `__getitem__(i)` and `__getitem__(i+1)` 
+      correspond to adjacent elements in a batch
+
+    - to imagine how it works, imagine the "matrix"
+      that `self.batched_data` forms
+      (the matrix is depicted in the section above;
+      "FOR language modeling, how to create batches from documents")
+
+    - in terms of the "matrix", 
+      `__getitem__(i)` and `__getitem__(i+1)` returns
+      cells vertically adjacent
+
+    - as the value of `idx` increments, `__getitem__`
+      go through the "cells" of the "matrix" in the following manner
+      
+      | 1 | 5 |  9 | 
+      | 2 | 6 | 10 | 
+      | 3 | 7 | 11 | 
+      | 4 | 8 | 12 | 
+
+    # __getitem__ detail
+    - `idx` is an integer between 0 and `total_len/bptt`
+      (= number of the cells in the "matrix")
+
+    - the index for the row of the "matrix" is determined by
       `idx % bs`
 
-    - the index for the column of the 'grid' is determined by
+    - the index for the column of the "matrix" is determined by
       `idx//bs`
 
     - now, we construct the corresponding cell (a list)
 
     - each 'cell' is a list of length `bptt`, so for 
       a cell whose index is (i, j), the cell contains
-      (bptt*j)-th element up-to&not including (bptt*j+bptt)-th 
+      (bptt*j)-th element up-to&not-including (bptt*j+bptt)-th 
       element in `batched_data[i]`
 
     - the label for the 'cell' will be elements contained
@@ -11027,8 +11465,8 @@
       in the label will be 1 less than `bptt`, 
       but python array indexing [l:l+m] works fine even when
       the array has less than `m` elements
-
 *** get_lm_dls, lm_databunchify
+
 
     #+BEGIN_SRC python
       #export
@@ -11040,14 +11478,21 @@
           return DataBunch(*get_lm_dls(sd.train, sd.valid, bs, bptt, **kwargs))
     #+END_SRC
 
-*** FOR language modeling, create data loader
+*** [language modeling], create data loader
 
     #+BEGIN_SRC python
+      path = datasets.untar_data(datasets.URLs.IMDB)
+
+      il = TextList.from_files(path, include=['train', 'test', 'unsup'])
+
+      sd = SplitData.split_by_func(il, partial(random_splitter, p_valid=0.1))
+      %time ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
+
       bs,bptt = 64,70
       data = lm_databunchify(ll, bs, bptt)
     #+END_SRC
 
-*** FOR classification, how to create batches
+*** [classification], how to create batches
     - note that for classification, we create batches
       in a completely different way from that for
       language modeling
@@ -11055,17 +11500,27 @@
     - in concrete, for classification, each batch
       contains a group of documents whereas 
       for language modeling, a batch contains
-      a list of numericalized words
+      lists of numericalized tokens
 
-    - for text classification, batches has different 'width'
+    - for text classification, batches have different 'width'
       where 'width' is the length of the longest document
-      in the batch
+      in a batch
 
     - each batch is constructed so that it contains 
       documents of about the same length.
 
     - the first batch contains the longest documents
       and the last batch conntains the shortest documents
+
+*** [classification], create LabeledData
+
+    #+BEGIN_SRC python
+      path = datasets.untar_data(datasets.URLs.IMDB)
+
+      il = TextList.from_files(path, include=['train', 'test'])
+      sd = SplitData.split_by_func(il, partial(grandparent_splitter, valid_name='test'))
+      ll = label_by_func(sd, parent_labeler, proc_x = [proc_tok, proc_num], proc_y=proc_cat)
+    #+END_SRC
 
 *** SortSampler
 
@@ -11080,6 +11535,7 @@
               return iter(sorted(list(range(len(self.data_source))), key=self.key, reverse=True))
     #+END_SRC
 
+    # SortSampler overview
     - NOTE that `Sampler` is from PyTorch, 
       and not 'home-made' `Sampler`
 
@@ -11088,21 +11544,36 @@
 
     - `SortSampler` is for validation set
 
-    - `range(len(self.data_source))` returns a list containing
-      the indexes of `data_source`
+    # __init__ detail
+    - `data_source` is a pytorch `DataLoader` instance
 
     - `key` is a function which extracts a key for sorting from
       each element of `list(range(len(self.data_source))`
-
-    - for example, `key` is as below, which returns the length
+      like below, which returns the length
       of a document at index `t` of `data_source`
 
       #+BEGIN_SRC python
         `key=lambda t: len(valid_ds.x[t]))`
       #+END_SRC
 
-    - `sorted` 
+    # __iter__ detail
+    - `list(range(len(self.data_source)))` returns a list
+      containing integer from 0 to `len(self.data_source)`-1
+      e.g. [0,1,2,3,4]
 
+    - `sorted` sorts iterables accepting optional parameters
+      `key` and `reverse`
+      https://docs.python.org/3/howto/sorting.html
+      https://www.programiz.com/python-programming/methods/built-in/sorted
+      https://realpython.com/python-sort/
+
+    - `iter()` returns an iterator object for the given object
+      such as list, sets, tuples, etc
+      https://docs.python.org/3/c-api/iter.html
+      https://docs.python.org/3.4/library/itertools.html?highlight=iter
+      https://www.programiz.com/python-programming/methods/built-in/iter
+      https://realpython.com/python-for-loop/
+      
 *** SortishSampler
 
     #+BEGIN_SRC python
@@ -11126,6 +11597,42 @@
               return iter(sorted_idx)
     #+END_SRC
 
+    # SortishSampler overview
+    - `SortishSampler` group texts of similar length with
+      some randomness  into batches, and then randomly 
+      permutes the batches, whereas with `SortSampler`, 
+      texts of similar length will be grouped into 
+      batches in a deterministic way.
+      
+    - `SortSampler` does this in the following way
+      - first randomly permute all the texts, 
+        and group them into mega batches,
+      - inside each mega batch, group
+        texts of similar length into mini batches
+      - randomly permutes the mini batches
+
+    - this way, what will be contained in a
+      mini batch of a certain lengths varies
+      depending on how to create mega batches
+
+    # __iter__() overview
+    - 
+
+    # __iter__() detail
+    - `data_source` is
+    - `megabatches` is a list of lists, each of which
+      is a "mega" list which contains bs*50 integers
+    - `sorted_idx` is created by first sorting each "mega" list
+      in `megabatches` according to `self.key`, and 
+      concatnating them to form a huge tensor
+    - `batch_idxs` is a tensor containing `len(batches)-2`
+      integers from 0 to len(batches)-3, corresponding to
+      all the batches other than the head and the tail
+      inside `batches` 
+    - `sorted_idx` is a tensor 
+    - `__iter__()` explicitly returns an iterator by
+      `returns iter(sorted_idx)`
+
 *** pad_collate
 
     #+BEGIN_SRC python
@@ -11139,24 +11646,28 @@
           return res, tensor([s[1] for s in samples])
     #+END_SRC
 
+    # pd_collate detail
     - `samples` is a list of tuples for creating a batch, 
-      each of which is a pair of (document, label),
+      each of which is a pair of (numericalized-text, label),
 
     - `res` is a rectangular shaped tensor (a rank2 tensor)
       which represents a batch
       - 'height'(=batch size) is len(samples)
       - 'width' is `max_len`
-      - i-th row will be later populated with the document in the
-        i-th element of `samples` & padding `pad_idx`
+      - i-th row will be later populated with the numericalized-text
+        in the i-th element of `samples` & padding `pad_idx`
 
     - `.long()` converts the elements in a tensor from float to integer
 
     - `pad_idx` is a scalar, and `+ pad_idx` adds `pad_idx` to
       all the elements of a tensor by broadcasting
+      (`res` will be initialized with 0s and padding)
 
-    - `res` is first filled with 0s and padding
+    - `enumerate` 
+      https://www.programiz.com/python-programming/methods/built-in/enumerate#:~:text=from%20enumerate()-,enumerate()%20method%20adds%20counter%20to%20an%20iterable%20and%20returns,and%20tuple()%20method%20respectively.
 
-    - `tensor([s[1] for s in samples])` is a tensor for the labels
+    - `tensor([s[1] for s in samples])` is the tensor representing
+      the labels
 
 *** creating DataLoader for training data for lauguage classification
 
@@ -11173,7 +11684,8 @@
       train_dl = DataLoader(ll.train, batch_size=bs, sampler=train_sampler, collate_fn=pad_collate)
     #+END_SRC
 
-    - 
+    - `key=lambda t: len(ll.train[int(t)][0])` returns
+      the length of a numericalized-text 
 
 *** get_clas_dls, clas_dls
 
@@ -11189,6 +11701,8 @@
           return DataBunch(*get_clas_dls(sd.train, sd.valid, bs, **kwargs))
     #+END_SRC
 
+    # get_clas_dls overview
+
     - note that `DataLoader` is PyTorch version, whose imeplementation
       is similar to 'home-made' `DataLoader` ver2,
 
@@ -11196,6 +11710,11 @@
       'home-made' version, and the usage is slightly different in that
       - need to specify batch size
       - samplers should be a function which returns a list of indexes
+
+    # get_clas_dls detail
+    - `train_ds`, `valid_ds` are `LabeledData` instances
+      which are already processed by `TokenizeProcessor`,
+      `NumericalizeProcessor`, `CategoryProcessor`
 
 ** 12a_awd_lstm.ipynb
 *** imports
@@ -11285,9 +11804,8 @@
 
 *** intuitive understanding of LSTM
     https://towardsdatascience.com/illustrated-guide-to-lstms-and-gru-s-a-step-by-step-explanation-44e9eb85bf21
-
 *** LSTMCell
-
+    
     #+BEGIN_SRC python
       class LSTMCell(nn.Module):
           def __init__(self, ni, nh):
@@ -12253,6 +12771,7 @@
       https://forums.fast.ai/t/which-format-is-better-for-pytorch-saved-model/5018/3
       https://stackoverflow.com/questions/42703500/best-way-to-save-a-trained-model-in-pytorch
 
+
 ** 12c_ulmfit.ipynb
 *** imports
 
@@ -12394,7 +12913,7 @@
       and the weight of the `LinearDecoder`
       of a language model
 
-*** [language modeling] update embedding matrix & vocas of the pretrained model
+*** [language modeling] update embedding matrix & vocabs of the pretrained model
 
     #+BEGIN_SRC python
       # 
@@ -12473,8 +12992,6 @@
 
       # LinearDecoder
       - m[1]
-
-
 
 *** [language modeling] train the pretrained language modeling with domain specific text data
 
@@ -13672,13 +14189,14 @@
     https://www.youtube.com/watch?v=ArPaAX_PhIs&list=PLkDaE6sCZn6Gl29AoE31iwdVwSG-KnDzF
 
 ** course5
+
+
 *** playlists
     https://www.youtube.com/watch?v=_i3aqgKVNQI&list=PLkDaE6sCZn6F6wUI9tvS_Gw1vaFAx6rd6
 
 * Yan LeCun lectures
   https://cds.nyu.edu/deep-learning/
   
-
 * misc resource    
 *** isntall pytorch on windows10
     # visual studio
@@ -13827,3 +14345,36 @@
 
   - pruning neural networks at initialization
     Why are we missing the mark?
+
+** how to read paper
+*** a
+    https://forums.fast.ai/t/how-to-read-research-papers-andrew-ng/66892
+
+* my strategy to understand a difficult thing
+** getting the big picture
+*** "black-boxing" & "white-boxing"
+    - try to understand the big picture
+      by "black-boxing" a hard to understand part
+      
+    - "black-boxing" means try to describe 
+      WHAT the hard-to-understand part does 
+
+    - only after getting the big picture,
+      go to the next step by "white-boxing"
+
+    - "white-boxing" means figuring out 
+      WHY the hard-to-understand part does what it does.
+
+** understand the detail
+*** make a progress little by little
+    - try to focus on one thing at a time, 
+      and don't try to proceed fast
+
+      
+
+*** know the reason why I cannot undrstand something
+    - do not know pre-requisite concepts 
+      => search for a resource explaining the pre-requisite concepts
+
+    - the way it explains it is not good 
+      => search for another reference explaining the thing
