@@ -12419,6 +12419,9 @@
       of `nn.LSTM`
       
     # WeightDropout::forward() summary
+    - `forward()` updates the parameters of `nn.LSTM`
+      and then delegates to `forward()` of 
+      the instance of `nn.LSTM`
 
     # WeightDropout::forward() detail
     - `self.setweights()` updates the parameters of
