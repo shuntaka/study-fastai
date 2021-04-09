@@ -1,3 +1,10 @@
+* things to study
+*** Andrew Ng lectures
+*** fast ai 2020
+*** matrix calculus
+*** Yan Lecun lectures
+*** ゼロから作るディープラーニング(フレームワーク編)
+
 * python (question)
 
 * python (understood)
@@ -230,7 +237,8 @@
     https://deeplizard.com/learn/video/kF2AlpykJGY
     https://www.kdnuggets.com/2020/06/fundamentals-pytorch.html
 *** stack
-    - Concatenates a sequence of tensors along a new dimension.
+    https://pytorch.org/docs/stable/generated/torch.stack.html
+    - Concatenates a list or tuple of tensors along a new dimension.
       All tensors need to be of the same size.
       (default for the dimension axis is dim=0)
  
@@ -244,7 +252,7 @@
         '''
       #+END_SRC
 
-      https://pytorch.org/docs/stable/generated/torch.stack.html
+
 *** squeeze
 
     # batch size=3
@@ -382,9 +390,51 @@
     - [ ] x.shape(16, -1) gives the same result as x.shape(16, 1)
       as `-1` means "whatever possible after specifying 16"
 
+*** unbind
+    https://pytorch.org/docs/stable/generated/torch.unbind.html
+    - `unbind` removes a tensor dimension
+
+      #+BEGIN_SRC python
+        # 64: batch size
+        # 70: length of the sequences in a single batch ()
+        # 300: embedding size of each embedding word vector in a batch
+
+        import torch
+        my_input = torch.randn(64, 70, 300)
+        my_input.size()
+        my_unbind = my_input.unbind(1)
+        type(my_unbind), len(my_unbind), my_unbind[0].size()
+
+        '''
+        (tuple, 70, torch.Size([64, 300]))
+        '''
+      #+END_SRC
 *** randperm
     https://pytorch.org/docs/stable/generated/torch.randperm.html
 
+
+*** nn.Parameter
+    https://pytorch.org/docs/stable/generated/torch.nn.parameter.Parameter.html
+    a special kind of tensor with a special property that
+    when added as an attribute of an instance of `nn.Module` 
+    or its subclass, it will automatically appears in 
+    the return value of `parameters()` method
+
+*** nn.Module::register_parameter
+    https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+    
+    signature:
+    register_parameter(name, param)
+
+    summary:
+    Adds a parameter to the module.
+    The parameter can be accessed as an attribute using given name.
+    
+
+    parameters:
+    - name (string) – name of the parameter. The parameter can be accessed from this module using the given name
+    - param (Parameter) – parameter to be added to the module.
+    
 
 *** how to move a model to GPU
     lesson10 1:43:20
@@ -990,7 +1040,7 @@
       it gets (mean, std) of (0, 1)
 
     - when devided by sqrt(m), (mean,std) will be (0, 1/sqrt(m) )
-
+      
       #+BEGIN_SRC python
         #memo
         # simplified kaiming init / he init
@@ -11825,35 +11875,91 @@
               return h, (h,c)
     #+END_SRC
 
-    # overview
-    - each single `LSTMCell` accepts
+    # LSTMCell::__init__() detail
+    - `ni` is number of the elements in a input vector
+    - `4*nh` in `self.ih=nn.Linear(ni,4*nh)` comes from the following;
+      - the output of the linear layer for input will be added to 
+        the output of the linear layer for hidden state
+      - the sum of the two outputs will be splitted into 4 pieces
+      - one of the 4 pieces will be multiplied to the previous 
+        cell state which has `nh` elements
+
+    # LSTMCell::forward() overview
+    - `LSTMCell` accepts
       - `input`
-      - `state` which is a comination of 
-        'hidden state' and 'cell state'
+      - `state` which consists of `h` & `c` where
+        h: hidden state, and c:cell state
 
-      and calculates 
-      - h: new hidden state
-      - c: new cell state
+        and calculates 
+        - h: new hidden state
+        - c: new cell state
 
-      and returns
-      - h
-      - (h,c)
+      and then returns a tuple which consists of
+      h & (h,c)
 
-    # forward
-    - `chunk(4,1)`
-      - ref: https://pytorch.org/docs/master/generated/torch.chunk.html
+    # LSTMCell::forward() detail
+    - `input` is a batch of word embedding vectors for i-th
+      position of a sequence, and it is a part of a batch
+      for the LSTM networks that contains the LSTMCells layers
 
-      - it splits an tensor into 4 chunks along the 2nd axis (along row)
+      # a batch for LSTMLayer
 
-    - `forgetgate*c`,  `ingate*cellgate` does 
-      element-wise multiplication between tensors
+      |     | 1st word vec | 2nd word vec | ... | 70th word vec |
+      |-----+--------------+--------------+-----+---------------|
+      |   1 |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      |   2 |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      | ... |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      |  64 |              |              |     |               |
+
+      # a batch for LSTMCell
+
+      |     | i-th word vec |
+      |-----+---------------|
+      |   1 |               |
+      |-----+---------------|
+      |   2 |               |
+      |-----+---------------|
+      | ... |               |
+      |-----+---------------|
+      |  64 |               |
+
+    - `state` is a tuple of (h,c)
+
+    - `h` is a hidden state
+
+    - `c` is a cell state
+
+    - `chunk(4,1)` splits a tensor into 4 chunks along `dim`=1
+
+      https://pytorch.org/docs/master/generated/torch.chunk.html
+
+    - `cellgate` is regulated version of the sum of 
+      (hidden activation for the current input) and (hidden activation for the previous hidden sate)
+      and will be used to update the previous cell state
+
+    - `forgetgate*c` corresponds to
+      "the parts of the previous cell state to keep"
+
+    - `ingate*cellgate` corresponds to "the parts of the 
+      sum of (hidden activation for the current input) and 
+      (hidden activation for the previous hidden sate)
+      to use for updating the previous cell state"
+
+    - `outgate * c.tanh` corresponds to that
+      the next hidden state is determined by
+      selecting a part of `c.tanh()`
+      (=regulated version of cell state) by 
+      multiplying `outgate`
 
     - the size of each variable is as follows;
       - the size of `input` is torch.Size([bs, ni]), 
         where `bs` is batch size, and `ni` is the 
         embedding size
 
-        |     | word1 vec         |
+        |     | 1st word vec      |
         |-----+-------------------|
         |   1 | (S1, S2,...,S300) |
         |-----+-------------------|
@@ -11882,9 +11988,7 @@
 
     - newly calculated `h` will be the output of each cell
 
-    - `state` is a pair of (h,c)
-    
-*** TODO LSTMLayer
+*** DONE LSTMLayer
 
     #+BEGIN_SRC python
       class LSTMLayer(nn.Module):
@@ -11901,63 +12005,45 @@
               return torch.stack(outputs, dim=1), state
     #+END_SRC
 
-    # overview
-    - `LSTMLayer` does below;
-      - records the history of hidden state(`out`) 
-        which is returned by each `cell`, and stack 
-        them together in the end.
+    # LSTMLayer::forward() summary
+    - `forward()` accepts 
+      - a batch of sequences of embedding word vectors
+      - initial state (=a pair of cell state and hidden state)
+      and 
+      returns
+      - a history of hidden states
+      - the final state (a pair of cell state and hidden state)
 
-      - keeps track of the latest state which is a combination of
-        hidden state & cell state and updated by every `cell` 
+    - `forward()` does;
+      - recursively applys 
+        `self.cell` (=`LSTMCell`) to `state` (=`(h,c)`) 
+        feeding `inputs[i]`
 
+      - record the history of `out`, corresponding to
+        `h` (=hidden state) inside `LSTMCell::forward()`
+        on `outputs`
+
+      - keep track of the latest `state`, corresponding to
+        `(h,c)` (=hidden state,cell state) 
+        inside `LSTMCell::forward()`
+
+
+    # LSTMLayer::forward() detail
     - `input` is a batch of sequences of embedding word vectors
 
-      |     | word1 vec | word2 vec | ... | word70 vec |
-      |-----+-----------+-----------+-----+------------|
-      |   1 |           |           |     |            |
-      |-----+-----------+-----------+-----+------------|
-      |   2 |           |           |     |            |
-      |-----+-----------+-----------+-----+------------|
-      | ... |           |           |     |            |
-      |-----+-----------+-----------+-----+------------|
-      |  64 |           |           |     |            |
-
-    - the shape of `outputs` is similar to `input`, and looks like
-      torch.Size([64, 70, 300]) where
-      - 64: batch size
-      - 70: the length of sequence
-      - 300: the 'width' of hidden state 
-
-    - the shape of `outputs` will be same when embedding size
-      is same as the 'width' of hidden state
-
-    # pytorch 
-    - `unbind`
-
-      #+BEGIN_SRC python
-        # 64: batch size
-        # 70: length of the sequences in a single batch ()
-        # 300: embedding size of each embedding word vector in a batch
-
-        import torch
-        my_input = torch.randn(64, 70, 300)
-        my_input.size()
-        my_unbind = my_input.unbind(1)
-        type(my_unbind), len(my_unbind), my_unbind[0].size()
-
-        '''
-        (tuple, 70, torch.Size([64, 300]))
-        '''
-      #+END_SRC
-
-
-    # forward
-    - `input` is a single batch of sequences of 
-      embedding word vectors
+      |     | 1st word vec | 2nd word vec | ... | 70th word vec |
+      |-----+--------------+--------------+-----+---------------|
+      |   1 |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      |   2 |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      | ... |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      |  64 |              |              |     |               |
 
     #+BEGIN_SRC python
       # 64: batch size
-      # 70: the length of a sequence
+      # 70: the length of a sequence (=bptt)
       # 300: width of embedding
 
 
@@ -11985,33 +12071,55 @@
       ]
     #+END_SRC
 
-    - `input.unbind(1)` splits a tensor into a tuple along the 
-      dim=1 (2nd axis), so each element in the tuple corresponds to
-      a bundle of embedding word vectors
-      (e.g. bundle of 64 embedding word vectors with embedding
-      size 300)
+    - `state` is the initial cell state
 
-      |     | word1 vec | word2 vec | word3 vec | ... | word70 vec |
-      |-----+-----------+-----------+-----------+-----+------------|
-      |   1 |           |           |           |     |            |
-      |-----+-----------+-----------+-----------+-----+------------|
-      |   2 |           |           |           |     |            |
-      |-----+-----------+-----------+-----------+-----+------------|
-      | ... |           |           |           |     |            |
-      |-----+-----------+-----------+-----------+-----+------------|
-      |  64 |           |           |           |     |            |
+    - `unbind` removes a tensor dimension and returns a tuple
+      #+BEGIN_SRC python
+        # 64: batch size
+        # 70: length of the sequences in a single batch ()
+        # 300: embedding size of each embedding word vector in a batch
+
+        import torch
+        my_input = torch.randn(64, 70, 300)
+        my_input.size()
+        my_unbind = my_input.unbind(1)
+        type(my_unbind), len(my_unbind), my_unbind[0].size()
+
+        '''
+        (tuple, 70, torch.Size([64, 300]))
+        '''
+      #+END_SRC
+
+    - `input.unbind(1)` splits a tensor into tuples along the dim=1, 
+      so each element in the tuple corresponds to
+      a batch of embedding word vectors for the ith words
+
+      # input.unbind(1) is as below
+
+      |     | 1st of tple  | 2nd of tuple | ... | 70th of tuple |
+      |-----+--------------+--------------+-----+---------------|
+      |     | 1st word vec | 2nd word vec | ... | 70th word vec |
+      |-----+--------------+--------------+-----+---------------|
+      |   1 |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      |   2 |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      | ... |              |              |     |               |
+      |-----+--------------+--------------+-----+---------------|
+      |  64 |              |              |     |               |
 
 
-    - the resulting TUPLE of `input.unbind(1)`
-    #+BEGIN_SRC python
+      # the tensor for input.unbind(1) 
+
+      #+BEGIN_SRC python
       (
-          # 1st words of the sequence
+          # a batch of 1st words of the sequence
           [S1_1_1, S1_1_2, ..., S1_1_300],
           [S2_1_1, S2_1_2, ..., S2_1_300],
           ...,
           [S64_1_1, S64_1_2, ..., S64_1_300],
 
-          # 2nd words of the sequence
+          # a batch of the 2nd words of the sequence
           [S1_2_1, S1_2_2, ..., S1_2_300],
           [S2_2_1, S2_2_2, ..., S2_2_300],
           ...,
@@ -12019,13 +12127,25 @@
 
           ...,
 
-          # 64th words of the sequence
+          # a batch of the 70th  words of the sequence
           [S1_70_1, S1_70_2, ..., S1_70_300],
           [S2_70_1, S2_70_2, ..., S2_70_300],
           ...,
           [S64_70_1, S64_70_2, ..., S64_70_300],    
       )
-    #+END_SRC
+      #+END_SRC
+
+    - `out` is a tuple of h & c (new hidden state & new cell state)
+
+    - the shape of `outputs` is similar to `input`, and looks like
+      torch.Size([64, 70, 300]) where
+      - 64: batch size
+      - 70: the length of sequence
+      - 300: the 'width' of hidden state 
+
+    - the shape of `outputs` will be same when embedding size
+      is same as the 'width' of hidden state
+
 
     - for each element of the tuples,
       `forward` calculates `out`, `state`, and record 
@@ -12068,13 +12188,65 @@
       the length of a sequence of embedding word vectors 
       in input
 
+*** nn.LSTM
     - [ ] ? 1:51:50 why will it be slow to use home made `LSTMLayer`
       - does GPU do special thing when executing a loop?
 
-*** nn.LSTM
+    - `nn.LSTMLayer` makes use of nvida cuda DNN, 
+      and runs faster than home-made LSTMLayer
+
     - `nn.LSTM::init` takes arguments `ni` & `nh`
       - `ni` specifies the 'width' of an embedding word vector
       - `nh` specifies the 'width' of a hidden state vector
+
+*** LSTMCell jit version
+
+    #+BEGIN_SRC python
+      class LSTMCell(jit.ScriptModule):
+          def __init__(self, ni, nh):
+              super().__init__()
+              self.ni = ni
+              self.nh = nh
+              self.w_ih = nn.Parameter(torch.randn(4 * nh, ni))
+              self.w_hh = nn.Parameter(torch.randn(4 * nh, nh))
+              self.bias_ih = nn.Parameter(torch.randn(4 * nh))
+              self.bias_hh = nn.Parameter(torch.randn(4 * nh))
+
+          @jit.script_method
+          def forward(self, input:Tensor, state:Tuple[Tensor, Tensor])->Tuple[Tensor, Tuple[Tensor, Tensor]]:
+              hx, cx = state
+              gates = (input @ self.w_ih.t() + self.bias_ih +
+                       hx @ self.w_hh.t() + self.bias_hh)
+              ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
+
+              ingate = torch.sigmoid(ingate)
+              forgetgate = torch.sigmoid(forgetgate)
+              cellgate = torch.tanh(cellgate)
+              outgate = torch.sigmoid(outgate)
+
+              cy = (forgetgate * cx) + (ingate * cellgate)
+              hy = outgate * torch.tanh(cy)
+
+              return hy, (hy, cy)
+    #+END_SRC
+
+*** LSTMLayer jit version
+
+    #+BEGIN_SRC python
+      class LSTMLayer(jit.ScriptModule):
+          def __init__(self, cell, *cell_args):
+              super().__init__()
+              self.cell = cell(*cell_args)
+
+          @jit.script_method
+          def forward(self, input:Tensor, state:Tuple[Tensor, Tensor])->Tuple[Tensor, Tuple[Tensor, Tensor]]:
+              inputs = input.unbind(1)
+              outputs = []
+              for i in range(len(inputs)):
+                  out, state = self.cell(inputs[i], state)
+                  outputs += [out]
+              return torch.stack(outputs, dim=1), state
+    #+END_SRC
 
 *** TODO dropout_mask
 
@@ -12084,14 +12256,24 @@
           return x.new(*sz).bernoulli_(1-p).div_(1-p)
     #+END_SRC
 
-    - `new` creates a tensor of the same type as `x`
+    # dropout_mask overview
+    - `dropout_mask` accepts any tensor and creates a 
+      new tensor of the same type as `x`, 
+      and creates a mask whose shape is `sz`
+
+    # dropout_mask detail
+    - `new` creates a tensor of the same type as `x`(an activation)
       whose size is (*sz)
       https://pytorch.org/docs/0.3.1/tensors.html?highlight=new#torch.Tensor.new
-      
 
-    - [ ] does std of an activation not change 
-      after applying the mask?
+    - `bernoulli_(1-p)` makes elements of the caller (`x`)
+      0 with the probability of `p`, 
+      and 1 with the probability of `1-p`
 
+    - [ ] `div_(1-p)` scales the elements of an activation
+      by a factor of `1-p` in order not to change the 
+      standard deviation of the activation
+     
 *** TODO RNNDropout
 
     #+BEGIN_SRC python
@@ -12107,26 +12289,31 @@
               return x * m
     #+END_SRC
 
-    # forward
+    # RNNDropout overview
     - `RNNDropout` applys dropout to either 
       - input: a batch of sequences of embedding word vectors
-      - output: a a batch of sequences of outputs
+      - output: a batch of sequences of outputs
 
     - so, `RNNDropout` should be applied after converting
       a batch of sequences of NUMERICALIZED words
       to a batch of sequences of embedding word vectors
 
-    - `forward` create `dropout_mask` instance 
-      whose dimension is `(x.size(0), 1, x.size(2))`
-      - `x.size(0)` is batch size
-      - `x.size(2)` is the embedding size 
+    # RNNDropout::forward() detail
+    - `x` is a batch of sequences of word embedding vectors
+    - `x.size(0)` is the batch size
+    - `x.size(2)` is the embedding size
 
-    - this way, `x * m` will be an tensor such that
+    # - `forward` creates `dropout_mask` instance 
+    #   whose dimension is `(x.size(0), 1, x.size(2))`
+    #   - `x.size(0)` is batch size
+    #   - `x.size(2)` is the embedding size 
+
+    - `x * m` will be an tensor such that
       the position of 0s within an word vector
       is same across a row of the sigle batch)
       (across an element of the single batch)
 
-       |     | word1      | word2      | ...        | word70     |
+       |     | 1st word   | 2nd word   | ...        | 70th word  |
        |-----+------------+------------+------------+------------|
        |   1 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 |
        |-----+------------+------------+------------+------------|
@@ -12139,7 +12326,7 @@
     - [ ] what the point of masking part of a word vector
       https://medium.com/@bingobee01/a-review-of-dropout-as-applied-to-rnns-72e79ecd5b7b
 
-*** WeightDropout
+*** TODO WeightDropout
 
     #+BEGIN_SRC python
       #export
@@ -12170,11 +12357,72 @@
                   return self.module.forward(*args)
     #+END_SRC
 
-    - WeightDropout applys the dropout to the weights
-      (not activations)
+    # WeightDropout overview
+    - `WeightDropout` is a wrapper for `nn.LSTM`, 
+      and will be registered to the DNN network
 
-    - `WeightDropout` receives a module, 
-      and calculates dropout-ed version of `forward` of the module
+    - it will be the responsibility of the instance of 
+      `WeightDropout` to update the parameters for
+      the linear layers of the instance of `nn.LSTM`,
+      so at the initialization, it clones the parameters
+      from the instance of `nn.LSTM` so that they will be
+      enumerated when calling `parameters()` on the instance
+      of `WeightDropout`
+     
+    # WeightDropout::__init__() detail
+    - `module` is an instance of `nn.LSTM`
+    - [ ] `w` is the hidden layer of `module` 
+      (="weight_hh_l0" attribute of `nn.LSTM` layer),
+      and is an instance of `nn.Parameter`
+
+      https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
+      https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
+
+    - `w.data` is a parameter tensor
+      https://pytorch.org/docs/stable/generated/torch.nn.parameter.Parameter.html
+
+    - `nn.Parameter(w.data)` creates a new instance of `nn.Parameter`
+
+    - `self.register_parameter` makes the above created new
+      instance of `nn.Parameter` as the parameters of
+      the instance of `WeightDropout` so that they appear
+      in the return value of `parameters()` method of the 
+      instance of `WeightDropout`
+      https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+
+    - `F.dropout(w, p=self.weight_p, training=False)`
+      returns `w` without applying any dropout
+      https://pytorch.org/docs/stable/nn.functional.html
+
+    - [ ] what's the point of
+      `self.module._parameters[layer] = F.dropout(w, p=self.weight_p, training=False)`
+      when we have 
+      `self.module._parameters[layer] = F.dropout(raw_w, p=self.weight_p, training=self.training)`
+
+    # WeightDropout::_setweights() summary
+    - `_setweights()` retrieves the latest values of 
+      the parameters which are updated as the parameters
+      of `WeightDropout` instance, and after applying dropout, 
+      updates the corresponding parameters of the instance
+      of `nn.LSTM`
+
+    # WeightDropout::_setweights() summary
+
+    # WeightDropout::_setweights() detail
+    - `raw_w` is the parameters corresponding to
+      the parameters of the linear layer of the
+      instance of `nn.LSTM`, which are stored on the
+      instance of `WeightDropout` and learned through training.
+
+    - `self.module._parameters[layer] = F.dropout(raw_w, p=self.weight_p, training=self.training)`
+      updates the parameters of the linear layer of the instance
+      of `nn.LSTM`
+      
+    # WeightDropout::forward() summary
+
+    # WeightDropout::forward() detail
+    - `self.setweights()` updates the parameters of
+      the linear layer of the instance of `nn.LSTM`
 
 *** EmbeddingDropout
 
