@@ -1,7 +1,8 @@
 * things to study
+*** auto grad
 *** Andrew Ng lectures
-*** fast ai 2020
 *** matrix calculus
+*** fast ai 2020
 *** Yan Lecun lectures
 *** ゼロから作るディープラーニング(フレームワーク編)
 
@@ -470,18 +471,22 @@
 
 ** BatchNorm
 *** why use moving average of batch mean & batch var for inference time
-    
     lesson10 1:42:00
+
+    => at the inference time, there is no batch,
+    since an input is not batched, so the best option
+    is to use the moving arerages
+
 *** why it is OK not fo define `backward` on `BatchNorm`
     # stack overflow
     https://stackoverflow.com/questions/49594858/how-does-pytorch-module-do-the-back-prop
-
 
     # my guess
     - `BatchNorm` inherits `backward` from `nn.Module`,
       which calls `backwrd` on all the `nn.Parameter` instance
       
 ** Dropout
+   https://medium.com/@bingobee01/a-review-of-dropout-as-applied-to-rnns-72e79ecd5b7b
 
 ** LSTM
 *** intuitive understanding of LSTM
@@ -507,7 +512,40 @@
         - Fw: Filter width
         - S: stride
       
-*** how do we determine the right kernel size for CNN?
+*** how to determine filter size (the "face size" of "金太郎飴")
+    https://course19.fast.ai/videos/?lesson=10&t=4120
+
+    - first, let's suppose the 1st conv layer is of
+      conv2d(1, 8, 3)
+
+    - so, below are "金太郎飴"
+      - depth: 1
+      - number: 8
+      - face size: 3
+
+    - just focus a (1x3x3) part of the entire input (1x28x28),
+      and what we get out of this part by calculating 
+      dot product with each of the 8 kernels
+
+    - we get a vector consisting of 8 elements
+
+    - this means, we barely reduce amount of information;
+      9=(1x3x3) to 8  (only 1 less)
+      which is a waste of computations
+
+    - as another example, think of imagenet, where input(3x28x28) has 3 channels
+      and the 1st layer often has 32 filters (kernels)
+
+    - if the kernel size is 3x3, since there are 32 kernels,
+      3x3x3 (=27) part of the input will be reduced into 32 numbers,
+      which results in not reducing the amount of the information the original input has
+
+    - on the other hand, if the kernel size is 7x7,
+      3x7x7 (=147) part of the input will be reduced into 32 numbers,
+      which is actually reducing the amount of the information.
+
+    - for the similar reson, we use 5 for the kernel size of 1st layer.
+      this way, the information is reduced from 25(1x5x5) to 8
 *** meaning of filters & channels
     - they are used interchangably?
 
@@ -7686,7 +7724,7 @@
     #+END_SRC
 
 
-     # get_cnn_layers ver3 overview
+     # get_cnn_layers ver3 summary
      - `get_cnn_layers` ver3 inserts a preceding 3 layers into 
        a cnn layer, for a better feature representation
 
@@ -7718,7 +7756,7 @@
        - think of 128*128*3 image where `c_in` = 3.
          For 3*3*3 kernel with stride 1,
          we have originally have roughly 128 groups of 3*3*3 cells
-         to each which the kernel is applied, and to produce less
+         to each of which the kernel is applied, and to produce less
          numberof the cells, number of the kernel (=filter)
          should be less than 3x3x3
 
@@ -10732,7 +10770,6 @@
 
 
 
-
 ** 11a_transfer_learning.ipynb
 *** imports
 
@@ -10978,7 +11015,6 @@
           return [ParamScheduler('lr', sched_lr),
                   ParamScheduler('mom', sched_mom)]
     #+END_SRC
-
 
 ** 12_text.ipynb
 *** imports
@@ -11342,30 +11378,37 @@
       into single giant document,
 
     - then create a matrix with 
-      height = batch-size = 6
+      height = batch-size = 3
       width_giant = Math.floor(length//height)
       
     - store the single giant document in the matrix,
       and then group cells to form a little bit bigger cell
-      so that each bigger cell contains bptt(=5) small cells
+      so that each bigger cell contains bptt(=3) small cells
 
-      | batch1 |    |       |    |      | batch2  |   |    |     |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
-      | xxbos  | \n | xxmaj | in | this | noteook | , | we | ... |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
-      | ...    |    |       |    |      |         |   |    |     |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
-      |        |    |       |    |      |         |   |    |     |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
-      |        |    |       |    |      |         |   |    |     |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
-      |        |    |       |    |      |         |   |    |     |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
-      |        |    |       |    |      |         |   |    |     |   |
-      |--------+----+-------+----+------+---------+---+----+-----+---|
+      |-------+----+-------+----+------+---------+---+----+-----+---|
+      | xxbos | \n | xxmaj | in | this | noteook | , | we | ... |   |
+      |-------+----+-------+----+------+---------+---+----+-----+---|
+      | ...   |    |       |    |      |         |   |    |     |   |
+      |-------+----+-------+----+------+---------+---+----+-----+---|
+      |       |    |       |    |      |         |   |    |     |   |
+      |-------+----+-------+----+------+---------+---+----+-----+---|
 
-    - each column consisting of 6(=batch-size) bigger cells
-      is a single batch
+      | 1 | 1 | 1 | 4 | 4 | 4 | 7 | 7 | 7 |
+      | 2 | 2 | 2 | 5 | 5 | 5 | 8 | 8 | 8 |
+      | 3 | 3 | 3 | 6 | 6 | 6 | 9 | 9 | 9 |
+
+    - group1 (|1|1|1|), group2(|2|2|2|), group3(|3|3|3|) form the 1st-batch
+    - group4 (|4|4|4|), group5(|5|5|5|), group6(|6|6|6|) form the 2nd-batch
+    - group7 (|7|7|7|), group8(|8|8|8|), group9(|9|9|9|) form the 3rd-batch
+      
+      # 1st batch
+      | 1 | 1 | 1 | 2 | 2 | 2 | 3 | 3 | 3 |
+
+      # 2nd batch
+      | 4 | 4 | 4 | 5 | 5 | 5 | 6 | 6 | 6 |
+
+      # 3rd batch
+      | 7 | 7 | 7 | 8 | 8 | 8 | 9 | 9 | 9 |
 
     - the NUMBER of the batches is 
       Math.floor(length//batch-size) / bptt
@@ -11902,7 +11945,28 @@
       position of a sequence, and it is a part of a batch
       for the LSTM networks that contains the LSTMCells layers
 
-      # a batch for LSTMLayer
+      # a single batch for LSTMLayer (bs=64, bptt=2)
+
+      |-------+-------+-------+-------+-----+-------+-------|
+      | 1     |       | 2     |       | ... | 64    |       |
+      |-------+-------+-------+-------+-----+-------+-------|
+      | seq1  | seq2  | seq1  | seq2  | ... | seq1  | seq2  |
+      |-------+-------+-------+-------+-----+-------+-------|
+      | (...) | (...) | (...) | (...) | ... | (...) | (...) |
+      |       |       |       |       |     |       |       |
+
+      # a single batch for LSTMCell (bs=64, bptt=2)
+
+      |-------+-------+-----+-------|
+      | 1     | 2     | ... | 64    |
+      |-------+-------+-----+-------|
+      | seq2  | seq2  | ... | seq2  |
+      |-------+-------+-----+-------|
+      | (...) | (...) | ... | (...) |
+      |       |       |     |       |
+
+
+      # _old_a batch for LSTMLayer
 
       |     | 1st word vec | 2nd word vec | ... | 70th word vec |
       |-----+--------------+--------------+-----+---------------|
@@ -11914,7 +11978,7 @@
       |-----+--------------+--------------+-----+---------------|
       |  64 |              |              |     |               |
 
-      # a batch for LSTMCell
+      # _old_a batch for LSTMCell
 
       |     | i-th word vec |
       |-----+---------------|
@@ -11958,6 +12022,14 @@
       - the size of `input` is torch.Size([bs, ni]), 
         where `bs` is batch size, and `ni` is the 
         embedding size
+
+      |-----------------+-----------------+-----+-----------------|
+      |               1 |               2 | ... |              64 |
+      |-----------------+-----------------+-----+-----------------|
+      | (s1,s2,...s300) | (s1,s2,...s300) | ... | (s1,s2,...s300) |
+      |-----------------+-----------------+-----+-----------------|
+
+        # old
 
         |     | 1st word vec      |
         |-----+-------------------|
@@ -12027,10 +12099,19 @@
         `(h,c)` (=hidden state,cell state) 
         inside `LSTMCell::forward()`
 
-
     # LSTMLayer::forward() detail
     - `input` is a batch of sequences of embedding word vectors
 
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | 1             |     |               | ... | 64            |     |               |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | seq1          | ... | seq70         | ... | seq1          | ... | seq70         |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | (s1,...,s300) | ... | (s1,...,s300) | ... | (s1,...,s300) | ... | (s1,...,s300) |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+
+      # _old
+      
       |     | 1st word vec | 2nd word vec | ... | 70th word vec |
       |-----+--------------+--------------+-----+---------------|
       |   1 |              |              |     |               |
@@ -12093,8 +12174,19 @@
     - `input.unbind(1)` splits a tensor into tuples along the dim=1, 
       so each element in the tuple corresponds to
       a batch of embedding word vectors for the ith words
+      https://pytorch.org/docs/stable/generated/torch.unbind.html
 
-      # input.unbind(1) is as below
+
+      # an element of input.unbind(1) is as below
+      |-----------------+-----------------+-----+-----------------|
+      |               1 |               2 | ... |              64 |
+      |-----------------+-----------------+-----+-----------------|
+      | (s1,s2,...s300) | (s1,s2,...s300) | ... | (s1,s2,...s300) |
+      |-----------------+-----------------+-----+-----------------|      
+      
+
+
+      # _old_input.unbind(1) is as below
 
       |     | 1st of tple  | 2nd of tuple | ... | 70th of tuple |
       |-----+--------------+--------------+-----+---------------|
@@ -12126,7 +12218,6 @@
           [S64_2_1, S64_2_2, ..., S64_2_300],
 
           ...,
-
           # a batch of the 70th  words of the sequence
           [S1_70_1, S1_70_2, ..., S1_70_300],
           [S2_70_1, S2_70_2, ..., S2_70_300],
@@ -12300,6 +12391,7 @@
 
     # RNNDropout::forward() detail
     - `x` is a batch of sequences of word embedding vectors
+    - [ ] is `x` a batch of one-hot encoded vectors?
     - `x.size(0)` is the batch size
     - `x.size(2)` is the embedding size
 
@@ -12313,15 +12405,26 @@
       is same across a row of the sigle batch)
       (across an element of the single batch)
 
-       |     | 1st word   | 2nd word   | ...        | 70th word  |
-       |-----+------------+------------+------------+------------|
-       |   1 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 |
-       |-----+------------+------------+------------+------------|
-       |   2 |            |            |            |            |
-       |-----+------------+------------+------------+------------|
-       | ... |            |            |            |            |
-       |-----+------------+------------+------------+------------|
-       |  64 | 1st=0      | 1st=0      | 1st=0      | 1st=0      |
+      |-----------+-------+-----------+-------+-----+-----------+-------|
+      | 1         |       | 2         |       | ... | 64        |       |
+      |-----------+-------+-----------+-------+-----+-----------+-------|
+      | seq1      | seq2  | seq1      | seq2  | ... | seq1      | seq2  |
+      |-----------+-------+-----------+-------+-----+-----------+-------|
+      | 2nd,5th=0 | 1st=0 | 2nd,5th=0 | 1st=0 | ... | 2nd,5th=0 | 1st=0 |
+      |           |       |           |       |     |           |       |
+    
+
+      # _old table
+
+      |     | 1st word   | 2nd word   | ...        | 70th word  |
+      |-----+------------+------------+------------+------------|
+      |   1 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 | 2nd, 5th=0 |
+      |-----+------------+------------+------------+------------|
+      |   2 |            |            |            |            |
+      |-----+------------+------------+------------+------------|
+      | ... |            |            |            |            |
+      |-----+------------+------------+------------+------------|
+      |  64 | 1st=0      | 1st=0      | 1st=0      | 1st=0      |
         
     - [ ] what the point of masking part of a word vector
       https://medium.com/@bingobee01/a-review-of-dropout-as-applied-to-rnns-72e79ecd5b7b
@@ -12450,8 +12553,10 @@
                                  self.emb.norm_type, self.emb.scale_grad_by_freq, self.emb.sparse)
     #+END_SRC
 
+
+    # EmbeddingDropout summary
     - `EmbeddingDropout` applys dropout to the embedding MATRIX,
-      which converts a word to an embedding word vector
+      which converts a word (one-hot encoded vector) to an embedding word vector
 
     - `EmbeddingDropout` accepts an embedding matrix,
       creates dropouted-ed version of the embedding matrix,
@@ -12464,6 +12569,24 @@
       
       https://pytorch.org/docs/stable/nn.functional.html
 
+    # EmbeddingDropout::__init__() detail
+    - `emb` is an embedding layer
+
+    # EmbeddingDropout::forward() detail
+    - `words` is a batch of one-hot encoded vectors
+
+    - `self.emb.weight.size(0)` is equal to the vocaburary size
+
+    - `mask` is a tensor for dropout where
+      - the number of the rows is smae as vocaburary size
+      - the number of the columns is 1
+
+    - in `self.emb.weight * mask`, broadcast occurs and 
+      as a result, for some row, all the entries will be zeros
+
+    - `F.embedding`
+      https://pytorch.org/docs/stable/nn.functional.html
+    
 *** to_detach
 
     #+BEGIN_SRC python
@@ -12472,6 +12595,7 @@
           "Detaches `h` from its history."
           return h.detach() if type(h) == torch.Tensor else tuple(to_detach(v) for v in h)
     #+END_SRC
+
 *** AWD_LSTM
 
 
@@ -14475,7 +14599,7 @@
 
     #   e.g. for PyTorch 1.7.1, CUDA 10.2
 
-    - uninstall old CUDA if any 
+    - uninstall old CUDA toolkit if any 
       https://dev.infohub.cc/install-cuda-toolkit-10/
       https://qiita.com/kmtk49/items/8c6113af1cc403b0587a
       https://dev.infohub.cc/install-cuda-toolkit-10/
@@ -14487,7 +14611,7 @@
       - manually remove 
         Program Files > NVIDIA GPU Computing Toolkit
 
-    - install CUDA toolkit compatible with GPU & CUDA driver
+    - install CUDA toolkit compatible with GPU & GPU driver
       # support matrix
       https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html
       https://docs.nvidia.com/cuda/archive/11.1.1/cuda-toolkit-release-notes/index.html
@@ -14498,7 +14622,7 @@
       # GPU compatibility
       for RTX 3080, >= 11.1 is necessary
 
-      # driver compatibility
+      # GPU driver compatibility
       CUDA 11.2.1 Update 1	>=461.09 (Windows x86_64 Driver Version)
       CUDA 11.1.1 Update 1	>=456.81 (Windows x86_64 Driver Version)
 
@@ -14515,7 +14639,7 @@
       NVIDIA Computing Toolkit > CUDA > v11.1 
 
     - set path to
-      C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\10.2\bin
+      C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\11.1\bin
       C:\Users\shun\anaconda3
       C:\Users\shun\anaconda3\scripts
 
@@ -14561,7 +14685,6 @@
 
     - in the virtual environment, install fastai by pip
       pip install fastai
-      
 
 
 *** how you should read research papers
@@ -14599,6 +14722,7 @@
 
 ** how to read paper
 *** a
+    https://www.youtube.com/watch?v=733m6qBH-jI
     https://forums.fast.ai/t/how-to-read-research-papers-andrew-ng/66892
 
 * my strategy to understand a difficult thing
