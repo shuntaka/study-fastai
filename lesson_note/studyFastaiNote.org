@@ -12644,24 +12644,23 @@
               self.hidden = [(self._one_hidden(l), self._one_hidden(l)) for l in range(self.n_layers)]
     #+END_SRC
     
-    # init
+    # __init__() detail
     - `n_layers` specifies the number of `nn.LSTM` layers
 
     # reset, _one_hidden
     - `reset` initialize `self.hidden` by calling `_one_hidden`
 
-    # forward
+    # forward() detail
     - `input` is a batch of sequences of NUMERICALIZED words
-      |     | word1 | word2 | ... | word70 |
-      |-----+-------+-------+-----+--------|
-      |   1 |       |       |     |        |
-      |-----+-------+-------+-----+--------|
-      |   2 |       |       |     |        |
-      |-----+-------+-------+-----+--------|
-      | ... |       |       |     |        |
-      |-----+-------+-------+-----+--------|
-      |  64 |       |       |     |        |
-      
+
+      |------+------+------+------+-----+------+------|
+      |    1 |      |    2 |      | ... |   64 |      |
+      |------+------+------+------+-----+------+------|
+      | seq1 | seq2 | seq1 | seq2 | ... | seq1 | seq2 |
+      |------+------+------+------+-----+------+------|
+      |   14 |   26 |    3 |    5 | ... |   43 |   23 |
+      |------+------+------+------+-----+------+------|
+
     - `sl` is the length of a sequence (e.g. 70) in a batch
       - when `AWD-LSTM` is called for laungage modeling,
         `sl` is same as `bptt`
@@ -12679,6 +12678,17 @@
     - then, `input_dp` (`RNNDropout`) is applied 
 
     - at this point, `raw_output` looks like
+
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | 1             |     |               | ... | 64            |     |               |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | seq1          | ... | seq70         | ... | seq1          | ... | seq70         |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | (s1,...,s300) | ... | (s1,...,s300) | ... | (s1,...,s300) | ... | (s1,...,s300) |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+
+
+      # _old
       |   1 | (...) | (...) | ... | (...) | (...) |
       | ... | ...   |       |     | ...   | ...   |
       |  64 | (...) | (...) | ... | (...) | (...) |
@@ -12716,6 +12726,8 @@
 
     - the output will be like below;
 
+
+      # old
       |     | prob dist1 | prob dist2 | ... | prob dist70 |
       |-----+------------+------------+-----+-------------|
       |   1 |            |            |     |             |
@@ -13263,7 +13275,7 @@
     #+END_SRC
 
 *** match_embeds
-
+    
     #+BEGIN_SRC python
       def match_embeds(old_wgts, old_vocab, new_vocab):
           wgts = old_wgts['0.emb.weight']
