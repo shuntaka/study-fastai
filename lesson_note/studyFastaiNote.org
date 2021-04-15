@@ -492,6 +492,10 @@
 *** intuitive understanding of LSTM
     https://towardsdatascience.com/illustrated-guide-to-lstms-and-gru-s-a-step-by-step-explanation-44e9eb85bf21
 
+    https://voletiv.github.io/docs/presentations/20180202_IIITH_Intuition_behind_LSTMs.pdf
+
+    https://towardsdatascience.com/the-most-intuitive-and-easiest-guide-for-recurrent-neural-network-873c29da73c7
+
 * Design Network Architecture (understood)
 ** CNN
 *** what convolution operation means mathmatically
@@ -10769,7 +10773,6 @@
     #+END_SRC
 
 
-
 ** 11a_transfer_learning.ipynb
 *** imports
 
@@ -12102,6 +12105,10 @@
     # LSTMLayer::forward() detail
     - `input` is a batch of sequences of embedding word vectors
 
+      # 64: batch size
+      # 70: the length of a sequence (=bptt)
+      # 300: width of embedding
+
       |---------------+-----+---------------+-----+---------------+-----+---------------|
       | 1             |     |               | ... | 64            |     |               |
       |---------------+-----+---------------+-----+---------------+-----+---------------|
@@ -12152,7 +12159,8 @@
       ]
     #+END_SRC
 
-    - `state` is the initial cell state
+    - `state` is the initial value for (h,c) where
+      h: hidden state,  c: cell state
 
     - `unbind` removes a tensor dimension and returns a tuple
       #+BEGIN_SRC python
@@ -12183,8 +12191,6 @@
       |-----------------+-----------------+-----+-----------------|
       | (s1,s2,...s300) | (s1,s2,...s300) | ... | (s1,s2,...s300) |
       |-----------------+-----------------+-----+-----------------|      
-      
-
 
       # _old_input.unbind(1) is as below
 
@@ -12226,58 +12232,81 @@
       )
       #+END_SRC
 
-    - `out` is a tuple of h & c (new hidden state & new cell state)
+    - for each element of the tuples, 
+      `LTMSLayer::forward()` calculates `out` and `state` where
+        `out`:  new hidden state (`h`)
+        `state`: a tuple of new hidden state and new cell state (`(h,c)`)
+      by applying `LTMSCell::forward()`, 
+      and record the history of `out` on `outputs`
+      
+    - `out` looks like
 
-    - the shape of `outputs` is similar to `input`, and looks like
-      torch.Size([64, 70, 300]) where
-      - 64: batch size
-      - 70: the length of sequence
-      - 300: the 'width' of hidden state 
+      |-------------+-------------+-----+-----------------|
+      |           1 |           2 | ... |              64 |
+      |-------------+-------------+-----+-----------------|
+      | (h1,h2,...) | (h1,h2,...) | ... | (h1,h2,...)     |
+      |-------------+-------------+-----+-----------------|
 
-    - the shape of `outputs` will be same when embedding size
-      is same as the 'width' of hidden state
+    - after getting `outputs`, `forward` stacks the elements in the 
+      outputs history array, along 'sequence' axis
 
-
-    - for each element of the tuples,
-      `forward` calculates `out`, `state`, and record 
-      the history of `out` on `outputs`
-
-    - `outputs` is an array of rank2 tensors with
-      the size of each tensor torch.Size([bs, nh])
-
-
-    - in the end, `forward` stacks the elements in the 
-      output history array, along 'sequence' axis, to 
-      make the final output, and return
-      - the final output
-      - the final state
-        
-      #+BEGIN_SRC python
-        #memo
-        import torch
-        my_input = torch.randn(3, 4, 5)
-        my_input.size()
-        my_unbind = my_input.unbind(1)
-        type(my_unbind), len(my_unbind), my_unbind[0].size()
-        '''
-        (tuple, 4, torch.Size([3, 5]))
-        '''
-
-        my_unbind_list = [my_unbind[0], my_unbind[1], my_unbind[2], my_unbind[3]]
-        my_stacked = torch.stack(my_unbind_list, dim=1)
-        my_stacked.size()
-
-        '''
-        torch.Size([3, 4, 5])
-        '''
-
-      #+END_SRC
-
-
-    - this way, the final output is a batch of sequences of 
+    - the shape of `outputs` is identical to `input`,
+      so the final output is a batch of sequences of 
       hidden states where the length of a sequence is equal to 
       the length of a sequence of embedding word vectors 
       in input
+
+      # - 64: batch size
+      # - 70: the length of sequence
+      # - 300: the 'width' of embedding vector
+    
+      # ouputs
+
+      |-------------+-----+-------------+-----+-------------+-----+------------------|
+      | 1           |     |             | ... | 64          |     |                  |
+      |-------------+-----+-------------+-----+-------------+-----+------------------|
+      | seq1        | ... | seq70       | ... | seq1        | ... | seq70            |
+      |-------------+-----+-------------+-----+-------------+-----+------------------|
+      | (h1,h2,...) | ... | (h1,h2,...) | ... | (h1,h2,...) | ... | (h1,h2,...)      |
+      |-------------+-----+-------------+-----+-------------+-----+------------------|
+
+
+      # input
+
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | 1             |     |               | ... | 64            |     |               |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | seq1          | ... | seq70         | ... | seq1          | ... | seq70         |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+      | (s1,...,s300) | ... | (s1,...,s300) | ... | (s1,...,s300) | ... | (s1,...,s300) |
+      |---------------+-----+---------------+-----+---------------+-----+---------------|
+
+    - in the end, `forward` returns 
+      - `outputs`: the outputs history
+      - `state`: a tuple of new hidden state and new cell state (`(h,c)`)
+
+    # - `outputs` is an array of rank2 tensors with
+    #   the size of each tensor torch.Size([bs, nh])
+    #   #+BEGIN_SRC python
+    #     #memo
+    #     import torch
+    #     my_input = torch.randn(3, 4, 5)
+    #     my_input.size()
+    #     my_unbind = my_input.unbind(1)
+    #     type(my_unbind), len(my_unbind), my_unbind[0].size()
+    #     '''
+    #     (tuple, 4, torch.Size([3, 5]))
+    #     '''
+
+    #     my_unbind_list = [my_unbind[0], my_unbind[1], my_unbind[2], my_unbind[3]]
+    #     my_stacked = torch.stack(my_unbind_list, dim=1)
+    #     my_stacked.size()
+
+    #     '''
+    #     torch.Size([3, 4, 5])
+    #     '''
+
+    #   #+END_SRC
 
 *** nn.LSTM
     - [ ] ? 1:51:50 why will it be slow to use home made `LSTMLayer`
@@ -12287,8 +12316,18 @@
       and runs faster than home-made LSTMLayer
 
     - `nn.LSTM::init` takes arguments `ni` & `nh`
-      - `ni` specifies the 'width' of an embedding word vector
+      - `ni` specifies the 'width' of an input 
+        - input will be a batch of word embedding vectors
+          if the instance of `nn.LSTM` is the first `nn.LSTM` layer
+        - input will be a batch of hidden states
+          if the instance of `nn.LSTM` is not the first `nn.LSTM` 
+          layer
+
       - `nh` specifies the 'width' of a hidden state vector
+
+      https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
+
+       
 
 *** LSTMCell jit version
 
@@ -12381,6 +12420,11 @@
     #+END_SRC
 
     # RNNDropout overview
+
+    # 
+    - `RNNDropout` is applied to activations
+
+    # _old
     - `RNNDropout` applys dropout to either 
       - input: a batch of sequences of embedding word vectors
       - output: a batch of sequences of outputs
@@ -12405,13 +12449,13 @@
       is same across a row of the sigle batch)
       (across an element of the single batch)
 
-      |-----------+-------+-----------+-------+-----+-----------+-------|
-      | 1         |       | 2         |       | ... | 64        |       |
-      |-----------+-------+-----------+-------+-----+-----------+-------|
-      | seq1      | seq2  | seq1      | seq2  | ... | seq1      | seq2  |
-      |-----------+-------+-----------+-------+-----+-----------+-------|
-      | 2nd,5th=0 | 1st=0 | 2nd,5th=0 | 1st=0 | ... | 2nd,5th=0 | 1st=0 |
-      |           |       |           |       |     |           |       |
+      |-----------+-----------+-----------+-----------+-----+-----------+-----------|
+      | 1         |           | 2         |           | ... | 64        |           |
+      |-----------+-----------+-----------+-----------+-----+-----------+-----------|
+      | seq1      | seq2      | seq1      | seq2      | ... | seq1      | seq2      |
+      |-----------+-----------+-----------+-----------+-----+-----------+-----------|
+      | 2nd,5th=0 | 2nd,5th=0 | 1st,3rd=0 | 1st,3rd=0 | ... | 1st,4th=0 | 1st,4th=0 |
+      |           |           |           |           |     |           |           |
     
 
       # _old table
@@ -12476,15 +12520,14 @@
     - `module` is an instance of `nn.LSTM`
     - [ ] `w` is the hidden layer of `module` 
       (="weight_hh_l0" attribute of `nn.LSTM` layer),
-      and is an instance of `nn.Parameter`
-
+      and is an instance of nn.Parameter
       https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
       https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
 
     - `w.data` is a parameter tensor
-      https://pytorch.org/docs/stable/generated/torch.nn.parameter.Parameter.html
 
     - `nn.Parameter(w.data)` creates a new instance of `nn.Parameter`
+       https://pytorch.org/docs/stable/generated/torch.nn.parameter.Parameter.html
 
     - `self.register_parameter` makes the above created new
       instance of `nn.Parameter` as the parameters of
@@ -12517,6 +12560,11 @@
       instance of `nn.LSTM`, which are stored on the
       instance of `WeightDropout` and learned through training.
 
+    - `F.dropout(raw_w, p=self.weight_p, training=self.training)`
+      randomly zeros elements of `raw_w` on training
+      with probability `p`
+      https://pytorch.org/docs/stable/nn.functional.html
+
     - `self.module._parameters[layer] = F.dropout(raw_w, p=self.weight_p, training=self.training)`
       updates the parameters of the linear layer of the instance
       of `nn.LSTM`
@@ -12529,6 +12577,8 @@
     # WeightDropout::forward() detail
     - `self.setweights()` updates the parameters of
       the linear layer of the instance of `nn.LSTM`
+      with the learned parameters on the instance of `WeightDropout`
+      (`weight_hh_l0_raw` attribute)
 
 *** EmbeddingDropout
 
@@ -12581,13 +12631,13 @@
       - the number of the rows is smae as vocaburary size
       - the number of the columns is 1
 
-    - in `self.emb.weight * mask`, broadcast occurs and 
+    - at `self.emb.weight * mask`, broadcast occurs and 
       as a result, for some row, all the entries will be zeros
 
     - `F.embedding`
       https://pytorch.org/docs/stable/nn.functional.html
     
-*** to_detach
+*** TODO to_detach
 
     #+BEGIN_SRC python
       #export
@@ -12596,9 +12646,11 @@
           return h.detach() if type(h) == torch.Tensor else tuple(to_detach(v) for v in h)
     #+END_SRC
 
+    # summary
+    - [ ] `h.detach()` makes the operations on `h` not tracked for calculating gradient
+      http://www.bnikolic.co.uk/blog/pytorch-detach.html
+
 *** AWD_LSTM
-
-
     #+BEGIN_SRC python
       #export
       class AWD_LSTM(nn.Module):
@@ -12645,9 +12697,23 @@
     #+END_SRC
     
     # __init__() detail
+    https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
     - `n_layers` specifies the number of `nn.LSTM` layers
 
-    # reset, _one_hidden
+    - `self.rnns = [nn.LSTM(emb_sz if l == 0 else n_hid, (n_hid if l != n_layers - 1 else emb_sz), 1,
+                            batch_first=True) for l in range(n_layers)]`
+      says
+      - `ni` is `emb_sz` for the first `nn.LSTM` layer, 
+        and `n_hid` otherwise
+      - `nh` is `n_hid` for all the `nn.LSTM` layers other 
+        than the last `nn.LSTM` layer, and is `emb_sz` for
+        the last `nn.LSTM` layer
+      - `1` means `num_layers ` is 1, which means
+        each individual LSTM layers are not stacked
+      - `batch_first=True` means the input and output tensors
+        are provided as (batch, seq, feature). 
+
+    # reset, _one_hidden summary
     - `reset` initialize `self.hidden` by calling `_one_hidden`
 
     # forward() detail
@@ -13157,7 +13223,6 @@
     - which of `torch.save` & `pickle.dump` to use
       https://forums.fast.ai/t/which-format-is-better-for-pytorch-saved-model/5018/3
       https://stackoverflow.com/questions/42703500/best-way-to-save-a-trained-model-in-pytorch
-
 
 ** 12c_ulmfit.ipynb
 *** imports
