@@ -6,6 +6,7 @@
 *** Yan Lecun lectures
 *** ゼロから作るディープラーニング(フレームワーク編)
 
+
 * python (question)
 
 * python (understood)
@@ -112,6 +113,23 @@
       https://realpython.com/python-sort/
 
 
+*** how to read traceback
+    https://realpython.com/python-traceback/
+
+*** with as
+    https://www.geeksforgeeks.org/with-statement-in-python/
+
+
+*** debuggin with vscode
+    https://deeplizard.com/learn/video/el39D7rz7K0
+
+    # with command line arguments
+    https://code.visualstudio.com/docs/python/debugging
+    https://stackoverflow.com/questions/51244223/visual-studio-code-how-debug-python-script-with-arguments
+
+
+*** openpy (excel with python )
+    https://openpyxl.readthedocs.io/en/stable/tutorial.html
 
 * pytorch (question)
 *** how auto grad works
@@ -2625,20 +2643,24 @@
       #+END_SRC
 
     # __iter__() overview
-    - `__iter__()` is a generator which returns a
-      subset of `self.idxs` every time it is called
+    `__iter__()` is a generator which yields a subset of `self.idxs` where
+    - `self.idxs` is a permuted set of integers from 0 to `self.n`
+    - the size of the subset is `self.bs`
+
+    # - `__iter__()` is a generator which yields a
+    #   subset of `self.idxs` every time it executes
 
     # __iter__() detail
     - `__iter__()` is a generator which returns an iterator
 
-    -  When `Sampler` instance is used in `for...in` loop,
-      internally  `__iter__()` method will be 
-      called to return an iterator, and `next()` will be 
+    -  When `Sampler` instance is used in an external for-in loop,
+      `__iter__()` method will be implicitly called to
+      return an iterator, and `next()` will be 
       implicitly called with the iterator at the every
-      step of for-in loop
+      step of the above for-in loop
       https://www.programiz.com/python-programming/generator
 
-    - at every step of the for-in loop, `__iter()` 
+    - at every step of the external for-in loop, `__iter()` 
       retunrs an array of indexes (more strictly, rank1 tensor) 
 
     - note that this 'home-made Sampler' will be used
@@ -2687,7 +2709,6 @@
       to `Dataset`
       
 *** home-made DataLoader ver2, collate
-
     #+BEGIN_SRC python
       def collate(b):
           xs,ys = zip(*b)
@@ -2701,67 +2722,16 @@
               for s in self.sampler: yield self.collate_fn([self.ds[i] for i in s])
     #+END_SRC
 
-    # home-made DataLoader ver2 overview
-    - 'home-made DataLoader ver2' is just for showing the 
-      idea of the implementation of PyTorch version of `DataLoader`,
-      and will not be used later in the course.
-
-      https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
-
-    - PyTorch version of `DataLoader` is different 
-      from the 'home-made DataLoader ver2 in that
-      # - `sampler` should be a list of indexes, instead of 
-      #   a list of list of indexes
-
-      - `batch_size` must be passed to `DataLoader`
-
-    # home-made DataLoader ver2::__init__ detail
-    - `ds` is a `Dataset` instance,
-      and so `self.ds[i]` is a tuple
-      
-      # Dataset
-      #+BEGIN_SRC python
-        class Dataset():
-              def __init__(self, x, y): self.x,self.y = x,y
-              def __len__(self): return len(self.x)
-              def __getitem__(self, i): return self.x[i],self.y[i]
-      #+END_SRC
-
-    - `sampler` is a `Sampler` instance which implements
-      `__iter__`, an generator, which returns an
-      array of indexes(rank1 tensor) when called 
-      through `for...in` syntax
-
-    - `collate_fn` is a function like `collate` implmented above,
-      and it combines the tuples in the list
-      `[self.ds[i] for i in s]` and returns
-      a tuple of 2 tensors (one is for x, and the other is for y)
-
-    # home-made DataLoader ver2::__iter__() overview
-    - `__iter__()` picks up elements of the passed `DataSet`
-      instance where `sampler` determines how to pick up 
-      and `collate_fn` determines how to merge the picked up
-      elements
-
-    # home-made DataLoader ver2::__iter__() detail
-    - `__iter__()` itself will be called when `DataLoader` 
-      instance is passed to `iter()`
-
-    - `[self.ds[i] for i in s]` as in `collate_fn([self.ds[i] for i in s])`
-      is a python syntax called "list construction"
-
-    - note that `DataLoader` itself does not do transform.
-      it is `ds` passed that could do transform.
-      especially, `ItemList`, `ImageItemList` does transform, 
-      and `Dataset` does NOT do transform
-
     # collate overview
-    - `collate` 'batch-ify' a list of tuples;
-      it creates a batch of x and corresponding y 
-      out of a list of tuples of xi and yi like
-      [(x1,y1), (x2,y2), ...]
+    - `collate` accepts a list of tuples each of which contains x & y, 
+      and returns a tuple consisting of
+      - a batch of xs
+      - a batch of ys
 
-    - the batch consists of a tensor for xs and a tensor for ys
+    # - `collate` 'batch-ify' a list of tuples;
+    #   it creates a batch of x and corresponding y 
+    #   out of a list of tuples of xi and yi like
+    #   [(x1,y1), (x2,y2), ...]
 
     # collate detail
     - `b` is a list of tuples which looks like `my_b` below
@@ -2827,6 +2797,82 @@
     - `torch.stack` "tensor-ify" a tuple;
       `torch.stack(xs)` converts a tuple (`xs`) to a rank2 tensor
       by stacking them together
+
+    # home-made DataLoader ver2 overview
+    - 'home-made DataLoader ver2' is just for showing the 
+      idea of the implementation of PyTorch version of `DataLoader`,
+      and will not be used later in the course.
+
+      https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
+
+    - PyTorch version of `DataLoader` is different 
+      from the 'home-made DataLoader ver2 in that
+      # - `sampler` should be a list of indexes, instead of 
+      #   a list of list of indexes
+
+      - `batch_size` must be passed to `DataLoader`
+
+    # home-made DataLoader ver2::__init__ detail
+    - `ds` is a `Dataset` instance,
+      and so `self.ds[i]` is a tuple
+      
+      # Dataset
+      #+BEGIN_SRC python
+        class Dataset():
+              def __init__(self, x, y): self.x,self.y = x,y
+              def __len__(self): return len(self.x)
+              def __getitem__(self, i): return self.x[i],self.y[i]
+      #+END_SRC
+
+    - `sampler` is an instance of `Sampler` implmented above;
+
+       #+BEGIN_SRC python
+         class Sampler():
+             def __init__(self, ds, bs, shuffle=False):
+                 self.n,self.bs,self.shuffle = len(ds),bs,shuffle
+
+             def __iter__(self):
+                 self.idxs = torch.randperm(self.n) if self.shuffle else torch.arange(self.n)
+                 for i in range(0, self.n, self.bs): yield self.idxs[i:i+self.bs]
+
+    #+END_SRC
+
+    - `collate_fn` is a function like `collate` implmented above,
+      and it combines the tuples in the list
+      `[self.ds[i] for i in s]` and returns
+      a tuple of 2 tensors (one is for x, and the other is for y)
+
+    # home-made DataLoader ver2::__iter__() overview
+    - `__iter__()` is a generator which yields a tuple of batches 
+      which consits of the batch for xs and the batch for ys
+
+    # home-made DataLoader ver2::__iter__() detail
+    - `__iter__()` itself will be called when an instance
+      of `DataLoader` is passed to `iter()` or used in 
+      an external for-in loop
+
+      e.g.
+      `next(iter(train_dl))`
+      `for x,y in train_dl`
+
+    - when `__iter__` is called, `__iter__` returns an iterator
+      before executing an INTERNAL for-in loop.
+      As the EXTERNAL for-in loop implicitly calls `next()`
+      passing the iterator, `__iter()` executes one step of
+      the INTERNAL for-in loop, and returns 
+      `self.collate_fn([self.ds[i] for i in s])`,
+      and pause the execution.
+      `__iter()` resumes the execution of the INTERNAL for-in loop
+      when `next()` is implicitly called for the next step of
+      the EXTERNAL for-in loop
+
+    - `[self.ds[i] for i in s]` as in `collate_fn([self.ds[i] for i in s])`
+      is a python syntax called "list construction"
+
+    - note that `DataLoader` itself does not do transform.
+      it is `ds` passed that could do transform.
+      especially, `ItemList`, `ImageItemList` does transform, 
+      and `Dataset` does NOT do transform
 
 *** validation loss
 
@@ -7417,8 +7463,12 @@
       labels such as 'tench', 'cat', 'dog', etc
 
     # `LabeledData` overview
+    - `LabeledData` can be considered as an advanced version of
+      `Dataset` with the capability to process `x` and `y`
+      on initialization using functions passed as `proc_x` and `proc_y`
+
     - `LabeledData` is for creating labels from an instance of
-      `ItemList` subclass such as `ImageList`, and associate it
+      `ItemList` subclass such as `ImageList`, and associate them
       with the passed instance of `ItemList` subclass,
       additionaly applying `CategoryProcessor` to the created 
       labels in order to "numer-ify" the labels.
@@ -7494,15 +7544,36 @@
 
     # `LabeledData::label_by_func` overview        
     - `LabeledData::label_by_func` is a factory method to create
-      a `LabeledData` instance which stores "x" & "y", out of `x`
+      a `LabeledData` instance which stores "x" & "y", out of 
+      an instance of `ItemList` making use of some labeling function
 
     # `LabeledData::label_by_func` detail
     - `cls`: `LabeledData`
-    - `il` will be `x` for `LabeledData::__init__`
-    - `f` will be `parent_labeler`, for exmaple.
+    - `il` is an instance of `ItemList` and will be `x` 
+      for `LabeledData::__init__`
+    - `f` is a labeling function such as  `parent_labeler`
     - `_label_by_func(il, f)` will be `y` for `LabeledData::__init__`
+      
+    # `label_by_func` (class method) overview
+    - `label_by_func` is a function which creates an instance of
+      `LabeledData` out of only `x` by obtaining `y`
+      by applying a passed function to `x`
+
+    - `label_by_func` accepts
+      - an instance of `ItemList` or its subclass
+      - a function to create `y` out of `x`
+      - a function to process `x`
+      - a function to process `y`
+      
+      and returns an instance of `LabeledData`
 
     # `label_by_func` (global function) overview              
+    - global function `label_by_func` is a function for applying
+      a class method `label_by_func` of `LabeledData` to
+      an instance of `SplitData` that contains 
+      - an instance of `ItemList` or its subclass for training
+      - an instance of `ItemList` or its subclass for validataion
+
     - `label_by_func` accepts `SplitData` instance, 
       which is a pair of instances of `ItemList` (or its subclass),
       and out of each instance of `ItemList` (or its subclass), 
@@ -10772,7 +10843,6 @@
 
     #+END_SRC
 
-
 ** 11a_transfer_learning.ipynb
 *** imports
 
@@ -11284,7 +11354,7 @@
     #+END_SRC
 
 
-    # TokenizeProcessor::proc_chunk overview
+    # TokenizeProcessor::proc_chunk() overview
     - `proc_chunk` accepts a list of texts,
       and retunrs a list of lists of tokens,
       each of which corresponding to 
@@ -11292,7 +11362,7 @@
 
     # TokenizeProcessor::proc_chunk detail
     - `chunk` is a group of texts (a list of texts)
-    - `self.pre_rules` defaults to be `default_post_rules` if not specified
+    - `self.pre_rules` defaults to be `default_pre_rules` if not specified
     - `self.tokenizer` is `spacy.blank(lang).tokenizer`
     - `doc` is a tokenized text
     - `d` is a single token contained in `doc`
@@ -11307,6 +11377,7 @@
       then divide it into groups, each of which is a list of texts, 
       and for each group, apply `proc_chunk` making
       use of `parallel`, and merge the results in the end
+      to return a list of lists of tokens
 
     # TokenizeProcessor::__call__ detail
     - `items` in the arguments is a list of file paths 
@@ -11315,7 +11386,7 @@
     - `items` will be a list of texts
 
     - `for i in (range(0, len(items), self.chunksize))` 
-      means "grab integers from 0 to `len(items)`
+      means "grab integers between 0 and `len(items)`
       incrementing by `self.chunksize` at each step
 
     - `chunks` is a list of groups of texts each of which
@@ -11372,7 +11443,7 @@
       %time ll = label_by_func(sd, lambda x: 0, proc_x = [proc_tok,proc_num])
     #+END_SRC
 
-*** [language modeling], how to create batches from documents
+*** _old_[language modeling], how to create batches from documents
     - for example, batch-size=6, bptt=5
       (keep in mind that batch-size is how many of
       the things a single batch contains)
@@ -11436,7 +11507,7 @@
           
           def batchify(self):
               texts = self.data.x
-              if self.shuffle: texts = texts[torch.randperm(len(texts))]
+              if self.shuffle: texts = texts[torch.randperm(len(texts))] 
               stream = torch.cat([tensor(t) for t in texts])
               self.batched_data = stream[:self.n_batch * self.bs].view(self.bs, self.n_batch)
     #+END_SRC
@@ -11475,6 +11546,14 @@
 
     - `n_batch` is the maximum integer less than `total_len/bs`
 
+    # __len__() overview
+    - `__len__()` returns the number of "cells" each of which 
+      contains `bptt` tokens
+
+    # __len__() detail
+    - 
+
+
     # batchify detail
     - `texts` is a list of lists of numerified tokens
       each of which corresponds to a single text
@@ -11494,8 +11573,11 @@
       #+END_SRC
 
     - `stream = torch.cat([tensor(t) for t in texts])` creates
-      a huge tensor made by concatnating all the individual
-      list of numericalized tokens
+      a huge tensor concatnating all the individual
+      numericalized tokens
+
+    - `self.n_batch * self.bs` is the largest multiple of 
+      `self.bs` less thant `total_len`
 
     - `stream[:self.n_batch * self.bs]` grabs the elements 
       up to `self.n_batch * self.bs`, and throw away the remaining.
@@ -11514,53 +11596,54 @@
       `__getitem__` should behave in the same way as
       that of `Dataset`
 
-    - in concrete, `__getitem__` should return data and its label 
-      in such a way that for some value "i", 
-      `__getitem__(i)` and `__getitem__(i+1)` 
-      correspond to adjacent elements in a batch
+    # - in concrete, `__getitem__` should return data and its label 
+    #   in such a way that for some value "i", 
+    #   `__getitem__(i)` and `__getitem__(i+1)` 
+    #   correspond to adjacent elements in a batch
 
-    - to imagine how it works, imagine the "matrix"
-      that `self.batched_data` forms
-      (the matrix is depicted in the section above;
-      "FOR language modeling, how to create batches from documents")
+    # - to imagine how it works, imagine the "matrix"
+    #   that `self.batched_data` forms
+    #   (the matrix is depicted in the section above;
+    #   "FOR language modeling, how to create batches from documents")
 
-    - in terms of the "matrix", 
-      `__getitem__(i)` and `__getitem__(i+1)` returns
-      cells vertically adjacent
+    # - in terms of the "matrix", 
+    #   `__getitem__(i)` and `__getitem__(i+1)` returns
+    #   cells vertically adjacent
 
-    - as the value of `idx` increments, `__getitem__`
-      go through the "cells" of the "matrix" in the following manner
+    # - as the value of `idx` increments, `__getitem__`
+    #   go through the "cells" of the "matrix" in the following manner
       
-      | 1 | 5 |  9 | 
-      | 2 | 6 | 10 | 
-      | 3 | 7 | 11 | 
-      | 4 | 8 | 12 | 
+    #   | 1 | 5 |  9 | 
+    #   | 2 | 6 | 10 | 
+    #   | 3 | 7 | 11 | 
+    #   | 4 | 8 | 12 | 
 
     # __getitem__ detail
-    - `idx` is an integer between 0 and `total_len/bptt`
-      (= number of the cells in the "matrix")
+    # - `idx` is an integer between 0 and `total_len/bptt`
+    #   (= number of the cells in the "matrix")
 
-    - the index for the row of the "matrix" is determined by
-      `idx % bs`
+    # - the index for the row of the "matrix" is determined by
+    #   `idx % bs`
 
-    - the index for the column of the "matrix" is determined by
-      `idx//bs`
+    # - the index for the column of the "matrix" is determined by
+    #   `idx//bs`
 
-    - now, we construct the corresponding cell (a list)
+    # - now, we construct the corresponding cell (a list)
 
-    - each 'cell' is a list of length `bptt`, so for 
-      a cell whose index is (i, j), the cell contains
-      (bptt*j)-th element up-to&not-including (bptt*j+bptt)-th 
-      element in `batched_data[i]`
+    # - each 'cell' is a list of length `bptt`, so for 
+    #   a cell whose index is (i, j), the cell contains
+    #   (bptt*j)-th element up-to&not-including (bptt*j+bptt)-th 
+    #   element in `batched_data[i]`
 
-    - the label for the 'cell' will be elements contained
-      when shifting the 'cell' by 1.
+    # - the label for the 'cell' will be elements contained
+    #   when shifting the 'cell' by 1.
 
     - note that for the label for the cell in the right edge
       of the grid, the number of the elements contained 
       in the label will be 1 less than `bptt`, 
       but python array indexing [l:l+m] works fine even when
       the array has less than `m` elements
+
 *** get_lm_dls, lm_databunchify
 
 
@@ -11574,7 +11657,7 @@
           return DataBunch(*get_lm_dls(sd.train, sd.valid, bs, bptt, **kwargs))
     #+END_SRC
 
-*** [language modeling], create data loader
+*** [language modeling] creating data loader example
 
     #+BEGIN_SRC python
       path = datasets.untar_data(datasets.URLs.IMDB)
@@ -12249,9 +12332,10 @@
 
     - after getting `outputs`, `forward` stacks the elements in the 
       outputs history array, along 'sequence' axis
+      by `torch.stack(outputs, dim=1)`
 
-    - the shape of `outputs` is identical to `input`,
-      so the final output is a batch of sequences of 
+    - the shape of `torch.stack(outputs, dim=1)` is identical
+      to `input`, so the final output is a batch of sequences of 
       hidden states where the length of a sequence is equal to 
       the length of a sequence of embedding word vectors 
       in input
@@ -12260,7 +12344,7 @@
       # - 70: the length of sequence
       # - 300: the 'width' of embedding vector
     
-      # ouputs
+      # `torch.stack(outputs, dim=1)`
 
       |-------------+-----+-------------+-----+-------------+-----+------------------|
       | 1           |     |             | ... | 64          |     |                  |
@@ -12282,7 +12366,7 @@
       |---------------+-----+---------------+-----+---------------+-----+---------------|
 
     - in the end, `forward` returns 
-      - `outputs`: the outputs history
+      - `torch.stack(outputs, dim=1)`: a batch of the outputs history
       - `state`: a tuple of new hidden state and new cell state (`(h,c)`)
 
     # - `outputs` is an array of rank2 tensors with
@@ -12328,7 +12412,6 @@
       https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
 
        
-
 *** LSTMCell jit version
 
     #+BEGIN_SRC python
@@ -14707,7 +14790,7 @@
       # support matrix
       https://docs.nvidia.com/deeplearning/cudnn/support-matrix/index.html
 
-      CUDA 11.1, cudnn-11.2
+      | CUDA 11.1 | cudnn-11.2 |
 
       # download
       https://developer.nvidia.com/cudnn
@@ -14749,6 +14832,10 @@
 
     - jupyter notebook auto complete
       https://unikina.com/jupyternotebook-nbextentions/
+
+*** install tensorflow on windows10
+    https://qiita.com/kHz/items/6af115d04628ecc82c43
+
 
 *** install fastai2
     https://github.com/fastai/fastai
@@ -14796,6 +14883,7 @@
 
   - pruning neural networks at initialization
     Why are we missing the mark?
+
 
 ** how to read paper
 *** a
