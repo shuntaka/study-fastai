@@ -100,18 +100,16 @@
       https://www.programiz.com/python-programming/methods/built-in/iter
       https://realpython.com/python-for-loop/
 
-*** yield
-    - `yield` 
+*** generator & yield 
+    - generator & yield
     https://www.programiz.com/python-programming/generator    
 
-    
 *** sorted
     - `sorted` sorts iterables accepting optional parameters
       `key` and `reverse`
       https://docs.python.org/3/howto/sorting.html
       https://www.programiz.com/python-programming/methods/built-in/sorted
       https://realpython.com/python-sort/
-
 
 *** how to read traceback
     https://realpython.com/python-traceback/
@@ -127,9 +125,13 @@
     https://code.visualstudio.com/docs/python/debugging
     https://stackoverflow.com/questions/51244223/visual-studio-code-how-debug-python-script-with-arguments
 
+*** read traceback
+    https://realpython.com/python-traceback/
+
 
 *** openpy (excel with python )
     https://openpyxl.readthedocs.io/en/stable/tutorial.html
+
 
 * pytorch (question)
 *** how auto grad works
@@ -2660,7 +2662,7 @@
       step of the above for-in loop
       https://www.programiz.com/python-programming/generator
 
-    - at every step of the external for-in loop, `__iter()` 
+    - at every step of the external for-in loop, `__iter__()` 
       retunrs an array of indexes (more strictly, rank1 tensor) 
 
     - note that this 'home-made Sampler' will be used
@@ -2802,8 +2804,15 @@
     - 'home-made DataLoader ver2' is just for showing the 
       idea of the implementation of PyTorch version of `DataLoader`,
       and will not be used later in the course.
-
       https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
+
+    - in 03.mnibatch_training.piynb, PyTorch version of `DataLoader` is 
+      imported like below, and this will be used here after
+
+    #+BEGIN_SRC python
+      #export
+      from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
+    #+END_SRC
 
     - PyTorch version of `DataLoader` is different 
       from the 'home-made DataLoader ver2 in that
@@ -2813,7 +2822,7 @@
       - `batch_size` must be passed to `DataLoader`
 
     # home-made DataLoader ver2::__init__ detail
-    - `ds` is a `Dataset` instance,
+    - `ds` is an instance of `Dataset` or `LabeledData`
       and so `self.ds[i]` is a tuple
       
       # Dataset
@@ -2873,6 +2882,15 @@
       it is `ds` passed that could do transform.
       especially, `ItemList`, `ImageItemList` does transform, 
       and `Dataset` does NOT do transform
+
+*** importing pytorch DataLoader
+
+    #+BEGIN_SRC python
+      #export
+      from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
+    #+END_SRC
+
+
 
 *** validation loss
 
@@ -5911,7 +5929,7 @@
       so the histogram counts the values between -7 and 7
       instead of 0 and 10
 
-*** DONE why GeneralRelu works better
+*** DONE why GeneralRelu (leaky Relu) works better
     - `GeneralRelu` works better since
       - it fixes nearly zero standard deviation of activations
       - it shifts mean close to zero
@@ -7244,7 +7262,7 @@
     # overview
     - `SplitData` is just a storage to store a pair of 
       training & validation data each of which is an instance of
-      `Dataset` 
+      `ItemList` or `LabeledData`
 
     # split_by_func detail
     - `SplitData::split_by_func` is a factory method to create a
@@ -7357,11 +7375,13 @@
                   self.vocab = uniqueify(items)
                   self.otoi  = {v:k for k,v in enumerate(self.vocab)}
               return [self.proc1(o) for o in items]
+
           def proc1(self, item):  return self.otoi[item]
           
           def deprocess(self, idxs):
               assert self.vocab is not None
               return [self.deproc1(idx) for idx in idxs]
+
           def deproc1(self, idx): return self.vocab[idx]
     #+END_SRC
 
@@ -7371,21 +7391,19 @@
       argument
 
     # CategoryProcessor::__call__() overivew
-    - `__call()__` "numer-ify" string labels, 
-      and thanks to `_call__` method, it can be used as
+    - `__call()__` "numer-ify" string labels
+
+    - by defining `_call__` method, an instance of 
+      `CategoryProcessor` can be used as
 
     #+BEGIN_SRC python
       MyCategoryProcessorInstance = CategoryProcessor()
       MyCategoryProcessorInstance(someItem)
     #+END_SRC
 
-
-      `MyCategoryProcessorInstance(someItem)`
-
-
     # CategoryProcessor::__call__ detail
     - `__call__` of `CategoryProcessor` will receive
-      a ItemList subclass instance corresponding to 
+      an `ItemList` subclass instance corresponding to 
       `ys`, i.e., labels such as 'tench', 'dog', 'cat', etc.
 
     - applying `uniqueify` to `items` will create a new list
@@ -7530,7 +7548,7 @@
       original instance of a `ItemList` subclass
 
     # `LabeledData::__init__` detail
-    - `x`: an instance of `ItemList` subclass such as `ImageList`
+    - `x`: an instance of `ItemList` or its subclass such as `ImageList`
 
     - `y`: an instance of `ItemList` subclass corresponding to labels
       which was created by `_label_by_func` from the passed instance
@@ -7586,7 +7604,6 @@
 
       and pair up the two `LabeledData` instances as
       a new `SplitData` instance
-        
 
     - a global function `label_fy_func` is a factory method
       to create a `SplitData` instance from the original
@@ -11353,7 +11370,6 @@
           def deproc1(self, tok):    return " ".join(tok)
     #+END_SRC
 
-
     # TokenizeProcessor::proc_chunk() overview
     - `proc_chunk` accepts a list of texts,
       and retunrs a list of lists of tokens,
@@ -11536,6 +11552,11 @@
     # LM_PreLoader overview
     - `LM_PreLoader` is equivalent of `Dataset` for language modeling
 
+    # `LM_PreLoader::__init__()`  overview
+    - `LM_PreLoader::__init__()` accepts an instance of
+      `LabeledData` which is a list of list of numericalized words
+      with dummy labels, and group them to store as `self.batched_data`
+
     # __init__ detail
     - `data` will be an instance of `LabeledData` instance
       that contains a list of list of numerified tokens
@@ -11583,8 +11604,8 @@
       up to `self.n_batch * self.bs`, and throw away the remaining.
 
     - `view(self.bs, self.n_batch)` reshape the huge tensor
-      into a rectangular shaped tensor whose 'height' is `self.bs`,
-      and 'width' is `n_batch`
+      into a rectangular shaped tensor whose size is
+      torch.Size([`self.bs`], [`n_batch`])
 
     # __getitem__ overview
     - `__getitem__` accepts an index (=`idx`) and returns
@@ -11657,7 +11678,7 @@
           return DataBunch(*get_lm_dls(sd.train, sd.valid, bs, bptt, **kwargs))
     #+END_SRC
 
-*** [language modeling] creating data loader example
+*** [language modeling] creating a data loader, example
 
     #+BEGIN_SRC python
       path = datasets.untar_data(datasets.URLs.IMDB)
@@ -11671,7 +11692,7 @@
       data = lm_databunchify(ll, bs, bptt)
     #+END_SRC
 
-*** [classification], how to create batches
+*** [classification] how to create batches
     - note that for classification, we create batches
       in a completely different way from that for
       language modeling
@@ -11691,7 +11712,7 @@
     - the first batch contains the longest documents
       and the last batch conntains the shortest documents
 
-*** [classification], create LabeledData
+*** [classification] creating LabeledData, example
 
     #+BEGIN_SRC python
       path = datasets.untar_data(datasets.URLs.IMDB)
@@ -11717,11 +11738,22 @@
     # SortSampler overview
     - NOTE that `Sampler` is from PyTorch, 
       and not 'home-made' `Sampler`
+      https://pytorch.org/docs/stable/data.html#torch.utils.data.Sampler
 
-    - `SortSampler` is expected to  be used with PyTorch version
-      of `DataLoader`, so it should returns a list of indexes
+    - `SortSampler` is expected to be used with PyTorch version
+      of `DataLoader`
 
-    - `SortSampler` is for validation set
+    - an instance of `SortSampler` is passed as `sampler` argument of
+      PyTorch `DataLoader`, and `__iter__()` method of the instance
+      is expected to return a iterator which returns a single index
+      on each call
+
+      # from pytorch doc
+      https://pytorch.org/docs/stable/data.html
+
+      "Alternatively, users may use the sampler argument to specify 
+      a custom Sampler object that at each time yields
+      the next index/key to fetch."
 
     # __init__ detail
     - `data_source` is a pytorch `DataLoader` instance
@@ -11735,9 +11767,13 @@
         `key=lambda t: len(valid_ds.x[t]))`
       #+END_SRC
 
+    # `__iter__()` overview
+    - `__iter__()` returns an iterator which retunrs, on each call,
+      an index 
+
     # __iter__ detail
     - `list(range(len(self.data_source)))` returns a list
-      containing integer from 0 to `len(self.data_source)`-1
+      containing integer from 0 to `len(self.data_source)-1`
       e.g. [0,1,2,3,4]
 
     - `sorted` sorts iterables accepting optional parameters
@@ -11783,8 +11819,8 @@
       texts of similar length will be grouped into 
       batches in a deterministic way.
       
-    - `SortSampler` does this in the following way
-      - first randomly permute all the texts, 
+    - `SortishSampler` does this in the following way
+      - first randomly permutes all the texts, 
         and group them into mega batches,
       - inside each mega batch, group
         texts of similar length into mini batches
@@ -11793,22 +11829,39 @@
     - this way, what will be contained in a
       mini batch of a certain lengths varies
       depending on how to create mega batches
+      
+    # __init__() detail
+    - `data_source` is an instance of `ItemList` or its subclass
+
 
     # __iter__() overview
-    - 
+    - `__iter__()` returns an iterator which returns, on each call, 
+      a SINGLE index
 
     # __iter__() detail
-    - `data_source` is
+    - `data_source` is an instance of `ItemList` or its subclass
+
     - `megabatches` is a list of lists, each of which
-      is a "mega" list which contains bs*50 integers
+      is a "mega" list which contains bs*50 integers,
+      and corresponds to a megabatch
+
     - `sorted_idx` is created by first sorting each "mega" list
-      in `megabatches` according to `self.key`, and 
-      concatnating them to form a huge tensor
+      (=megabatch) in `megabatches` according to `self.key`, and 
+      concatnating(flattening) them to form a single huge rank1 
+      tensor
+
+    - `len(sorted_idx)` is equal to the number of the indexes
+
+    - `batches` is a rank2 tensor and contains all the minibatches
+
     - `batch_idxs` is a tensor containing `len(batches)-2`
       integers from 0 to len(batches)-3, corresponding to
       all the batches other than the head and the tail
       inside `batches` 
-    - `sorted_idx` is a tensor 
+
+    - NOTE that `sorted_idx` is a rank1 tensor since 
+      `torch.cat` is called
+
     - `__iter__()` explicitly returns an iterator by
       `returns iter(sorted_idx)`
 
@@ -11825,7 +11878,12 @@
           return res, tensor([s[1] for s in samples])
     #+END_SRC
 
-    # pd_collate detail
+    # pad_collate overview
+    - `pad_collate` accepts a list of samples
+      which is a subset of a data set,
+      and returns a batch of samples
+
+    # pad_collate detail
     - `samples` is a list of tuples for creating a batch, 
       each of which is a pair of (numericalized-text, label),
 
@@ -11848,7 +11906,7 @@
     - `tensor([s[1] for s in samples])` is the tensor representing
       the labels
 
-*** creating DataLoader for training data for lauguage classification
+*** [classification] creating DataLoader for training data, example
 
     #+BEGIN_SRC python
       #
@@ -11866,7 +11924,20 @@
     - `key=lambda t: len(ll.train[int(t)][0])` returns
       the length of a numericalized-text 
 
-*** get_clas_dls, clas_dls
+    - note that `DataLoader` is PyTorch version, whose imeplementation
+      is similar to 'home-made' `DataLoader` ver2,
+
+    - `collate_fn` is used to collate list of samples 
+      into batches, and it is used in the following way
+
+      #+BEGIN_SRC python
+        for indices in batch_sampler:
+            yield collate_fn([dataset[i] for i in indices])
+      #+END_SRC
+
+      https://pytorch.org/docs/stable/data.html
+
+*** get_clas_dls, clas_databunchify
 
     #+BEGIN_SRC python
       #export
@@ -11881,19 +11952,25 @@
     #+END_SRC
 
     # get_clas_dls overview
-
     - note that `DataLoader` is PyTorch version, whose imeplementation
       is similar to 'home-made' `DataLoader` ver2,
 
-    - PyTorch version of `DataLoader` is slightly different from
-      'home-made' version, and the usage is slightly different in that
-      - need to specify batch size
-      - samplers should be a function which returns a list of indexes
+    # - PyTorch version of `DataLoader` is slightly different from
+    #   'home-made' version, and the usage is slightly different in that
+    #   - need to specify batch size
+    #   - samplers should be a function which returns a list of indexes
 
     # get_clas_dls detail
     - `train_ds`, `valid_ds` are `LabeledData` instances
       which are already processed by `TokenizeProcessor`,
       `NumericalizeProcessor`, `CategoryProcessor`
+
+    - by specifying `batch_size`, automatic batching kicks in,
+      and a batch of data is returned even though both of
+      `train_sampler::__iter__()` and `valid_sampler::__iter__()` themselves
+      return an iterator which returns only a single index
+
+      https://pytorch.org/docs/stable/data.html#loading-batched-and-non-batched-data
 
 ** 12a_awd_lstm.ipynb
 *** imports
@@ -12005,11 +12082,13 @@
     #+END_SRC
 
     # LSTMCell::__init__() detail
-    - `ni` is number of the elements in a input vector
+    - `ni` is the number of the elements in an input vector
     - `4*nh` in `self.ih=nn.Linear(ni,4*nh)` comes from the following;
       - the output of the linear layer for input will be added to 
         the output of the linear layer for hidden state
+
       - the sum of the two outputs will be splitted into 4 pieces
+
       - one of the 4 pieces will be multiplied to the previous 
         cell state which has `nh` elements
 
@@ -12017,7 +12096,8 @@
     - `LSTMCell` accepts
       - `input`
       - `state` which consists of `h` & `c` where
-        h: hidden state, and c:cell state
+        - h: hidden state
+        - c: cell state
 
         and calculates 
         - h: new hidden state
@@ -12169,10 +12249,10 @@
       - initial state (=a pair of cell state and hidden state)
       and 
       returns
-      - a history of hidden states
+      - a batch of sequences of hidden states 
       - the final state (a pair of cell state and hidden state)
 
-    - `forward()` does;
+    - `forward()` does following;
       - recursively applys 
         `self.cell` (=`LSTMCell`) to `state` (=`(h,c)`) 
         feeding `inputs[i]`
@@ -12317,8 +12397,8 @@
 
     - for each element of the tuples, 
       `LTMSLayer::forward()` calculates `out` and `state` where
-        `out`:  new hidden state (`h`)
-        `state`: a tuple of new hidden state and new cell state (`(h,c)`)
+      -  `out`:  new hidden state (`h`)
+      -  `state`: a tuple of new hidden state and new cell state (`(h,c)`)
       by applying `LTMSCell::forward()`, 
       and record the history of `out` on `outputs`
       
@@ -12346,13 +12426,13 @@
     
       # `torch.stack(outputs, dim=1)`
 
-      |-------------+-----+-------------+-----+-------------+-----+------------------|
-      | 1           |     |             | ... | 64          |     |                  |
-      |-------------+-----+-------------+-----+-------------+-----+------------------|
-      | seq1        | ... | seq70       | ... | seq1        | ... | seq70            |
-      |-------------+-----+-------------+-----+-------------+-----+------------------|
-      | (h1,h2,...) | ... | (h1,h2,...) | ... | (h1,h2,...) | ... | (h1,h2,...)      |
-      |-------------+-----+-------------+-----+-------------+-----+------------------|
+      |-------------+-----+-------------+-----+-------------+-----+-------------|
+      | 1           |     |             | ... | 64          |     |             |
+      |-------------+-----+-------------+-----+-------------+-----+-------------|
+      | seq1        | ... | seq70       | ... | seq1        | ... | seq70       |
+      |-------------+-----+-------------+-----+-------------+-----+-------------|
+      | (h1,h2,...) | ... | (h1,h2,...) | ... | (h1,h2,...) | ... | (h1,h2,...) |
+      |-------------+-----+-------------+-----+-------------+-----+-------------|
 
 
       # input
@@ -12411,7 +12491,6 @@
 
       https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
 
-       
 *** LSTMCell jit version
 
     #+BEGIN_SRC python
@@ -12503,14 +12582,13 @@
     #+END_SRC
 
     # RNNDropout overview
-
-    # 
-    - `RNNDropout` is applied to activations
+    - [ ] (?)`RNNDropout` is applied to activations 
+      for LSTMCell 
 
     # _old
     - `RNNDropout` applys dropout to either 
       - input: a batch of sequences of embedding word vectors
-      - output: a batch of sequences of outputs
+      - activations: a batch of sequences 
 
     - so, `RNNDropout` should be applied after converting
       a batch of sequences of NUMERICALIZED words
@@ -12588,7 +12666,8 @@
     #+END_SRC
 
     # WeightDropout overview
-    - `WeightDropout` is a wrapper for `nn.LSTM`, 
+    - `WeightDropout` is a wrapper for an instance of `nn.LSTM` 
+      to apply dropout to the hidden layer of the `nn.LSTM` instance
       and will be registered to the DNN network
 
     - it will be the responsibility of the instance of 
@@ -12598,12 +12677,17 @@
       from the instance of `nn.LSTM` so that they will be
       enumerated when calling `parameters()` on the instance
       of `WeightDropout`
+
+    - `self.module._parameters[layer]` is updated everytime
+      `forward` is called so that it stores the latest value
+      of the parameters
      
     # WeightDropout::__init__() detail
     - `module` is an instance of `nn.LSTM`
+
     - [ ] `w` is the hidden layer of `module` 
       (="weight_hh_l0" attribute of `nn.LSTM` layer),
-      and is an instance of nn.Parameter
+      and is an instance of `nn.Parameter`
       https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
       https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
 
@@ -12635,8 +12719,6 @@
       updates the corresponding parameters of the instance
       of `nn.LSTM`
 
-    # WeightDropout::_setweights() summary
-
     # WeightDropout::_setweights() detail
     - `raw_w` is the parameters corresponding to
       the parameters of the linear layer of the
@@ -12653,9 +12735,10 @@
       of `nn.LSTM`
       
     # WeightDropout::forward() summary
-    - `forward()` updates the parameters of `nn.LSTM`
-      and then delegates to `forward()` of 
-      the instance of `nn.LSTM`
+    - `forward()` accepts a batch of sequences of
+      word embedding vectors, or a batch of sequences
+      of hidden states, and returns
+      a batch of sequences of hidden states
 
     # WeightDropout::forward() detail
     - `self.setweights()` updates the parameters of
@@ -12705,14 +12788,19 @@
     # EmbeddingDropout::__init__() detail
     - `emb` is an embedding layer
 
+    # EmbeddingDropout::forward() summary
+    - `forward()` accepts a batch of one-hot encoded vectors,
+      and returns a batch of word vectors where
+      some entries of the embedding vector are zeros
+
     # EmbeddingDropout::forward() detail
     - `words` is a batch of one-hot encoded vectors
 
-    - `self.emb.weight.size(0)` is equal to the vocaburary size
+    - (?) `self.emb.weight.size(0)` is equal to the vocabubrary size
 
-    - `mask` is a tensor for dropout where
-      - the number of the rows is smae as vocaburary size
-      - the number of the columns is 1
+    - `mask` is a tensor for dropout where 
+      - the size of the 1st dimension is smae as the vocabubrary size
+      - the size of the 2nd dimension is 1
 
     - at `self.emb.weight * mask`, broadcast occurs and 
       as a result, for some row, all the entries will be zeros
@@ -12785,19 +12873,24 @@
 
     - `self.rnns = [nn.LSTM(emb_sz if l == 0 else n_hid, (n_hid if l != n_layers - 1 else emb_sz), 1,
                             batch_first=True) for l in range(n_layers)]`
-      says
+
+      => 
+      right hand side: [nn.LSTM(...) for l in range(n_layers)]
+      nn.LSTM(...)   : nn.LSTM(emb_sz..., n_hid..., 1, batch_first=True)
+
+    - nn.LSTM(...) says
       - `ni` is `emb_sz` for the first `nn.LSTM` layer, 
-        and `n_hid` otherwise
+        and `n_hid` for the others
+
       - `nh` is `n_hid` for all the `nn.LSTM` layers other 
         than the last `nn.LSTM` layer, and is `emb_sz` for
         the last `nn.LSTM` layer
+
       - `1` means `num_layers ` is 1, which means
         each individual LSTM layers are not stacked
+
       - `batch_first=True` means the input and output tensors
         are provided as (batch, seq, feature). 
-
-    # reset, _one_hidden summary
-    - `reset` initialize `self.hidden` by calling `_one_hidden`
 
     # forward() detail
     - `input` is a batch of sequences of NUMERICALIZED words
@@ -12816,8 +12909,9 @@
       - when `AWD-LSTM` is called for classification,
         `sl` may be different from `bptt`
 
-    - in the beggining, `reset` is called, which 
-      sets the initial state (H0, C0)
+    - in the beggining, `self.reset` is called, 
+      which sets the initial state to (H0, C0)
+      (sets `self.hidden`)
 
     - input (a batch of sequences of NUMERICALIZED words)
       is converted to a batch of sequences of embedding
@@ -12859,7 +12953,7 @@
         accepts the output for the last `nn.LSTM` layer.
 
     - for each `nn.LSTM` layer, output & the droput-ed output
-      is recorded separately on list `row_outputs` & list `outputs`
+      is recorded separately on list `raw_outputs` & list `outputs`
       which contains output & the droput-ed output for
       all the `nn.LSTM` layers.
 
@@ -12894,7 +12988,10 @@
       - for language modeling, dropout happens at `LinearDecoder` layer
       - for language classification, dropout happens at `PoolingLinearClassifier` layer
 
-    # reset
+    # reset summary
+    - `reset` initializes `self.hidden` by calling `_one_hidden`
+
+    # reset detail
     - `reset` creates a list of tuples, and each tuple corresponds to
       (hidden state, cell state)
 
@@ -14624,6 +14721,12 @@
     https://www.analyticsvidhya.com/blog/2019/09/step-by-step-deep-learning-tutorial-video-classification-python/
 
 * math resource
+*** matrix calculus (vector calculus)
+    # fast.ai
+    https://explained.ai/matrix-calculus/
+    https://www.educative.io/edpresso/the-basics-of-matrix-calculus-for-deep-learning
+
+
 *** 3Blue1Brown ()
     https://www.youtube.com/channel/UCYO_jab_esuFRV4b17AJtAw/videos
 
@@ -14680,7 +14783,7 @@
 
 * ========
 * fastai 2019 courses
-    https://course19.fast.ai/part2
+  https://course19.fast.ai/part2
 
 * fastai 2020 courses
   https://course.fast.ai/
@@ -14885,6 +14988,21 @@
     Why are we missing the mark?
 
 
+* machine learning resource
+*** best machine learning courses
+
+    # list
+    https://www.learndatasci.com/best-machine-learning-courses/
+    
+    # google crash course
+https://developers.google.com/machine-learning/crash-course
+
+    # fast ai
+    https://course18.fast.ai/ml.html
+
+
+
+
 ** how to read paper
 *** a
     https://www.youtube.com/watch?v=733m6qBH-jI
@@ -14905,12 +15023,11 @@
     - "white-boxing" means figuring out 
       WHY the hard-to-understand part does what it does.
 
+
 ** understand the detail
 *** make a progress little by little
     - try to focus on one thing at a time, 
       and don't try to proceed fast
-
-      
 
 *** know the reason why I cannot undrstand something
     - do not know pre-requisite concepts 
@@ -14918,3 +15035,54 @@
 
     - the way it explains it is not good 
       => search for another reference explaining the thing
+
+* study plan for deep learning
+** how to use
+*** TODO Python for Computer Vision with OpenCV and deep learning (14h)
+*** TODO Deep Learning A-Z: Hands-On Artificial Neural Networks (23h)
+*** TODO fast-ai2020
+*** DONE fast-ai2019 part1
+
+*** (book)Deep Learning Patterns and Practices 
+    https://www.amazon.com/Learning-Patterns-Practices-Andrew-Ferlitsch/dp/1617298263/ref=sr_1_1?dchild=1&keywords=deep+learning+design+patterns&qid=1631165943&s=books&sr=1-1
+    https://www.manning.com/books/deep-learning-patterns-and-practices
+*** (book)DeZero1
+*** (book) Deep Learning with PyTorch: Build, train, and tune neural networks using Python tools 1st Edition
+    https://www.amazon.com/Deep-Learning-PyTorch-Eli-Stevens/dp/1617295264/ref=pd_sbs_2/133-2838230-5925607?pd_rd_w=l06S6&pf_rd_p=3676f086-9496-4fd7-8490-77cf7f43f846&pf_rd_r=RP14TQX2WNZA42E4VTH6&pd_rd_r=85bfae81-d3a3-47ff-8e0e-9dbcfd5ea96e&pd_rd_wg=CB6Sj&pd_rd_i=1617295264&psc=1
+
+
+** code internal
+*** DONE fast-ai part2
+*** WIP DeZero3
+
+** theory
+*** TODO Andrew Ng lectures
+*** YanLecun lectures
+*** Deep Learning: A Visual Approach Illustrated Edition
+    https://www.amazon.com/Deep-Learning-Approach-Andrew-Glassner/dp/1718500726/ref=sr_1_2?dchild=1&keywords=deep+learning&qid=1631165682&s=books&sr=1-2
+
+
+* study plan for machine learning
+** how to use
+*** https://note.com/currypurin/n/nba054c13d0c0
+
+*** TODO Jose Portilla, 2021 Python for Machine Learning & Data Science Masterclass (44h)
+*** TODO fast ai
+    https://course18.fast.ai/ml.html
+*** google crash course
+    https://developers.google.com/machine-learning/crash-course
+
+*** books
+   # Pythonではじめる機械学習 ―scikit-learnで学ぶ特徴量エンジニアリングと機械学習の基礎 Tankobon Softcover – May 25, 2017
+   https://www.amazon.co.jp/Andreas-C-Muller/dp/4873117984/ref=pd_sbs_3/358-8912400-2112020?pd_rd_w=BY33y&pf_rd_p=367c54b8-500b-4071-9b4d-65fe16192688&pf_rd_r=89BM5HZV094VGD228JA8&pd_rd_r=87118894-ce11-40e9-8de9-324cba042145&pd_rd_wg=VRZHm&pd_rd_i=4873117984&psc=1
+   
+   # 達人
+   https://www.amazon.co.jp/dp/B08LYWFPQ9/ref=dp-kindle-redirect?_encoding=UTF8&btkr=1
+   https://www.amazon.co.jp/-/en/Sebastian-Raschka-ebook/dp/B07VBLX2W7/ref=sr_1_1?dchild=1&keywords=Sebastian+Raschka&qid=1631090588&s=digital-text&sr=1-1
+
+   # 実践機械学習
+   https://www.amazon.co.jp/Aur%C3%A9lien-G%C3%A9ron/dp/4873119286/ref=pd_sbs_5/358-8912400-2112020?pd_rd_w=BY33y&pf_rd_p=367c54b8-500b-4071-9b4d-65fe16192688&pf_rd_r=89BM5HZV094VGD228JA8&pd_rd_r=87118894-ce11-40e9-8de9-324cba042145&pd_rd_wg=VRZHm&pd_rd_i=4873119286&psc=1
+   https://www.amazon.co.jp/-/en/Aur%C3%A9lien-G%C3%A9ron/dp/1492032646/ref=sr_1_2?dchild=1&qid=1631090939&refinements=p_27%3AAur%C3%A9lien+G%C3%A9ron&s=books&sr=1-2&text=Aur%C3%A9lien+G%C3%A9ron
+
+** theory
+*** Andrew Ng lectures   
